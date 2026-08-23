@@ -2,11 +2,10 @@ import Link from 'next/link';
 import {DeliveryForm} from '~/components/delivery-form';
 import {GrantForm} from '~/components/grant-form';
 import {GrantNarrative} from '~/components/grant-narrative';
-import {ProductThumb} from '~/components/product-thumb';
+import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatCard} from '~/components/stat-card';
 import {StatusPill} from '~/components/status-pill';
 import {formatUsd} from '~/lib/money';
-import {itemImageUrl} from '~/lib/product-preview';
 import {semesterLabel} from '~/lib/school-year';
 import type {CycleRow, GrantItemRow, GrantRow} from '~/lib/types';
 
@@ -74,20 +73,7 @@ export const GrantDetail = ({
           <p className="font-body mt-1 mb-3 text-sm text-gray-600">
             Prices are estimates from when this was submitted. Checkout may come in higher or lower.
           </p>
-          <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
-            {items.map((item) => (
-              <li className="flex items-center justify-between gap-4 px-4 py-3" key={item.id}>
-                <span className="flex min-w-0 items-center gap-3">
-                  <ProductThumb alt="" url={itemImageUrl(item)} />
-                  <span>
-                    {item.item_description}
-                    <span className="ml-2 text-gray-500">× {item.quantity}</span>
-                  </span>
-                </span>
-                <span className="tabular-nums">{formatUsd(item.total_price)}</span>
-              </li>
-            ))}
-          </ul>
+          <GrantRequestedItems items={items} />
         </div>
         {grant.status === 'PURCHASED' ? <DeliveryForm grantId={grant.id} /> : null}
         <Link className="text-sm text-eagle-blue underline" href={backHref}>

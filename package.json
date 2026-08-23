@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-select": "^2.3.7",
+    "@sentry/cloudflare": "^10.70.0",
     "@vitejs/plugin-react": "^6.1.0",
     "@vitejs/plugin-rsc": "^0.5.34",
     "driver.js": "^1.8.0",

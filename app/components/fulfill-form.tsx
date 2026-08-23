@@ -3,6 +3,7 @@
 import {useMemo, useState} from 'react';
 import {FileUpload} from '~/components/file-upload';
 import {ProductThumb} from '~/components/product-thumb';
+import {Select} from '~/components/select';
 import {fulfillGrantAction} from '~/fulfill/actions';
 import {sumActuals, variance} from '~/lib/fulfillment';
 import {formatUsd} from '~/lib/money';
@@ -164,28 +165,29 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <select
+                    <Select
                       aria-label={`Outcome for ${item.item_description}`}
-                      className="rounded-lg border border-gray-300 px-2 py-1"
-                      onChange={(event) =>
+                      onValueChange={(itemStatus) =>
                         setLines((current) =>
                           current.map((row, i) =>
                             i === index
                               ? {
                                   ...row,
-                                  item_status: event.target.value as LineState['item_status'],
+                                  item_status: itemStatus as LineState['item_status'],
                                 }
                               : row,
                           ),
                         )
                       }
+                      options={[
+                        {label: 'Purchased', value: 'PURCHASED'},
+                        {label: 'Substituted', value: 'SUBSTITUTED'},
+                        {label: 'Unavailable', value: 'UNAVAILABLE'},
+                        {label: 'Cancelled', value: 'CANCELLED'},
+                      ]}
+                      size="sm"
                       value={line.item_status}
-                    >
-                      <option value="PURCHASED">Purchased</option>
-                      <option value="SUBSTITUTED">Substituted</option>
-                      <option value="UNAVAILABLE">Unavailable</option>
-                      <option value="CANCELLED">Cancelled</option>
-                    </select>
+                    />
                     {line.item_status === 'SUBSTITUTED' ? (
                       <input
                         aria-label={`Substitute description for ${item.item_description}`}

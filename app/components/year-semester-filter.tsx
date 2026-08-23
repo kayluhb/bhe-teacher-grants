@@ -1,6 +1,7 @@
 'use client';
 
 import {useRouter} from 'next/navigation';
+import {Select} from '~/components/select';
 import type {SemesterFilter} from '~/lib/filters';
 import {formatSchoolYearLong} from '~/lib/school-year';
 
@@ -31,23 +32,22 @@ export const YearSemesterFilter = ({
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <label className="font-body text-sm text-charcoal">
+      <label className="font-body text-sm text-charcoal" htmlFor="school-year-filter">
         School year
-        <select
-          className="font-body mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-eagle-blue focus:ring-1 focus:ring-eagle-blue"
+        <Select
+          className="mt-1 min-w-56"
           disabled={!schoolYearId || years.length === 0}
-          onChange={(event) => {
+          id="school-year-filter"
+          onValueChange={(year) => {
             if (!schoolYearId) return;
-            apply(event.target.value, semester);
+            apply(year, semester);
           }}
-          value={schoolYearId ?? ''}
-        >
-          {years.map((year) => (
-            <option key={year.id} value={year.id}>
-              {formatSchoolYearLong(year.label)}
-            </option>
-          ))}
-        </select>
+          options={years.map((year) => ({
+            label: formatSchoolYearLong(year.label),
+            value: year.id,
+          }))}
+          value={schoolYearId}
+        />
       </label>
       <fieldset className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
         <legend className="sr-only">Semester</legend>

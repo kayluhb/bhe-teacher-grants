@@ -1,7 +1,13 @@
 'use client';
 
 import {useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {type DirectoryPerson, type PersonSuggestion, suggestPeople} from '~/lib/people';
+import {
+  composeDraftFromSuggestion,
+  type DirectoryPerson,
+  type PersonSuggestion,
+  parseUserName,
+  suggestPeople,
+} from '~/lib/people';
 import type {Result} from '~/lib/types';
 
 type MenuBox = {bottom?: number; left: number; top?: number; width: number};
@@ -35,6 +41,7 @@ export const CommitteePicker = ({
   const [draftEmail, setDraftEmail] = useState('');
   const [menu, setMenu] = useState<MenuBox | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   const taken = useMemo(
     () => new Set([...excludeIds, ...selected.map((person) => person.id)]),
@@ -47,10 +54,14 @@ export const CommitteePicker = ({
   const composing = draftName !== null;
   const showMenu = open && !composing && suggestions.length > 0;
 
+  const wasComposing = useRef(false);
   useEffect(() => {
-    if (!composing) return;
-    nameRef.current?.focus();
-  }, [composing]);
+    const entered = composing && !wasComposing.current;
+    wasComposing.current = composing;
+    if (!entered) return;
+    if (draftEmail) nameRef.current?.focus();
+    else emailRef.current?.focus();
+  }, [composing, draftEmail]);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {
@@ -106,14 +117,15 @@ export const CommitteePicker = ({
       setError(suggestion.message);
       return;
     }
-    if (suggestion.kind === 'draft') {
-      setDraftName(suggestion.name);
-      setDraftEmail('');
-      setOpen(false);
-      setError(null);
+    if (suggestion.kind === 'person') {
+      void addPerson(suggestion.person.email);
       return;
     }
-    void addPerson(suggestion.kind === 'create' ? suggestion.email : suggestion.person.email);
+    const draft = composeDraftFromSuggestion(suggestion);
+    setDraftName(draft.name);
+    setDraftEmail(draft.email);
+    setOpen(false);
+    setError(null);
   };
 
   const remove = async (userId: string) => {
@@ -147,11 +159,16 @@ export const CommitteePicker = ({
   };
 
   const submitDraft = () => {
-    if (!draftName?.trim() || !draftEmail.trim()) {
+    const named = parseUserName(draftName ?? '');
+    if ('error' in named) {
+      setError(named.error);
+      return;
+    }
+    if (!draftEmail.trim()) {
       setError('Enter a name and email.');
       return;
     }
-    void addPerson(draftEmail, draftName.trim());
+    void addPerson(draftEmail, named.name);
   };
 
   return (
@@ -211,7 +228,8 @@ export const CommitteePicker = ({
                 event.preventDefault();
                 submitDraft();
               }}
-              placeholder="name@bheeagles.com"
+              placeholder="name@gmail.com"
+              ref={emailRef}
               type="email"
               value={draftEmail}
             />
@@ -372,7 +390,8 @@ export const CommitteePicker = ({
         </p>
       ) : (
         <p className="text-xs text-gray-500">
-          Search a name to create someone new, or type an AISD or BHE email. They can sign in later.
+          Search a name to create someone new, or type an email. AISD stays teacher; everyone else
+          joins as committee.
         </p>
       )}
     </div>

@@ -91,3 +91,27 @@ export const committeeAddError = (
 
 export const committeeRemoveError = (remainingCommitteeCount: number): string | null =>
   remainingCommitteeCount < 1 ? 'Add at least one committee reviewer.' : null;
+
+export const parseUserName = (raw: string): Result<{name: string}> => {
+  const name = raw.trim();
+  if (!name) return {error: 'Name is required.'};
+  return {name};
+};
+
+export const resolvedPersonName = (email: string, name?: string): Result<{name: string}> => {
+  if (name?.trim()) return parseUserName(name);
+  const draft = draftUserFromEmail(email);
+  if ('error' in draft) return draft;
+  return {name: draft.name};
+};
+
+export const composeDraftFromSuggestion = (
+  suggestion: Extract<PersonSuggestion, {kind: 'create'} | {kind: 'draft'}>,
+): {email: string; name: string} => {
+  if (suggestion.kind === 'draft') return {email: '', name: suggestion.name};
+  const draft = draftUserFromEmail(suggestion.email);
+  return {
+    email: suggestion.email,
+    name: 'error' in draft ? '' : draft.name,
+  };
+};

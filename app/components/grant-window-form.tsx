@@ -4,6 +4,7 @@ import {useActionState} from 'react';
 import type {AdminFormState} from '~/admin/actions';
 import {DialogSubmitBar} from '~/components/form-dialog';
 import {GrantWindowCommitteeField} from '~/components/grant-window-committee-field';
+import {Select} from '~/components/select';
 import type {UserRow} from '~/lib/admin';
 import {toDatetimeLocalValue} from '~/lib/grant-cycle';
 import type {CycleRow} from '~/lib/types';
@@ -37,21 +38,19 @@ export const GrantWindowForm = ({
     (reviewers ?? []).filter((row) => row.seat === 'committee').map((row) => row.user_id),
   );
   const personSelect = (name: string, seat: string, label: string) => (
-    <label className="block text-sm font-medium text-charcoal">
+    <label className="block text-sm font-medium text-charcoal" htmlFor={name}>
       {label}
-      <select
-        className={`mt-1 ${fieldClass}`}
+      <Select
+        className="mt-1 w-full"
         defaultValue={officerId(reviewers, seat)}
         name={name}
+        options={users.map((user) => ({
+          label: `${user.name} (${user.email})`,
+          value: user.id,
+        }))}
+        placeholder="Select…"
         required
-      >
-        <option value="">Select…</option>
-        {users.map((user) => (
-          <option key={user.id} value={user.id}>
-            {user.name} ({user.email})
-          </option>
-        ))}
-      </select>
+      />
     </label>
   );
 
@@ -68,27 +67,30 @@ export const GrantWindowForm = ({
       <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto px-5">
         <input name="tab" type="hidden" value={tab} />
         {cycle ? <input name="cycle_id" type="hidden" value={cycle.id} /> : null}
-        <label className="block text-sm font-medium text-charcoal">
+        <label className="block text-sm font-medium text-charcoal" htmlFor="school_year_id">
           School year
-          <select
-            className={`mt-1 ${fieldClass}`}
-            defaultValue={cycle?.school_year_id}
+          <Select
+            className="mt-1 w-full"
+            defaultValue={cycle?.school_year_id ?? years[0]?.id}
             name="school_year_id"
+            options={years.map((year) => ({
+              label: year.label,
+              value: year.id,
+            }))}
             required
-          >
-            {years.map((year) => (
-              <option key={year.id} value={year.id}>
-                {year.label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
-        <label className="block text-sm font-medium text-charcoal">
+        <label className="block text-sm font-medium text-charcoal" htmlFor="semester">
           Semester
-          <select className={`mt-1 ${fieldClass}`} defaultValue={cycle?.semester} name="semester">
-            <option value="FALL">Fall</option>
-            <option value="SPRING">Spring</option>
-          </select>
+          <Select
+            className="mt-1 w-full"
+            defaultValue={cycle?.semester ?? 'FALL'}
+            name="semester"
+            options={[
+              {label: 'Fall', value: 'FALL'},
+              {label: 'Spring', value: 'SPRING'},
+            ]}
+          />
         </label>
         <label className="block text-sm font-medium text-charcoal">
           Name

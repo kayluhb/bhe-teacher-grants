@@ -6,12 +6,15 @@ import {
   setActiveCycleAction,
   updateCycleAction,
   updateSchoolYearAction,
+  updateUserNameAction,
   updateUserRoleAction,
 } from '~/admin/actions';
+import {AutosaveForm} from '~/components/autosave-form';
 import {DeletePersonForm} from '~/components/delete-person-form';
 import {FormDialog} from '~/components/form-dialog';
 import {GrantWindowForm} from '~/components/grant-window-form';
 import {SchoolYearForm} from '~/components/school-year-form';
+import {Select} from '~/components/select';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {ASSIGNABLE_ROLES, ROLE_LABELS, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
@@ -103,35 +106,38 @@ export default async function AdminPage({
               <tbody>
                 {users.map((user) => (
                   <tr className="border-t border-gray-100" key={user.id}>
-                    <td className="px-4 py-2">{user.name}</td>
+                    <td className="px-4 py-2">
+                      <AutosaveForm action={updateUserNameAction}>
+                        <TabField tab={tab} />
+                        <input name="user_id" type="hidden" value={user.id} />
+                        <input
+                          aria-label="Name"
+                          className="rounded-lg border border-gray-300 px-2 py-1"
+                          defaultValue={user.name}
+                          name="name"
+                        />
+                      </AutosaveForm>
+                    </td>
                     <td className="px-4 py-2">{user.email}</td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {isLockedRosterEmail(user.email) ? (
                           <span>{ROLE_LABELS[user.role]}</span>
                         ) : (
-                          <form action={updateUserRoleAction} className="flex gap-2">
+                          <AutosaveForm action={updateUserRoleAction}>
                             <TabField tab={tab} />
                             <input name="user_id" type="hidden" value={user.id} />
-                            <select
+                            <Select
                               aria-label={`Role for ${user.name}`}
-                              className="rounded-lg border border-gray-300 px-2 py-1"
                               defaultValue={user.role}
                               name="role"
-                            >
-                              {ASSIGNABLE_ROLES.map((role) => (
-                                <option key={role} value={role}>
-                                  {ROLE_LABELS[role]}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              className="whitespace-nowrap text-sm text-eagle-blue underline"
-                              type="submit"
-                            >
-                              Save
-                            </button>
-                          </form>
+                              options={ASSIGNABLE_ROLES.map((role) => ({
+                                label: ROLE_LABELS[role],
+                                value: role,
+                              }))}
+                              size="sm"
+                            />
+                          </AutosaveForm>
                         )}
                         {isLockedRosterEmail(user.email) ? null : (
                           <DeletePersonForm

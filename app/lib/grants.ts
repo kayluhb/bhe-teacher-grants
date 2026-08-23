@@ -10,7 +10,12 @@ import {
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {finiteMoney, money} from '~/lib/money';
-import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
+import {
+  asinFromUrl,
+  fillMissingItemImages,
+  itemImageUrl,
+  stackPreviewImages,
+} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
 import {tallyVotes, validateChairDecision} from '~/lib/votes';
@@ -166,8 +171,13 @@ export const listGrantItems = async (db: D1Database, grantId: string) => {
     .prepare('SELECT * FROM grant_items WHERE grant_id = ? ORDER BY is_ad_hoc ASC, created_at ASC')
     .bind(grantId)
     .all<GrantItemRow>();
-  return rows.results;
+  return rows.results ?? [];
 };
+
+export const hydrateGrantItemImages = async (db: D1Database, items: GrantItemRow[]) =>
+  fillMissingItemImages(items, async (id, imageUrl) => {
+    await db.prepare('UPDATE grant_items SET image_url = ? WHERE id = ?').bind(imageUrl, id).run();
+  });
 
 const requestedTotal = (items: GrantItemInput[]) =>
   money(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0));

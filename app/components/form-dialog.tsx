@@ -52,7 +52,10 @@ export const FormDialog = ({
       <Dialog.Content
         className="dialog-content"
         onInteractOutside={(event) => {
-          if (event.target instanceof Element && event.target.closest('[data-committee-menu]')) {
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-committee-menu], [data-select-menu]')
+          ) {
             event.preventDefault();
           }
         }}

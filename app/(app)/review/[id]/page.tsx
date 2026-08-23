@@ -10,8 +10,8 @@ import {
   getGrant,
   hydrateGrantItemImages,
   listGrantItems,
-  listReviewQueue,
   listVotes,
+  userCanAccessGrant,
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
@@ -23,12 +23,7 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
   const db = getDb();
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/review');
-
-  const queue = await listReviewQueue(db, user.id);
-  const inQueue = queue.some((row) => row.id === grant.id);
-  if (grant.status === 'PENDING' && grant.teacher_id !== user.id && !inQueue) {
-    redirect('/review');
-  }
+  if (!(await userCanAccessGrant(db, user, grant))) redirect('/review');
 
   const [rawItems, votes, budget] = await Promise.all([
     listGrantItems(db, id),

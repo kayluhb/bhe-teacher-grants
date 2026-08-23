@@ -100,6 +100,8 @@ describe('isSafePreviewUrl', () => {
     expect(isSafePreviewUrl('https://192.168.1.9/p/1')).toBe(false);
     expect(isSafePreviewUrl('https://10.0.0.4/p/1')).toBe(false);
     expect(isSafePreviewUrl('https://169.254.169.254/latest')).toBe(false);
+    expect(isSafePreviewUrl('https://8.8.8.8/p/1')).toBe(false);
+    expect(isSafePreviewUrl('https://[::ffff:169.254.169.254]/latest')).toBe(false);
   });
 });
 

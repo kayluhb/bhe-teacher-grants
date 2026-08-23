@@ -156,7 +156,11 @@ const GrantRequestSidebar = ({
           </ul>
         ) : null}
 
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {error ? (
+          <p className="text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className="flex flex-col gap-2">
           <button
@@ -407,34 +411,34 @@ export const GrantForm = ({
                     value={wishlistUrl}
                   />
                 </label>
-              <div className="mt-3">
-                <p className="font-body text-sm font-medium text-charcoal">
-                  Amazon Download list spreadsheet
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-3">
-                  <label className="btn btn-secondary cursor-pointer gap-2">
-                    <input
-                      accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                      className="sr-only"
-                      onChange={(event) => setXlsxFile(event.target.files?.[0] ?? null)}
-                      type="file"
-                    />
-                    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 16 16">
-                      <path
-                        d="M8 10.5V3.5M8 3.5L5.5 6M8 3.5L10.5 6M3 12.5h10"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.75"
+                <div className="mt-3">
+                  <p className="font-body text-sm font-medium text-charcoal">
+                    Amazon Download list spreadsheet
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                    <label className="btn btn-secondary cursor-pointer gap-2">
+                      <input
+                        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        className="sr-only"
+                        onChange={(event) => setXlsxFile(event.target.files?.[0] ?? null)}
+                        type="file"
                       />
-                    </svg>
-                    {xlsxFile ? 'Change file' : 'Upload .xlsx'}
-                  </label>
-                  {xlsxFile ? (
-                    <span className="font-body text-sm text-gray-600">{xlsxFile.name}</span>
-                  ) : null}
+                      <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 16 16">
+                        <path
+                          d="M8 10.5V3.5M8 3.5L5.5 6M8 3.5L10.5 6M3 12.5h10"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="1.75"
+                        />
+                      </svg>
+                      {xlsxFile ? 'Change file' : 'Upload .xlsx'}
+                    </label>
+                    {xlsxFile ? (
+                      <span className="font-body text-sm text-gray-600">{xlsxFile.name}</span>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
                 <p className="font-body mt-1 text-xs text-gray-500">
                   On Amazon, open the list, choose More, then Download list. Use the .xlsx if the
                   URL import finds nothing.
@@ -533,7 +537,11 @@ export const GrantForm = ({
             </button>
           </div>
 
-          {error ? <p className="text-sm text-red-700 lg:hidden">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-700 lg:hidden" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
 
         <div className="hidden lg:sticky lg:top-6 lg:block lg:self-start">{sidebar}</div>

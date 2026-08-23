@@ -35,7 +35,7 @@ export const GrantNarrative = ({grant}: {grant: GrantRow}) => {
               rel="noopener"
               target="_blank"
             >
-              Open {retailer ? `${retailer} wishlist` : 'wishlist'}
+              Open {retailer ? `${retailer} wishlist` : 'wishlist'} (opens in a new tab)
             </a>
           ) : null}
         </section>

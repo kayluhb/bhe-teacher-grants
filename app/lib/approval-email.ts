@@ -1,14 +1,8 @@
+import {escapeHtml} from '~/lib/html';
 import {TREASURER_EMAIL} from '~/lib/login-email';
 import {formatUsd} from '~/lib/money';
 
 export const REIMBURSEMENT_FORM_URL = 'https://bheeagles.com/reimbursement';
-
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
 
 const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? '';
 

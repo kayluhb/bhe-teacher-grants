@@ -128,7 +128,7 @@ export default async function AdminPage({
                             <TabField tab={tab} />
                             <input name="user_id" type="hidden" value={user.id} />
                             <Select
-                              aria-label="Role"
+                              aria-label={`Role for ${user.name}`}
                               defaultValue={user.role}
                               name="role"
                               options={ASSIGNABLE_ROLES.map((role) => ({

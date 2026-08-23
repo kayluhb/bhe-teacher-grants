@@ -260,9 +260,13 @@ export const CommitteePicker = ({
       ) : (
         <div className="relative">
           <input
+            aria-activedescendant={
+              showMenu && suggestions[active] ? `${listId}-opt-${active}` : undefined
+            }
             aria-autocomplete="list"
             aria-controls={listId}
             aria-expanded={showMenu}
+            aria-label="Add committee member"
             autoComplete="off"
             className={fieldClass}
             disabled={pending}
@@ -305,6 +309,7 @@ export const CommitteePicker = ({
                     <button
                       aria-selected={activeRow}
                       className={rowClass}
+                      id={`${listId}-opt-${index}`}
                       key={`create-${suggestion.email}`}
                       onClick={() => choose(suggestion)}
                       role="option"
@@ -325,6 +330,7 @@ export const CommitteePicker = ({
                     <button
                       aria-selected={activeRow}
                       className={rowClass}
+                      id={`${listId}-opt-${index}`}
                       key={`draft-${suggestion.name}`}
                       onClick={() => choose(suggestion)}
                       role="option"
@@ -361,6 +367,7 @@ export const CommitteePicker = ({
                     className={`flex w-full flex-col px-3 py-2 text-left ${
                       activeRow ? 'bg-eagle-blue/10' : 'hover:bg-warm-white'
                     }`}
+                    id={`${listId}-opt-${index}`}
                     key={suggestion.person.id}
                     onClick={() => choose(suggestion)}
                     role="option"

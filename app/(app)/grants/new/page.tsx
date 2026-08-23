@@ -2,6 +2,7 @@ import {redirect} from 'next/navigation';
 import {GrantForm} from '~/components/grant-form';
 import {requireAuth, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle} from '~/lib/grants';
 
 export default async function NewGrantPage() {
@@ -9,7 +10,7 @@ export default async function NewGrantPage() {
   if (user.role === 'teacher') redirect('/portal/new');
   await requireRole('admin');
   const cycle = await getActiveCycle(getDb());
-  if (!cycle) redirect('/grants');
+  if (!cycle || !isSubmissionOpen(cycle)) redirect('/grants');
 
   return (
     <div className="space-y-6">

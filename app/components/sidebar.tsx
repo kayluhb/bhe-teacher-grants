@@ -57,6 +57,7 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
       <div className="flex items-center justify-between bg-gradient-to-r from-eagle-blue to-night-blue px-4 py-3 text-white md:hidden">
         <p className="font-heading text-sm font-bold">Teacher Grants</p>
         <button
+          aria-expanded={open}
           aria-label="Open menu"
           className="rounded p-1 hover:bg-white/10"
           onClick={() => setOpen((value) => !value)}
@@ -97,17 +98,17 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
           <p className="font-heading text-lg font-bold leading-tight">
             Barton Hills Elementary PTA
           </p>
-          <p className="font-body mt-1 text-xs text-white/70">Teacher Grants</p>
+          <p className="font-body mt-1 text-xs text-white/85">Teacher Grants</p>
         </div>
         {nav}
         <div className="mt-auto border-t border-white/10 px-5 py-4">
           <p className="text-sm font-medium">{user.name}</p>
-          <p className="text-xs text-white/70">{ROLE_LABELS[user.role]}</p>
+          <p className="text-xs text-white/85">{ROLE_LABELS[user.role]}</p>
           <div className="mt-3">
             <TourHelpButton />
           </div>
           <form action="/api/auth/logout" method="post">
-            <button className="mt-3 text-xs text-white/70 underline hover:text-white" type="submit">
+            <button className="mt-3 text-xs text-white/85 underline hover:text-white" type="submit">
               Sign out
             </button>
           </form>

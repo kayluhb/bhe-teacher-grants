@@ -83,8 +83,8 @@ describe('window phases', () => {
 });
 
 describe('toDatetimeLocalValue', () => {
-  it('strips seconds and Z from stored ISO times', () => {
-    expect(toDatetimeLocalValue('2026-08-15T00:00:00Z')).toBe('2026-08-15T00:00');
+  it('converts stored UTC times into America/Chicago datetime-local values', () => {
+    expect(toDatetimeLocalValue('2026-08-15T00:00:00Z')).toBe('2026-08-14T19:00');
   });
 
   it('keeps a datetime-local value as-is', () => {

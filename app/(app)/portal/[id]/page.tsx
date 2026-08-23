@@ -2,7 +2,7 @@ import {notFound} from 'next/navigation';
 import {GrantDetail} from '~/components/grant-detail';
 import {requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
-import {getActiveCycle, getGrant, listGrantItems} from '~/lib/grants';
+import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 
 export default async function TeacherGrantDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireTeacher();
@@ -11,7 +11,7 @@ export default async function TeacherGrantDetailPage({params}: {params: Promise<
   const grant = await getGrant(db, id);
   if (!grant || grant.teacher_id !== user.id) notFound();
 
-  const [items, cycle] = await Promise.all([listGrantItems(db, id), getActiveCycle(db)]);
+  const [items, cycle] = await Promise.all([listGrantItems(db, id), getCycle(db, grant.cycle_id)]);
 
   return <GrantDetail backHref="/portal" cycle={cycle} grant={grant} items={items} />;
 }

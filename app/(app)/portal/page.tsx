@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {TourGrantTable} from '~/components/tour-grant-table';
 import {requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle, listGrants} from '~/lib/grants';
 
 export default async function TeacherPortalPage() {
@@ -11,6 +12,8 @@ export default async function TeacherPortalPage() {
     listGrants(db, {teacherId: user.id}),
     getActiveCycle(db),
   ]);
+
+  const open = Boolean(cycle && isSubmissionOpen(cycle));
 
   return (
     <div className="space-y-6">
@@ -23,13 +26,13 @@ export default async function TeacherPortalPage() {
             Every request you have submitted, across years.
           </p>
         </div>
-        {cycle ? (
+        {open ? (
           <Link className="btn btn-primary" data-tour="submit-grant" href="/portal/new">
             Submit grant
           </Link>
         ) : null}
       </div>
-      {cycle ? (
+      {open && cycle ? (
         <p
           className="rounded-xl border border-spirit-gold/40 bg-spirit-gold/15 px-4 py-3 text-sm text-night-blue"
           data-tour="window-banner"

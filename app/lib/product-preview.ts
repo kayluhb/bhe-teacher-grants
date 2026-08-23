@@ -25,16 +25,7 @@ export const isSafePreviewUrl = (raw: string): boolean => {
     if (PRIVATE_HOSTS.has(host) || host.endsWith('.localhost') || host.endsWith('.local')) {
       return false;
     }
-    if (host.includes(':')) {
-      if (
-        host === '::1' ||
-        host.startsWith('fc') ||
-        host.startsWith('fd') ||
-        host.startsWith('fe80')
-      ) {
-        return false;
-      }
-    }
+    if (host.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
     if (isPrivateIpv4(host)) return false;
     return true;
   } catch {

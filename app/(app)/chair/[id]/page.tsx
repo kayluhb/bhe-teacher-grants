@@ -11,17 +11,22 @@ import {
   hydrateGrantItemImages,
   listEligibleVoters,
   listGrantItems,
+  listReviewerRows,
   listVotes,
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 
 export default async function ChairDetailPage({params}: {params: Promise<{id: string}>}) {
-  await requireChairman();
+  const user = await requireChairman();
   const {id} = await params;
   const db = getDb();
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/chair');
+  const chairs = await listReviewerRows(db, grant.cycle_id);
+  if (!chairs.some((row) => row.seat === 'chairman' && row.userId === user.id)) {
+    redirect('/chair');
+  }
 
   const [rawItems, votes, voters, tally] = await Promise.all([
     listGrantItems(db, id),

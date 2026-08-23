@@ -29,7 +29,11 @@ export const DeliveryForm = ({grantId}: {grantId: string}) => {
         label="Photo (optional)"
         name="proof_of_delivery_r2_key"
       />
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-brand" disabled={pending} type="submit">
         {pending ? 'Saving…' : 'Mark delivered'}
       </button>

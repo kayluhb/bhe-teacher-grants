@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  addRosterUserAction,
   createCycleAction,
   createSchoolYearAction,
   deleteUserAction,
@@ -9,6 +10,7 @@ import {
   updateUserNameAction,
   updateUserRoleAction,
 } from '~/admin/actions';
+import {AddPersonForm} from '~/components/add-person-form';
 import {AutosaveForm} from '~/components/autosave-form';
 import {DeletePersonForm} from '~/components/delete-person-form';
 import {FormDialog} from '~/components/form-dialog';
@@ -92,11 +94,21 @@ export default async function AdminPage({
 
       {tab === 'roster' ? (
         <section className="space-y-4">
-          <p className="text-sm text-gray-600">
-            People appear here after they sign in, or after the chair adds them to a committee. AISD
-            emails are teachers except kathryn.achtermann@austinisd.org (principal). Other emails
-            are committee except treasurer@bheeagles.com.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-2xl text-sm text-gray-600">
+              Add people so they can sign in. AISD emails are teachers except
+              kathryn.achtermann@austinisd.org (principal). Other emails are committee except
+              treasurer@bheeagles.com.
+            </p>
+            <FormDialog
+              description="They can sign in with this email after you add them. Change their role in the table if needed."
+              padded={false}
+              title="Add person"
+              triggerLabel="Add person"
+            >
+              <AddPersonForm action={addRosterUserAction} tab={tab} />
+            </FormDialog>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="min-w-full text-sm">
               <thead className="bg-warm-white text-left text-xs text-gray-500 uppercase">

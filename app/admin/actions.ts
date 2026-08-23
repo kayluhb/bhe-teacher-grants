@@ -3,6 +3,7 @@
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {
+  addRosterUser,
   createCycle,
   createSchoolYear,
   deleteUser,
@@ -28,6 +29,21 @@ const fail = (error: string, tab?: string): never => toAdmin(tab, error);
 const tabFrom = (formData: FormData) => String(formData.get('tab') || '');
 
 export type AdminFormState = {error?: string};
+
+export const addRosterUserAction = async (
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> => {
+  await requireRole('admin');
+  const tab = tabFrom(formData);
+  const result = await addRosterUser(getDb(), {
+    email: String(formData.get('email') || ''),
+    name: String(formData.get('name') || ''),
+  });
+  if ('error' in result) return {error: result.error};
+  revalidatePath('/admin');
+  return toAdmin(tab);
+};
 
 export const updateUserRoleAction = async (formData: FormData): Promise<void> => {
   await requireRole('admin');

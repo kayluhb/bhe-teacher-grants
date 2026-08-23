@@ -62,7 +62,7 @@ export const LoginForm = () => {
         {step === 'code' ? <input name="email" type="hidden" value={email} /> : null}
         {step === 'email' ? (
           <label className="block text-sm">
-            Work email
+            Email
             <input
               autoComplete="email"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"

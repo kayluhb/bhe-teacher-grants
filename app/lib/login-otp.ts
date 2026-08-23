@@ -3,11 +3,13 @@ import {createSession} from '~/lib/auth';
 import {getDb, newId} from '~/lib/db';
 import {sendEmail} from '~/lib/email';
 import {
+  canCreateUserFromEmail,
   displayRole,
   nameFromEmail,
   normalizeEmail,
   persistableRole,
   roleForEmail,
+  UNKNOWN_LOGIN_EMAIL_ERROR,
 } from '~/lib/login-email';
 import {
   cooldownSeconds,
@@ -61,6 +63,14 @@ export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> =>
   const email = normalizeEmail(rawEmail);
   if (!roleForEmail(email)) {
     return {error: 'Enter a valid email address.'};
+  }
+
+  if (!canCreateUserFromEmail(email)) {
+    const rostered = await getDb()
+      .prepare('SELECT id FROM users WHERE email = ?')
+      .bind(email)
+      .first<{id: string}>();
+    if (!rostered) return {error: UNKNOWN_LOGIN_EMAIL_ERROR};
   }
 
   const now = Date.now();
@@ -127,22 +137,23 @@ export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> =>
   return {cooldownSeconds: cooldownSeconds(OTP_COOLDOWN_MS), ok: true};
 };
 
-const upsertUser = async (email: string): Promise<string> => {
+const upsertUser = async (email: string): Promise<{error: string} | {id: string}> => {
   const db = getDb();
   const existing = await db
     .prepare('SELECT id FROM users WHERE email = ?')
     .bind(email)
     .first<{id: string}>();
-  if (existing) return existing.id;
+  if (existing) return {id: existing.id};
 
-  const userId = newId();
+  if (!canCreateUserFromEmail(email)) return {error: UNKNOWN_LOGIN_EMAIL_ERROR};
   const role = roleForEmail(email);
-  if (!role) throw new Error('Enter a valid email address.');
+  if (!role) return {error: 'Enter a valid email address.'};
+  const userId = newId();
   await db
     .prepare('INSERT INTO users (id, email, name, role) VALUES (?, ?, ?, ?)')
     .bind(userId, email, nameFromEmail(email), persistableRole(role))
     .run();
-  return userId;
+  return {id: userId};
 };
 
 export const verifyOtp = async (rawEmail: string, rawCode: string): Promise<OtpVerifyResult> => {
@@ -168,12 +179,13 @@ export const verifyOtp = async (rawEmail: string, rawCode: string): Promise<OtpV
     return {error: 'That code is incorrect.'};
   }
 
+  const user = await upsertUser(email);
+  if ('error' in user) return user;
   await getDb().prepare('DELETE FROM login_otps WHERE email = ?').bind(email).run();
-  const userId = await upsertUser(email);
-  await createSession(userId);
+  await createSession(user.id);
   const userRow = await getDb()
     .prepare('SELECT email, role FROM users WHERE id = ?')
-    .bind(userId)
+    .bind(user.id)
     .first<{email: string; role: string}>();
   return {
     ok: true,

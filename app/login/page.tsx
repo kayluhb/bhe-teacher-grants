@@ -12,7 +12,7 @@ export default async function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="bg-eagle-blue shadow-lg">
+      <header className="bg-eagle-blue text-white shadow-lg">
         <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
           <HeaderLogo />
         </div>
@@ -26,8 +26,8 @@ export default async function LoginPage() {
 
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="font-body mb-6 text-center text-sm text-gray-600">
-              Teachers sign in with <span className="font-medium">@austinisd.org</span>. Other
-              emails work too. We’ll email a one-time code.
+              Teachers sign in with <span className="font-medium">@austinisd.org</span>. We’ll email
+              a one-time code.
             </p>
             <LoginForm />
           </div>

@@ -22,6 +22,7 @@ export const TeacherNav = ({
     {href: '/portal', label: 'My grants'},
     ...(canSubmit ? [{href: '/portal/new', label: 'Submit grant'}] : []),
     ...(portals?.includes('reviewer') ? [{href: '/review', label: 'Review'}] : []),
+    ...(portals?.includes('chairman') ? [{href: '/chair', label: 'Chair'}] : []),
   ];
 
   const nav = (
@@ -53,22 +54,23 @@ export const TeacherNav = ({
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
         <div>
           <p className="font-heading text-lg font-bold leading-tight">My teacher grants</p>
-          <p className="font-body text-xs text-white/70">Barton Hills Elementary PTA</p>
+          <p className="font-body text-xs text-white/85">Barton Hills Elementary PTA</p>
         </div>
         <div className="hidden md:block">{nav}</div>
         <div className="hidden items-center gap-4 md:flex">
           <TourHelpButton />
           <div className="text-right">
             <p className="text-sm font-medium">{user.name}</p>
-            <p className="text-xs text-white/70">{ROLE_LABELS[user.role]}</p>
+            <p className="text-xs text-white/85">{ROLE_LABELS[user.role]}</p>
           </div>
           <form action="/api/auth/logout" method="post">
-            <button className="text-xs text-white/70 underline hover:text-white" type="submit">
+            <button className="text-xs text-white/85 underline hover:text-white" type="submit">
               Sign out
             </button>
           </form>
         </div>
         <button
+          aria-expanded={open}
           aria-label="Open menu"
           className="rounded p-1 hover:bg-white/10 md:hidden"
           onClick={() => setOpen((value) => !value)}
@@ -99,7 +101,7 @@ export const TeacherNav = ({
               <TourHelpButton />
             </div>
             <form action="/api/auth/logout" method="post">
-              <button className="mt-2 text-xs text-white/70 underline" type="submit">
+              <button className="mt-2 text-xs text-white/85 underline" type="submit">
                 Sign out
               </button>
             </form>

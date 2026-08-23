@@ -2,7 +2,7 @@ import {redirect} from 'next/navigation';
 import {GrantDetail} from '~/components/grant-detail';
 import {requireAuth} from '~/lib/auth';
 import {getDb} from '~/lib/db';
-import {getActiveCycle, getGrant, listGrantItems} from '~/lib/grants';
+import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 
 export default async function GrantDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireAuth();
@@ -14,7 +14,7 @@ export default async function GrantDetailPage({params}: {params: Promise<{id: st
   if (!grant) redirect('/grants');
   if (user.role !== 'admin' && grant.teacher_id !== user.id) redirect('/grants');
 
-  const [items, cycle] = await Promise.all([listGrantItems(db, id), getActiveCycle(db)]);
+  const [items, cycle] = await Promise.all([listGrantItems(db, id), getCycle(db, grant.cycle_id)]);
 
   return <GrantDetail backHref="/grants" cycle={cycle} grant={grant} items={items} />;
 }

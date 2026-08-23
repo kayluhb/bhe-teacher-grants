@@ -26,9 +26,9 @@ describe('validateSchoolYearDates', () => {
     expect(validateSchoolYearDates({endsOn: valid.endsOn, startsOn: valid.startsOn})).toBeNull();
   });
 
-  it('requires start and end dates', () => {
-    expect(validateSchoolYearDates({endsOn: '', startsOn: valid.startsOn})).toBe(
-      'Start and end dates are required.',
+  it('requires the end date after the start date', () => {
+    expect(validateSchoolYearDates({endsOn: '2026-08-01', startsOn: '2026-08-01'})).toBe(
+      'The end date must be after the start date.',
     );
   });
 });

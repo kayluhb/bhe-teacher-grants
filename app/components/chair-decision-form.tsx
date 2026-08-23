@@ -25,7 +25,8 @@ export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
       <p className="text-sm text-gray-600">
         You may follow the tally or override it. A comment is stored with a rejection.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <fieldset className="flex flex-wrap gap-2">
+        <legend className="sr-only">Official decision</legend>
         <label className="font-body flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm">
           <input name="outcome" required type="radio" value="APPROVED" />
           Approve
@@ -34,7 +35,7 @@ export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
           <input name="outcome" required type="radio" value="REJECTED" />
           Reject
         </label>
-      </div>
+      </fieldset>
       <label className="font-body block text-sm text-charcoal">
         Comment (used as the rejection note)
         <textarea
@@ -42,7 +43,11 @@ export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
           name="comment"
         />
       </label>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-brand" disabled={pending} type="submit">
         {pending ? 'Saving…' : 'Record decision'}
       </button>

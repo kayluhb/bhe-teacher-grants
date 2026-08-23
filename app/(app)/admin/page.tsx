@@ -114,6 +114,7 @@ export default async function AdminPage({
                             <TabField tab={tab} />
                             <input name="user_id" type="hidden" value={user.id} />
                             <select
+                              aria-label={`Role for ${user.name}`}
                               className="rounded-lg border border-gray-300 px-2 py-1"
                               defaultValue={user.role}
                               name="role"

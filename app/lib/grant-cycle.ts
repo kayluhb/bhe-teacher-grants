@@ -63,7 +63,43 @@ export const validateCycleInput = (input: CycleInput): string | null => {
   return null;
 };
 
+const SCHOOL_TIME_ZONE = 'America/Chicago';
+
 export const toDatetimeLocalValue = (value: string): string => {
-  const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
-  return match?.[1] ?? value;
+  if (!/Z$|[+-]\d{2}:\d{2}$/.test(value)) {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    return match?.[1] ?? value;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit',
+      hourCycle: 'h23',
+      minute: '2-digit',
+      month: '2-digit',
+      timeZone: SCHOOL_TIME_ZONE,
+      year: 'numeric',
+      day: '2-digit',
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
+
+export const fromDatetimeLocalValue = (value: string): string => {
+  if (/Z$|[+-]\d{2}:\d{2}$/.test(value)) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toISOString();
+  }
+  const local = value.length === 16 ? `${value}:00` : value;
+  for (const offset of ['-05:00', '-06:00'] as const) {
+    const date = new Date(`${local}${offset}`);
+    if (Number.isNaN(date.getTime())) continue;
+    if (toDatetimeLocalValue(date.toISOString()) === value.slice(0, 16)) {
+      return date.toISOString();
+    }
+  }
+  return new Date(`${local}-06:00`).toISOString();
 };

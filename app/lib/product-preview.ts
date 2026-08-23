@@ -25,11 +25,7 @@ export const isSafePreviewUrl = (raw: string): boolean => {
     if (PRIVATE_HOSTS.has(host) || host.endsWith('.localhost') || host.endsWith('.local')) {
       return false;
     }
-    if (host.includes(':')) {
-      if (host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80')) {
-        return false;
-      }
-    }
+    if (host.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
     if (isPrivateIpv4(host)) return false;
     return true;
   } catch {
@@ -92,7 +88,9 @@ const productImageFromLd = (node: unknown): string | null => {
 };
 
 const jsonLdImage = (html: string): string | null => {
-  for (const match of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const match of html.matchAll(
+    /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )) {
     try {
       const found = productImageFromLd(JSON.parse(match[1] ?? ''));
       if (found) return found;

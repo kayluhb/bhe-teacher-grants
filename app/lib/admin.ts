@@ -1,5 +1,10 @@
 import {newId} from '~/lib/db';
-import {type CycleInput, parseCycleSemester, validateCycleInput} from '~/lib/grant-cycle';
+import {
+  type CycleInput,
+  fromDatetimeLocalValue,
+  parseCycleSemester,
+  validateCycleInput,
+} from '~/lib/grant-cycle';
 import {
   deleteUserError,
   displayRole,
@@ -40,15 +45,15 @@ const parseCycle = (
     budgetLimit: money(input.budgetLimit),
     chairmanUserId: input.chairmanUserId,
     committeeUserIds: input.committeeUserIds,
-    endsAt: input.endsAt,
+    endsAt: fromDatetimeLocalValue(input.endsAt),
     isActive: input.isActive,
     name: input.name.trim(),
     principalUserId: input.principalUserId,
-    reviewEndsAt: input.reviewEndsAt,
-    reviewStartsAt: input.reviewStartsAt,
+    reviewEndsAt: fromDatetimeLocalValue(input.reviewEndsAt),
+    reviewStartsAt: fromDatetimeLocalValue(input.reviewStartsAt),
     schoolYearId: input.schoolYearId,
     semester,
-    startsAt: input.startsAt,
+    startsAt: fromDatetimeLocalValue(input.startsAt),
     treasurerUserId: input.treasurerUserId,
   };
 };
@@ -223,6 +228,19 @@ export const deleteUser = async (
     userId: input.userId,
   });
   if (error) return {error};
+
+  const seat = await db
+    .prepare('SELECT seat FROM cycle_reviewers WHERE user_id = ?')
+    .bind(input.userId)
+    .first();
+  if (seat) {
+    return {error: 'Remove this person from grant windows before deleting them.'};
+  }
+  const vote = await db
+    .prepare('SELECT 1 FROM grant_votes WHERE voter_id = ?')
+    .bind(input.userId)
+    .first();
+  if (vote) return {error: 'This person has votes on file and cannot be removed.'};
 
   await db.batch([
     db.prepare('DELETE FROM grant_audit_logs WHERE actor_id = ?').bind(input.userId),

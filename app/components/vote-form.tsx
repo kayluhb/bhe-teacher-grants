@@ -28,7 +28,8 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
           Current ballot: {existing}. You can change it while voting is open.
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <fieldset className="flex flex-wrap gap-2">
+        <legend className="sr-only">Vote</legend>
         {(['APPROVE', 'REJECT', 'ABSTAIN'] as const).map((vote) => (
           <label
             className="font-body flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -44,7 +45,7 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
             {vote === 'APPROVE' ? 'Approve' : vote === 'REJECT' ? 'Reject' : 'Abstain'}
           </label>
         ))}
-      </div>
+      </fieldset>
       <label className="font-body block text-sm text-charcoal">
         Comment (optional)
         <textarea
@@ -52,7 +53,11 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
           name="comment"
         />
       </label>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-brand" disabled={pending} type="submit">
         {pending ? 'Saving…' : 'Submit vote'}
       </button>

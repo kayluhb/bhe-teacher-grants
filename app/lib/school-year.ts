@@ -2,6 +2,7 @@ export type SchoolYearDates = {endsOn: string; startsOn: string};
 
 export const validateSchoolYearDates = (input: SchoolYearDates): string | null => {
   if (!input.startsOn || !input.endsOn) return 'Start and end dates are required.';
+  if (input.endsOn <= input.startsOn) return 'The end date must be after the start date.';
   return null;
 };
 

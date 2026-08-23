@@ -25,6 +25,9 @@ export const cooldownSeconds = (remainingMs: number): number => Math.ceil(remain
 
 export const generateOtp = (): string => {
   const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
+  const limit = 4_294_000_000;
+  do {
+    crypto.getRandomValues(bytes);
+  } while (bytes[0] >= limit);
   return String(bytes[0] % 1_000_000).padStart(6, '0');
 };

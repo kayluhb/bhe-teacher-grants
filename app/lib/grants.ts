@@ -9,7 +9,7 @@ import {
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
-import {money} from '~/lib/money';
+import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
@@ -79,6 +79,19 @@ export const getActiveCycle = async (db: D1Database) => {
     .first<CycleRow>();
 };
 
+export const getCycle = async (db: D1Database, cycleId: string) => {
+  return db
+    .prepare(
+      `SELECT c.*, y.label AS school_year
+       FROM grant_cycles c
+       JOIN school_years y ON y.id = c.school_year_id
+       WHERE c.id = ?
+       LIMIT 1`,
+    )
+    .bind(cycleId)
+    .first<CycleRow>();
+};
+
 export const resolveListFilters = async (db: D1Database, search: ListSearch) => {
   const [years, cycles] = await Promise.all([listSchoolYears(db), listCycles(db)]);
   return pickListFilters(years, cycles, search);
@@ -121,6 +134,17 @@ export const listGrants = async (
 
 export const getGrant = async (db: D1Database, grantId: string) => {
   return db.prepare(`${GRANT_SELECT} WHERE g.id = ?`).bind(grantId).first<GrantRow>();
+};
+
+export const userCanAccessGrant = async (
+  db: D1Database,
+  user: User,
+  grant: GrantRow,
+): Promise<boolean> => {
+  if (user.role === 'admin') return true;
+  if (grant.teacher_id === user.id) return true;
+  const reviewers = await listReviewerRows(db, grant.cycle_id);
+  return reviewers.some((row) => row.userId === user.id);
 };
 
 const attachPreviewImages = async (db: D1Database, grants: GrantRow[]): Promise<GrantRow[]> => {
@@ -209,7 +233,19 @@ export const saveGrant = async (
   });
   if ('error' in narrative) return narrative;
   if (input.items.length === 0) return {error: 'Add at least one line item.'};
-  if (input.items.some((item) => !item.item_description.trim() || item.quantity < 1)) {
+  if (
+    input.items.some((item) => {
+      const quantity = Number(item.quantity);
+      const price = finiteMoney(item.unit_price);
+      return (
+        !item.item_description.trim() ||
+        !Number.isFinite(quantity) ||
+        quantity < 1 ||
+        price == null ||
+        price < 0
+      );
+    })
+  ) {
     return {error: 'Each item needs a description and quantity.'};
   }
 
@@ -303,7 +339,7 @@ export const saveGrant = async (
   return {grantId, status};
 };
 
-const listReviewerRows = async (db: D1Database, cycleId: string) => {
+export const listReviewerRows = async (db: D1Database, cycleId: string) => {
   const rows = await db
     .prepare(
       `SELECT r.user_id, r.seat, u.email, u.name
@@ -478,8 +514,8 @@ export const setApprovedAmount = async (
   const grant = await getGrant(db, input.grantId);
   if (!grant) return {error: 'Grant not found.'};
   if (grant.status !== 'APPROVED') return {error: 'Cap can only change on an approved grant.'};
-  const amount = money(input.amount);
-  if (amount <= 0 || amount > grant.requested_amount) {
+  const amount = finiteMoney(input.amount);
+  if (amount == null || amount <= 0 || amount > grant.requested_amount) {
     return {error: 'Approved amount must be between 0 and the requested total.'};
   }
   await db.batch([
@@ -675,7 +711,6 @@ export const listReviewQueue = async (db: D1Database, userId: string, now = new 
        WHERE g.status = 'PENDING'
          AND g.teacher_id != ?
          AND r.seat != 'chairman'
-         AND v.voter_id IS NULL
        ORDER BY g.created_at ASC`,
     )
     .bind(userId, userId, userId)

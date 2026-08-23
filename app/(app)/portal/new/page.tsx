@@ -2,12 +2,13 @@ import {redirect} from 'next/navigation';
 import {GrantForm} from '~/components/grant-form';
 import {requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle} from '~/lib/grants';
 
 export default async function NewTeacherGrantPage() {
   const user = await requireTeacher();
   const cycle = await getActiveCycle(getDb());
-  if (!cycle) redirect('/portal');
+  if (!cycle || !isSubmissionOpen(cycle)) redirect('/portal');
 
   return (
     <div className="space-y-6">

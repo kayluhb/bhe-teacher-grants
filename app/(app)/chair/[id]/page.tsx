@@ -4,16 +4,27 @@ import {GrantNarrative} from '~/components/grant-narrative';
 import {StatusPill} from '~/components/status-pill';
 import {requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
-import {getGrant, grantTally, listEligibleVoters, listGrantItems, listVotes} from '~/lib/grants';
+import {
+  getGrant,
+  grantTally,
+  listEligibleVoters,
+  listGrantItems,
+  listReviewerRows,
+  listVotes,
+} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 
 export default async function ChairDetailPage({params}: {params: Promise<{id: string}>}) {
-  await requireChairman();
+  const user = await requireChairman();
   const {id} = await params;
   const db = getDb();
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/chair');
+  const chairs = await listReviewerRows(db, grant.cycle_id);
+  if (!chairs.some((row) => row.seat === 'chairman' && row.userId === user.id)) {
+    redirect('/chair');
+  }
 
   const [items, votes, voters, tally] = await Promise.all([
     listGrantItems(db, id),

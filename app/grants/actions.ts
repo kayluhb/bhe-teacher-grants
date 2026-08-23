@@ -6,12 +6,21 @@ import {requireAuth, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
 import {confirmDelivery, saveGrant} from '~/lib/grants';
+import {escapeHtml} from '~/lib/html';
 import {grantPath} from '~/lib/roles';
 import type {GrantItemInput} from '~/lib/types';
 
+const parseJson = <T>(raw: string, fallback: T): T => {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
+
 export const saveGrantAction = async (formData: FormData) => {
   const user = await requireRole('teacher');
-  const items = JSON.parse(String(formData.get('items') || '[]')) as GrantItemInput[];
+  const items = parseJson<GrantItemInput[]>(String(formData.get('items') || '[]'), []);
   const grantId = String(formData.get('grant_id') || '') || undefined;
   const submit = String(formData.get('submit') || '') === '1';
 
@@ -47,7 +56,7 @@ export const confirmDeliveryAction = async (formData: FormData) => {
     .prepare("SELECT email FROM users WHERE role = 'admin'")
     .all<{email: string}>();
   notifyQuietly({
-    html: `<p>${user.name} confirmed delivery.</p>`,
+    html: `<p>${escapeHtml(user.name)} confirmed delivery.</p>`,
     subject: 'Grant delivery confirmed',
     to: (treasurer.results ?? []).map((row) => row.email),
   });

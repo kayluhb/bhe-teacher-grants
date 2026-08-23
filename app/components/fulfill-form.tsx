@@ -165,6 +165,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                   </td>
                   <td className="px-3 py-2">
                     <select
+                      aria-label={`Outcome for ${item.item_description}`}
                       className="rounded-lg border border-gray-300 px-2 py-1"
                       onChange={(event) =>
                         setLines((current) =>
@@ -187,6 +188,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                     </select>
                     {line.item_status === 'SUBSTITUTED' ? (
                       <input
+                        aria-label={`Substitute description for ${item.item_description}`}
                         className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1"
                         onChange={(event) =>
                           setLines((current) =>
@@ -202,6 +204,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                   </td>
                   <td className="px-3 py-2">
                     <input
+                      aria-label={`Actual quantity for ${item.item_description}`}
                       className="w-20 rounded-lg border border-gray-300 px-2 py-1 tabular-nums"
                       onChange={(event) =>
                         setLines((current) =>
@@ -216,6 +219,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                   </td>
                   <td className="px-3 py-2">
                     <input
+                      aria-label={`Actual unit price for ${item.item_description}`}
                       className="w-24 rounded-lg border border-gray-300 px-2 py-1 tabular-nums"
                       onChange={(event) =>
                         setLines((current) =>
@@ -231,6 +235,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                   </td>
                   <td className="px-3 py-2">
                     <input
+                      aria-label={`Note for ${item.item_description}`}
                       className="w-full rounded-lg border border-gray-300 px-2 py-1"
                       onChange={(event) =>
                         setLines((current) =>
@@ -271,6 +276,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
           {extras.map((extra, index) => (
             <div className="grid gap-2 md:grid-cols-3" key={extra.id}>
               <input
+                aria-label={`Fee ${index + 1} description`}
                 className="rounded-lg border border-gray-300 px-3 py-2"
                 onChange={(event) =>
                   setExtras((current) =>
@@ -283,6 +289,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                 value={extra.item_description}
               />
               <input
+                aria-label={`Fee ${index + 1} quantity`}
                 className="rounded-lg border border-gray-300 px-3 py-2"
                 onChange={(event) =>
                   setExtras((current) =>
@@ -295,6 +302,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                 value={extra.actual_quantity}
               />
               <input
+                aria-label={`Fee ${index + 1} unit price`}
                 className="rounded-lg border border-gray-300 px-3 py-2"
                 onChange={(event) =>
                   setExtras((current) =>
@@ -322,7 +330,11 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
         <p className="mt-1 text-xs text-gray-500">Overages are recorded, not blocked.</p>
       </div>
 
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-brand" disabled={pending} type="submit">
         {pending ? 'Saving…' : 'Record purchase'}
       </button>

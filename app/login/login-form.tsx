@@ -28,7 +28,11 @@ export const LoginForm = () => {
 
   return (
     <div className="space-y-4">
-      {error ? <p className="text-center text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-center text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {step === 'code' ? (
         <form action={verifyCode} className="space-y-3">

@@ -7,11 +7,20 @@ import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
 import type {AdHocItemInput, FulfillmentItemInput} from '~/lib/fulfillment';
 import {fulfillGrant, getGrant} from '~/lib/grants';
+import {escapeHtml} from '~/lib/html';
+
+const parseJson = <T>(raw: string, fallback: T): T => {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
 
 export const fulfillGrantAction = async (formData: FormData) => {
   const user = await requireRole('admin');
-  const items = JSON.parse(String(formData.get('items') || '[]')) as FulfillmentItemInput[];
-  const adHocItems = JSON.parse(String(formData.get('ad_hoc_items') || '[]')) as AdHocItemInput[];
+  const items = parseJson<FulfillmentItemInput[]>(String(formData.get('items') || '[]'), []);
+  const adHocItems = parseJson<AdHocItemInput[]>(String(formData.get('ad_hoc_items') || '[]'), []);
   const grantId = String(formData.get('grant_id') || '');
 
   const result = await fulfillGrant(getDb(), {
@@ -29,7 +38,7 @@ export const fulfillGrantAction = async (formData: FormData) => {
   const grant = await getGrant(getDb(), grantId);
   if (grant) {
     notifyQuietly({
-      html: `<p>Your grant “${grant.title}” has been purchased. Please confirm when it arrives.</p>`,
+      html: `<p>Your grant “${escapeHtml(grant.title)}” has been purchased. Please confirm when it arrives.</p>`,
       subject: 'Grant purchased — confirm delivery',
       to: grant.teacher_email,
     });

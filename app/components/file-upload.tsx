@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useId, useState} from 'react';
 
 export const FileUpload = ({
   grantId,
@@ -15,6 +15,7 @@ export const FileUpload = ({
   name: string;
   required?: boolean;
 }) => {
+  const inputId = useId();
   const [key, setKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,12 +41,15 @@ export const FileUpload = ({
 
   return (
     <div>
-      <p className="font-body text-sm font-medium text-charcoal">{label}</p>
+      <label className="font-body block text-sm font-medium text-charcoal" htmlFor={inputId}>
+        {label}
+      </label>
       <label className="btn btn-secondary mt-1 w-fit cursor-pointer gap-2">
         <input
           accept="application/pdf,image/jpeg,image/png,image/webp"
           className="sr-only"
           disabled={busy}
+          id={inputId}
           onChange={onChange}
           required={required && !key}
           type="file"
@@ -62,8 +66,16 @@ export const FileUpload = ({
         {busy ? 'Uploading…' : key ? 'Change file' : 'Choose file'}
       </label>
       <input name={name} type="hidden" value={key} />
-      {key && !busy ? <p className="mt-1 text-xs text-creek-green">Uploaded.</p> : null}
-      {error ? <p className="mt-1 text-xs text-red-700">{error}</p> : null}
+      {key && !busy ? (
+        <p className="mt-1 text-xs text-creek-green" role="status">
+          Uploaded.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-1 text-xs text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 };

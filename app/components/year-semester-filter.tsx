@@ -49,7 +49,8 @@ export const YearSemesterFilter = ({
           ))}
         </select>
       </label>
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
+      <fieldset className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
+        <legend className="sr-only">Semester</legend>
         {TERMS.map(({label, value}) => {
           const selected = semester === value;
           return (
@@ -70,7 +71,7 @@ export const YearSemesterFilter = ({
             </button>
           );
         })}
-      </div>
+      </fieldset>
       {extra}
     </div>
   );

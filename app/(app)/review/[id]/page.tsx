@@ -5,7 +5,7 @@ import {VoteForm} from '~/components/vote-form';
 import {requireReviewer} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {getGrant, listGrantItems, listReviewQueue, listVotes} from '~/lib/grants';
+import {getGrant, listGrantItems, listVotes, userCanAccessGrant} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 import type {Ballot} from '~/lib/votes';
@@ -16,12 +16,7 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
   const db = getDb();
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/review');
-
-  const queue = await listReviewQueue(db, user.id);
-  const inQueue = queue.some((row) => row.id === grant.id);
-  if (grant.status === 'PENDING' && grant.teacher_id !== user.id && !inQueue) {
-    redirect('/review');
-  }
+  if (!(await userCanAccessGrant(db, user, grant))) redirect('/review');
 
   const [items, votes, budget] = await Promise.all([
     listGrantItems(db, id),

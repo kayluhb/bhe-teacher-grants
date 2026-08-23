@@ -62,7 +62,9 @@ describe('parseProductImage', () => {
   });
 
   it('returns null when there is no product image', () => {
-    expect(parseProductImage('<html><title>Nope</title></html>', 'https://shop.example.com')).toBeNull();
+    expect(
+      parseProductImage('<html><title>Nope</title></html>', 'https://shop.example.com'),
+    ).toBeNull();
   });
 });
 
@@ -87,6 +89,8 @@ describe('isSafePreviewUrl', () => {
     expect(isSafePreviewUrl('https://192.168.1.9/p/1')).toBe(false);
     expect(isSafePreviewUrl('https://10.0.0.4/p/1')).toBe(false);
     expect(isSafePreviewUrl('https://169.254.169.254/latest')).toBe(false);
+    expect(isSafePreviewUrl('https://8.8.8.8/p/1')).toBe(false);
+    expect(isSafePreviewUrl('https://[::ffff:169.254.169.254]/latest')).toBe(false);
   });
 });
 
@@ -143,7 +147,10 @@ describe('fetchProductImage', () => {
   it('extracts an ASIN from an Amazon product URL instead of fetching', async () => {
     const fetchFn = vi.fn();
     await expect(
-      fetchProductImage({asin: null, vendorUrl: 'https://www.amazon.com/dp/B07GSZM4YM/?ref=wl'}, fetchFn),
+      fetchProductImage(
+        {asin: null, vendorUrl: 'https://www.amazon.com/dp/B07GSZM4YM/?ref=wl'},
+        fetchFn,
+      ),
     ).resolves.toBe(
       'https://images-na.ssl-images-amazon.com/images/P/B07GSZM4YM.01._SCLZZZZZZZ_.jpg',
     );

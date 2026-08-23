@@ -44,11 +44,11 @@ export const getYearBudget = async (db: D1Database, schoolYearId: string) => {
       `SELECT
          y.id AS school_year_id,
          y.label AS school_year,
-         SUM(c.budget_limit) AS budget_limit,
+         (SELECT SUM(c2.budget_limit) FROM grant_cycles c2 WHERE c2.school_year_id = y.id) AS budget_limit,
          COALESCE(SUM(CASE WHEN g.status = 'PENDING' THEN g.requested_amount ELSE 0 END), 0) AS pipeline_requested,
          COALESCE(SUM(CASE WHEN g.status = 'APPROVED' THEN g.approved_amount ELSE 0 END), 0) AS committed,
          COALESCE(SUM(CASE WHEN g.status IN ('PURCHASED', 'DELIVERED') THEN g.actual_amount ELSE 0 END), 0) AS spent,
-         SUM(c.budget_limit)
+         (SELECT SUM(c2.budget_limit) FROM grant_cycles c2 WHERE c2.school_year_id = y.id)
            - COALESCE(SUM(CASE WHEN g.status = 'APPROVED' THEN g.approved_amount ELSE 0 END), 0)
            - COALESCE(SUM(CASE WHEN g.status IN ('PURCHASED', 'DELIVERED') THEN g.actual_amount ELSE 0 END), 0)
            AS remaining,

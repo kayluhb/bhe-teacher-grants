@@ -1,8 +1,7 @@
 import {unzipSync} from 'fflate';
 import {itemImageUrl} from '~/lib/product-preview';
 
-const AMAZON_LIST_ID =
-  /\/(?:hz\/wishlist\/ls|gp\/registry\/wishlist|registries)\/+([A-Za-z0-9]+)/i;
+const AMAZON_LIST_ID = /\/(?:hz\/wishlist\/ls|gp\/registry\/wishlist|registries)\/+([A-Za-z0-9]+)/i;
 const WALMART_LIST_PATH = /^\/(?:lists|registry)\//i;
 const TARGET_LIST_PATH = /^\/(?:gift-registry|lists)(?:\/|$)/i;
 const ASIN = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i;
@@ -110,8 +109,13 @@ const amazonUrl = (href: string | undefined): string | null => {
   return null;
 };
 
-const asinOf = (value: string | null | undefined): string | null =>
-  value?.match(ASIN)?.[1] ?? (/^[A-Z0-9]{10}$/i.test(value?.trim() ?? '') ? value.trim() : null);
+const asinOf = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const fromUrl = value.match(ASIN)?.[1];
+  if (fromUrl) return fromUrl;
+  const trimmed = value.trim();
+  return /^[A-Z0-9]{10}$/i.test(trimmed) ? trimmed : null;
+};
 
 const toItem = (input: {
   asin: string | null;

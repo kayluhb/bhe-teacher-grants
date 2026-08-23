@@ -6,7 +6,10 @@ import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
 import {getActiveCycle, listGrants} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
 import {homePathForPortals, listPortals} from '~/lib/portals';
+
+export const metadata = {title: DOCUMENT_TITLES.home};
 
 export default async function HomePage() {
   const user = await requireAuth();

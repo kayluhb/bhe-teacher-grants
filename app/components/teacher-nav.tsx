@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useState} from 'react';
+import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
 import type {Portal} from '~/lib/reviewers';
 import {ROLE_LABELS, type User} from '~/lib/roles';
@@ -50,14 +51,13 @@ export const TeacherNav = ({
   );
 
   return (
-    <header className="shrink-0 bg-gradient-to-r from-eagle-blue to-night-blue text-white">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
-        <div>
-          <p className="font-heading text-lg font-bold leading-tight">My teacher grants</p>
-          <p className="font-body text-xs text-white/85">Barton Hills Elementary PTA</p>
-        </div>
-        <div className="hidden md:block">{nav}</div>
-        <div className="hidden items-center gap-4 md:flex">
+    <header className="shrink-0 bg-eagle-blue text-white shadow-lg">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
+        <Link aria-label="Barton Hills Elementary PTA home" className="shrink-0" href="/portal">
+          <HeaderLogo />
+        </Link>
+        <div className="ml-auto hidden items-center gap-4 md:flex">
+          {nav}
           <TourHelpButton />
           <div className="text-right">
             <p className="text-sm font-medium">{user.name}</p>

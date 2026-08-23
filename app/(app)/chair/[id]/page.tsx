@@ -15,7 +15,13 @@ import {
   listVotes,
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
+import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {semesterLabel} from '~/lib/school-year';
+
+export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
+  const grant = await getGrant(getDb(), (await params).id);
+  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.chair, grant?.title)};
+};
 
 export default async function ChairDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireChairman();

@@ -1,16 +1,19 @@
 'use client';
 
+import type {ReactNode} from 'react';
 import {GrantTable} from '~/components/grant-table';
 import {useTour} from '~/components/tour-provider';
 import type {GrantRow} from '~/lib/types';
 import {fixturesFor, overlayTourGrants} from '~/tour/tour';
 
 export const TourGrantTable = ({
+  empty,
   grants,
   hrefBase,
   queue,
   showTeacher,
 }: {
+  empty?: ReactNode;
   grants: GrantRow[];
   hrefBase: string;
   queue: 'chairman' | 'fulfill' | 'reviewer' | 'teacher';
@@ -31,6 +34,7 @@ export const TourGrantTable = ({
         </p>
       ) : null}
       <GrantTable
+        empty={empty}
         grants={overlay.grants}
         hrefFor={(grant) => (overlay.usingFixtures ? '#' : `${hrefBase}/${grant.id}`)}
         showTeacher={showTeacher}

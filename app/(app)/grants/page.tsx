@@ -7,6 +7,9 @@ import {getDb} from '~/lib/db';
 import {toListGrantFilters} from '~/lib/filters';
 import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle, listGrants, resolveListFilters} from '~/lib/grants';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
+
+export const metadata = {title: DOCUMENT_TITLES.grants};
 
 export default async function GrantsPage({
   searchParams,

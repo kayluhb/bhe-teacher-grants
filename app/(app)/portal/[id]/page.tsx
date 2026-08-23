@@ -3,6 +3,12 @@ import {GrantDetail} from '~/components/grant-detail';
 import {requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
+import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+
+export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
+  const grant = await getGrant(getDb(), (await params).id);
+  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.portal, grant?.title)};
+};
 
 export default async function TeacherGrantDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireTeacher();

@@ -4,7 +4,10 @@ import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {listChairCycles, listChairQueue} from '~/lib/grants';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
 import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
+
+export const metadata = {title: DOCUMENT_TITLES.chair};
 
 export default async function ChairPage() {
   const user = await requireChairman();

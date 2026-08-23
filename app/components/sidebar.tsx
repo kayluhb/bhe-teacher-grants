@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useState} from 'react';
+import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
+import {APP_TITLE} from '~/lib/page-title';
 import type {Portal} from '~/lib/reviewers';
 import {ROLE_LABELS, type Role, type User} from '~/lib/roles';
 
@@ -54,8 +56,10 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
 
   return (
     <>
-      <div className="flex items-center justify-between bg-gradient-to-r from-eagle-blue to-night-blue px-4 py-3 text-white md:hidden">
-        <p className="font-heading text-sm font-bold">Teacher Grants</p>
+      <div className="flex h-16 items-center justify-between bg-eagle-blue px-4 text-white md:hidden">
+        <Link aria-label="Barton Hills Elementary PTA home" className="min-w-0" href="/">
+          <HeaderLogo compact />
+        </Link>
         <button
           aria-expanded={open}
           aria-label="Open menu"
@@ -90,15 +94,15 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-gradient-to-b from-eagle-blue to-night-blue text-white transition-transform md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-eagle-blue text-white transition-transform md:static md:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-5 py-5">
-          <p className="font-heading text-lg font-bold leading-tight">
-            Barton Hills Elementary PTA
-          </p>
-          <p className="font-body mt-1 text-xs text-white/85">Teacher Grants</p>
+        <div className="px-4 py-5">
+          <Link aria-label="Barton Hills Elementary PTA home" className="block min-w-0" href="/">
+            <HeaderLogo compact />
+          </Link>
+          <p className="font-body mt-2 text-xs text-white/85">{APP_TITLE}</p>
         </div>
         {nav}
         <div className="mt-auto border-t border-white/10 px-5 py-4">

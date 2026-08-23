@@ -4,6 +4,9 @@ import {requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle} from '~/lib/grants';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
+
+export const metadata = {title: DOCUMENT_TITLES.portalNew};
 
 export default async function NewTeacherGrantPage() {
   const user = await requireTeacher();

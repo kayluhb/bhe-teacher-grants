@@ -7,6 +7,9 @@ import {getDb} from '~/lib/db';
 import {toListGrantFilters} from '~/lib/filters';
 import {listGrants, resolveListFilters} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
+
+export const metadata = {title: DOCUMENT_TITLES.budget};
 
 export default async function BudgetPage({
   searchParams,

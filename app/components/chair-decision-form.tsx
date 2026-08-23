@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import {decideGrantAction} from '~/chair/actions';
+import {RadioGroup} from '~/components/radio-group';
 
 export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
   const [error, setError] = useState<string | null>(null);
@@ -25,17 +26,16 @@ export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
       <p className="text-sm text-gray-600">
         You may follow the tally or override it. A comment is stored with a rejection.
       </p>
-      <fieldset className="flex flex-wrap gap-2">
-        <legend className="sr-only">Official decision</legend>
-        <label className="font-body flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm">
-          <input name="outcome" required type="radio" value="APPROVED" />
-          Approve
-        </label>
-        <label className="font-body flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm">
-          <input name="outcome" required type="radio" value="REJECTED" />
-          Reject
-        </label>
-      </fieldset>
+      <RadioGroup
+        aria-label="Official decision"
+        className="flex flex-wrap gap-x-6 gap-y-3"
+        name="outcome"
+        options={[
+          {label: 'Approve', value: 'APPROVED'},
+          {label: 'Reject', value: 'REJECTED'},
+        ]}
+        required
+      />
       <label className="font-body block text-sm text-charcoal">
         Comment (used as the rejection note)
         <textarea

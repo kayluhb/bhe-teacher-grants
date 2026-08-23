@@ -261,14 +261,20 @@ export const parseWishlistRows = (rows: string[][]): WishlistItem[] => {
   return items;
 };
 
+const MAX_XLSX_ROWS = 2000;
+const XML_NS = '(?:[\\w]+:)?';
+
 const xmlText = (bytes: Uint8Array): string => new TextDecoder().decode(bytes);
+
+const xmlRe = (body: string, flags: string): RegExp =>
+  new RegExp(body.replaceAll('NS', XML_NS), flags);
 
 const sharedStrings = (xml: string): string[] =>
   xml
-    .split(/<si[ >]/i)
+    .split(xmlRe(`<${XML_NS}si[ >]`, 'i'))
     .slice(1)
     .map((si) =>
-      [...si.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/gi)]
+      [...si.matchAll(xmlRe(`<${XML_NS}t[^>]*>([\\s\\S]*?)</${XML_NS}t>`, 'gi'))]
         .map((match) => decodeBasicEntities(match[1]))
         .join(''),
     );
@@ -285,21 +291,27 @@ const rowNumber = (ref: string): number => Number(/(\d+)$/.exec(ref)?.[1] ?? '1'
 const cellValue = (attrs: string, inner: string, strings: string[]): string => {
   const type = /\bt="([^"]+)"/i.exec(attrs)?.[1] ?? '';
   if (type === 'inlineStr') {
-    return [...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/gi)]
+    return [...inner.matchAll(xmlRe(`<${XML_NS}t[^>]*>([\\s\\S]*?)</${XML_NS}t>`, 'gi'))]
       .map((match) => decodeBasicEntities(match[1]))
       .join('');
   }
-  const raw = /<v>([^<]*)<\/v>/i.exec(inner)?.[1] ?? '';
+  const raw = xmlRe(`<${XML_NS}v>([^<]*)</${XML_NS}v>`, 'i').exec(inner)?.[1] ?? '';
   if (type === 's') return strings[Number(raw)] ?? '';
   return raw;
 };
 
 const sheetRows = (xml: string, strings: string[]): string[][] => {
+  const data =
+    xmlRe(`<${XML_NS}sheetData\\b[^>]*>([\\s\\S]*?)</${XML_NS}sheetData>`, 'i').exec(xml)?.[1] ??
+    xml;
   const grid: string[][] = [];
-  for (const match of xml.matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/gi)) {
+  for (const match of data.matchAll(
+    xmlRe(`<${XML_NS}c\\b([^>]*)>([\\s\\S]*?)</${XML_NS}c>`, 'gi'),
+  )) {
     const ref = /\br="([^"]+)"/i.exec(match[1])?.[1];
     if (!ref) continue;
     const row = rowNumber(ref);
+    if (row >= MAX_XLSX_ROWS) continue;
     const col = colLetters(ref);
     if (!grid[row]) grid[row] = [];
     grid[row][col] = cellValue(match[1], match[2], strings);
@@ -310,13 +322,20 @@ const sheetRows = (xml: string, strings: string[]): string[][] => {
   });
 };
 
+const isWorkbookXml = (name: string): boolean =>
+  name.endsWith('sharedStrings.xml') || /worksheets\/sheet\d+\.xml$/i.test(name);
+
 export const parseWishlistXlsx = (bytes: Uint8Array): WishlistItem[] => {
-  const files = unzipSync(bytes);
-  const names = Object.keys(files);
-  const stringsPath = names.find((name) => name.endsWith('sharedStrings.xml'));
-  const sheetPath = names.find((name) => /worksheets\/sheet\d+\.xml$/i.test(name));
-  if (!sheetPath || !files[sheetPath]) return [];
-  const strings =
-    stringsPath && files[stringsPath] ? sharedStrings(xmlText(files[stringsPath])) : [];
-  return parseWishlistRows(sheetRows(xmlText(files[sheetPath]), strings));
+  try {
+    const files = unzipSync(bytes, {filter: (file) => isWorkbookXml(file.name)});
+    const names = Object.keys(files);
+    const stringsPath = names.find((name) => name.endsWith('sharedStrings.xml'));
+    const sheetPath = names.find((name) => /worksheets\/sheet\d+\.xml$/i.test(name));
+    if (!sheetPath || !files[sheetPath]) return [];
+    const strings =
+      stringsPath && files[stringsPath] ? sharedStrings(xmlText(files[stringsPath])) : [];
+    return parseWishlistRows(sheetRows(xmlText(files[sheetPath]), strings));
+  } catch {
+    return [];
+  }
 };

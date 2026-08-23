@@ -98,6 +98,17 @@ export const parseUserName = (raw: string): Result<{name: string}> => {
   return {name};
 };
 
+export const parseRosterUserInput = (input: {
+  email: string;
+  name: string;
+}): Result<{email: string; name: string}> => {
+  const named = parseUserName(input.name);
+  if ('error' in named) return named;
+  const draft = draftUserFromEmail(input.email);
+  if ('error' in draft) return draft;
+  return {email: draft.email, name: named.name};
+};
+
 export const resolvedPersonName = (email: string, name?: string): Result<{name: string}> => {
   if (name?.trim()) return parseUserName(name);
   const draft = draftUserFromEmail(email);

@@ -4,6 +4,7 @@ export const AISD_DOMAIN = 'austinisd.org';
 export const BHE_DOMAIN = 'bheeagles.com';
 export const TREASURER_EMAIL = 'treasurer@bheeagles.com';
 export const PRINCIPAL_EMAIL = 'kathryn.achtermann@austinisd.org';
+export const UNKNOWN_LOGIN_EMAIL_ERROR = 'Use your @austinisd.org email.';
 
 export const normalizeEmail = (raw: string): string => raw.trim().toLowerCase();
 
@@ -24,6 +25,11 @@ export const roleForEmail = (raw: string): Role | null => {
   if (email === PRINCIPAL_EMAIL) return 'principal';
   if (domainOf(email) === AISD_DOMAIN) return 'teacher';
   return 'committee';
+};
+
+export const canCreateUserFromEmail = (raw: string): boolean => {
+  const email = normalizeEmail(raw);
+  return isEmailAddress(email) && domainOf(email) === AISD_DOMAIN;
 };
 
 export const persistableRole = (role: Role): Role => (role === 'principal' ? 'committee' : role);

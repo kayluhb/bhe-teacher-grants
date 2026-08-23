@@ -7,6 +7,7 @@ import {
   createEmailFromQuery,
   draftUserFromEmail,
   matchPeople,
+  parseRosterUserInput,
   parseUserName,
   resolvedPersonName,
   suggestPeople,
@@ -138,6 +139,34 @@ describe('committeeRemoveError', () => {
 
   it('allows removing when another reviewer remains', () => {
     expect(committeeRemoveError(1)).toBeNull();
+  });
+});
+
+describe('parseRosterUserInput', () => {
+  it('accepts an AISD teacher with a name', () => {
+    expect(parseRosterUserInput({email: 'maya.chen@austinisd.org', name: 'Maya Chen'})).toEqual({
+      email: 'maya.chen@austinisd.org',
+      name: 'Maya Chen',
+    });
+  });
+
+  it('accepts a personal email as a committee member', () => {
+    expect(parseRosterUserInput({email: 'parent@gmail.com', name: 'Alex Parent'})).toEqual({
+      email: 'parent@gmail.com',
+      name: 'Alex Parent',
+    });
+  });
+
+  it('rejects a blank name', () => {
+    expect(parseRosterUserInput({email: 'maya.chen@austinisd.org', name: '  '})).toEqual({
+      error: 'Name is required.',
+    });
+  });
+
+  it('rejects an invalid email', () => {
+    expect(parseRosterUserInput({email: 'not-an-email', name: 'Maya Chen'})).toEqual({
+      error: 'Enter a valid email address.',
+    });
   });
 });
 

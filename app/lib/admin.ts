@@ -18,6 +18,7 @@ import {
   committeeAddError,
   committeeRemoveError,
   draftUserFromEmail,
+  parseRosterUserInput,
   parseUserName,
   resolvedPersonName,
 } from '~/lib/people';
@@ -109,6 +110,20 @@ const toUserRow = (row: UserRow): UserRow => ({
   ...row,
   role: displayRole(row.email, normalizeRole(row.role) ?? row.role),
 });
+
+export const addRosterUser = async (
+  db: D1Database,
+  input: {email: string; name: string},
+): Promise<Result<UserRow>> => {
+  const parsed = parseRosterUserInput(input);
+  if ('error' in parsed) return parsed;
+  const existing = await db
+    .prepare('SELECT id FROM users WHERE email = ?')
+    .bind(parsed.email)
+    .first<{id: string}>();
+  if (existing) return {error: 'That email is already on the roster.'};
+  return findOrCreateUser(db, parsed);
+};
 
 export const findOrCreateUser = async (
   db: D1Database,

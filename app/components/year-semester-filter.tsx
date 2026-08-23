@@ -35,7 +35,7 @@ export const YearSemesterFilter = ({
       <label className="font-body text-sm text-charcoal" htmlFor="school-year-filter">
         School year
         <Select
-          className="mt-1 min-w-[14rem]"
+          className="mt-1 min-w-56"
           disabled={!schoolYearId || years.length === 0}
           id="school-year-filter"
           onValueChange={(year) => {

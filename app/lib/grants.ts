@@ -147,7 +147,7 @@ export const listGrantItems = async (db: D1Database, grantId: string) => {
     .prepare('SELECT * FROM grant_items WHERE grant_id = ? ORDER BY is_ad_hoc ASC, created_at ASC')
     .bind(grantId)
     .all<GrantItemRow>();
-  return rows.results;
+  return rows.results ?? [];
 };
 
 export const hydrateGrantItemImages = async (db: D1Database, items: GrantItemRow[]) =>

@@ -3,6 +3,7 @@
 import {useMemo, useState} from 'react';
 import {FormDialog} from '~/components/form-dialog';
 import {ProductThumb} from '~/components/product-thumb';
+import {RadioGroup} from '~/components/radio-group';
 import {saveGrantAction} from '~/grants/actions';
 import {
   BENEFIT_SCOPE_LABELS,
@@ -16,7 +17,12 @@ import {
 import {formatUsd} from '~/lib/money';
 import {amazonImageUrl, asinFromUrl, itemImageUrl} from '~/lib/product-preview';
 import type {GrantItemInput, GrantItemRow, GrantRow} from '~/lib/types';
-import {canImportWishlist, type WishlistItem, wishlistRetailerLabel} from '~/lib/wishlist';
+import {
+  canImportWishlist,
+  parseWishlistXlsx,
+  type WishlistItem,
+  wishlistRetailerLabel,
+} from '~/lib/wishlist';
 
 type DraftItem = GrantItemInput & {clientId: string};
 
@@ -208,6 +214,9 @@ export const GrantForm = ({
   const [error, setError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importIndeterminate, setImportIndeterminate] = useState(false);
+  const [importPercent, setImportPercent] = useState(0);
+  const [importStatus, setImportStatus] = useState('');
   const [pending, setPending] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
@@ -252,21 +261,9 @@ export const GrantForm = ({
     );
   };
 
-  const importWishlist = async () => {
-    setImporting(true);
-    setImportError(null);
-    const data = new FormData();
-    data.set('url', wishlistUrl);
-    if (xlsxFile) data.set('file', xlsxFile);
-    const res = await fetch('/api/wishlist/import', {body: data, method: 'POST'});
-    const json = (await res.json()) as {error?: string; items?: WishlistItem[]; url?: string};
-    setImporting(false);
-    if (!res.ok || !json.items) {
-      setImportError(json.error ?? 'Could not import that list.');
-      return;
-    }
-    if (json.url) setWishlistUrl(json.url);
-    const imported = json.items.map((item) => ({...item, clientId: crypto.randomUUID()}));
+  const applyImported = (importedItems: WishlistItem[], nextUrl?: string | null) => {
+    if (nextUrl) setWishlistUrl(nextUrl);
+    const imported = importedItems.map((item) => ({...item, clientId: crypto.randomUUID()}));
     setItems((current) => {
       const manual = current.filter(
         (item) => item.source !== 'WISHLIST' && item.item_description.trim(),
@@ -275,6 +272,63 @@ export const GrantForm = ({
     });
     setXlsxFile(null);
     setWishlistOpen(false);
+  };
+
+  const importWishlist = async () => {
+    setImporting(true);
+    setImportError(null);
+    try {
+      if (xlsxFile) {
+        setImportIndeterminate(false);
+        setImportPercent(15);
+        setImportStatus(`Reading ${xlsxFile.name}…`);
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        const bytes = new Uint8Array(await xlsxFile.arrayBuffer());
+        setImportPercent(60);
+        setImportStatus('Finding items…');
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        const items = parseWishlistXlsx(bytes);
+        setImportPercent(100);
+        if (!items.length) {
+          setImportError(
+            'That spreadsheet had no items we could read. Use Amazon’s More → Download list, or type the lines by hand.',
+          );
+          return;
+        }
+        applyImported(items, canImportWishlist(wishlistUrl) ? wishlistUrl : null);
+        return;
+      }
+
+      setImportIndeterminate(true);
+      setImportPercent(10);
+      setImportStatus('Fetching your Amazon list. This can take a minute…');
+      const data = new FormData();
+      data.set('url', wishlistUrl);
+      const res = await fetch('/api/wishlist/import', {body: data, method: 'POST'});
+      let json: {error?: string; items?: WishlistItem[]; url?: string};
+      try {
+        json = JSON.parse(await res.text()) as typeof json;
+      } catch {
+        json = {
+          error:
+            'Amazon took too long to respond. Download the list as a spreadsheet (More → Download list) and upload that instead.',
+        };
+      }
+      if (!res.ok || !json.items) {
+        setImportError(json.error ?? 'Could not import that list.');
+        return;
+      }
+      applyImported(json.items, json.url);
+    } catch {
+      setImportError(
+        'Could not import that list. Try the spreadsheet from Amazon’s More → Download list, or add items by hand.',
+      );
+    } finally {
+      setImporting(false);
+      setImportIndeterminate(false);
+      setImportPercent(0);
+      setImportStatus('');
+    }
   };
 
   const submit = async (submitNow: boolean) => {
@@ -350,23 +404,16 @@ export const GrantForm = ({
               Will this grant benefit your class, your whole grade, multiple grades or the whole
               school?
             </legend>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {BENEFIT_SCOPES.map((scope) => (
-                <label
-                  className="font-body flex items-center gap-2 text-sm text-charcoal"
-                  key={scope}
-                >
-                  <input
-                    checked={benefitScope === scope}
-                    name="benefit_scope"
-                    onChange={() => setBenefitScope(scope)}
-                    type="radio"
-                    value={scope}
-                  />
-                  {BENEFIT_SCOPE_LABELS[scope]}
-                </label>
-              ))}
-            </div>
+            <RadioGroup
+              className="mt-3 grid grid-cols-2 gap-x-10 gap-y-3"
+              name="benefit_scope"
+              onValueChange={(scope) => setBenefitScope(scope as BenefitScope)}
+              options={BENEFIT_SCOPES.map((scope) => ({
+                label: BENEFIT_SCOPE_LABELS[scope],
+                value: scope,
+              }))}
+              value={benefitScope}
+            />
           </fieldset>
 
           {benefitScope && benefitScope !== 'CLASS' ? (
@@ -395,6 +442,9 @@ export const GrantForm = ({
                   if (!next) {
                     setImportError(null);
                     setXlsxFile(null);
+                    setImportStatus('');
+                    setImportPercent(0);
+                    setImportIndeterminate(false);
                   }
                 }}
                 open={wishlistOpen}
@@ -416,10 +466,13 @@ export const GrantForm = ({
                     Amazon Download list spreadsheet
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-3">
-                    <label className="btn btn-secondary cursor-pointer gap-2">
+                    <label
+                      className={`btn btn-secondary cursor-pointer gap-2 ${importing ? 'pointer-events-none opacity-60' : ''}`}
+                    >
                       <input
                         accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         className="sr-only"
+                        disabled={importing}
                         onChange={(event) => setXlsxFile(event.target.files?.[0] ?? null)}
                         type="file"
                       />
@@ -444,6 +497,21 @@ export const GrantForm = ({
                   URL import finds nothing.
                 </p>
                 {importError ? <p className="mt-2 text-sm text-red-700">{importError}</p> : null}
+                {importing ? (
+                  <div aria-live="polite" className="mt-3" role="status">
+                    <p className="font-body text-sm text-charcoal">{importStatus}</p>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-warm-white ring-1 ring-eagle-blue/15">
+                      {importIndeterminate ? (
+                        <div className="import-bar-indeterminate h-full w-1/3 rounded-full bg-eagle-blue" />
+                      ) : (
+                        <div
+                          className="h-full rounded-full bg-eagle-blue transition-[width] duration-300 ease-out"
+                          style={{width: `${Math.max(8, importPercent)}%`}}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-4 flex justify-end">
                   <button
                     className="btn btn-brand"

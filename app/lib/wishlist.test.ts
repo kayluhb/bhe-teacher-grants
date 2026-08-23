@@ -1,4 +1,4 @@
-import {strToU8, zipSync} from 'fflate';
+import {strToU8, unzipSync, zipSync} from 'fflate';
 import {describe, expect, it} from 'vitest';
 import {
   canImportWishlist,
@@ -418,5 +418,31 @@ describe('parseWishlistXlsx', () => {
       unit_price: 13.3,
       vendor_url: 'https://www.amazon.com/dp/0803730551',
     });
+  });
+
+  it('returns no items instead of throwing on a truncated file', () => {
+    expect(parseWishlistXlsx(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]))).toEqual([]);
+  });
+
+  it('reads SpreadsheetML with namespace prefixes', () => {
+    const plain = buildXlsx([
+      ['Item Identifier', 'Title', 'Link', 'Price', 'Quantity to Buy'],
+      ['0803730551', 'The Best Story', 'https://www.amazon.com/dp/0803730551', 13.3, 1],
+    ]);
+    const files = unzipSync(plain);
+    const prefixXml = (xml: string): string =>
+      xml
+        .replaceAll(/<\/?(?:si|t|c|v|row|sheetData|worksheet)\b/gi, (tag) =>
+          tag.replace('<', '<x:').replace('</', '</x:'),
+        )
+        .replaceAll('<x:/', '</x:');
+    const strings = files['xl/sharedStrings.xml'];
+    const sheet = files['xl/worksheets/sheet1.xml'];
+    if (!strings || !sheet) throw new Error('expected workbook parts');
+    files['xl/sharedStrings.xml'] = strToU8(prefixXml(new TextDecoder().decode(strings)));
+    files['xl/worksheets/sheet1.xml'] = strToU8(prefixXml(new TextDecoder().decode(sheet)));
+    const items = parseWishlistXlsx(zipSync(files));
+    expect(items).toHaveLength(1);
+    expect(items[0]?.item_description).toBe('The Best Story');
   });
 });

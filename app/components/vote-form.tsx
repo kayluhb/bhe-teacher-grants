@@ -1,6 +1,7 @@
 'use client';
 
 import {useState} from 'react';
+import {RadioGroup} from '~/components/radio-group';
 import type {Ballot} from '~/lib/votes';
 import {castVoteAction} from '~/review/actions';
 
@@ -28,24 +29,18 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
           Current ballot: {existing}. You can change it while voting is open.
         </p>
       ) : null}
-      <fieldset className="flex flex-wrap gap-2">
-        <legend className="sr-only">Vote</legend>
-        {(['APPROVE', 'REJECT', 'ABSTAIN'] as const).map((vote) => (
-          <label
-            className="font-body flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            key={vote}
-          >
-            <input
-              defaultChecked={existing === vote}
-              name="vote"
-              required
-              type="radio"
-              value={vote}
-            />
-            {vote === 'APPROVE' ? 'Approve' : vote === 'REJECT' ? 'Reject' : 'Abstain'}
-          </label>
-        ))}
-      </fieldset>
+      <RadioGroup
+        aria-label="Vote"
+        className="flex flex-wrap gap-x-6 gap-y-3"
+        defaultValue={existing ?? undefined}
+        name="vote"
+        options={[
+          {label: 'Approve', value: 'APPROVE'},
+          {label: 'Reject', value: 'REJECT'},
+          {label: 'Abstain', value: 'ABSTAIN'},
+        ]}
+        required
+      />
       <label className="font-body block text-sm text-charcoal">
         Comment (optional)
         <textarea

@@ -52,9 +52,16 @@ const fetchAmazonPages = async (
     page < MAX_WISHLIST_PAGES && pageUrl && items.length < MAX_WISHLIST_ITEMS;
     page++
   ) {
-    const response = await fetch(pageUrl, {
-      headers: cookie ? {...AMAZON_HEADERS, Cookie: cookie} : AMAZON_HEADERS,
-    });
+    let response: Response;
+    try {
+      response = await fetch(pageUrl, {
+        headers: cookie ? {...AMAZON_HEADERS, Cookie: cookie} : AMAZON_HEADERS,
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      if (page === 0) return {items: [], unreachable: true};
+      break;
+    }
     if (!response.ok) {
       if (page === 0) return {items: [], unreachable: true};
       break;
@@ -79,8 +86,16 @@ const readInput = async (request: Request) => {
   if (contentType.includes('multipart/form-data')) {
     const form = await request.formData();
     const file = form.get('file');
+    const uploaded =
+      typeof file === 'object' &&
+      file !== null &&
+      'arrayBuffer' in file &&
+      'size' in file &&
+      Number(file.size) > 0
+        ? (file as Blob)
+        : null;
     return {
-      file: file instanceof File && file.size > 0 ? file : null,
+      file: uploaded,
       url: String(form.get('url') ?? ''),
     };
   }
@@ -91,6 +106,20 @@ const readInput = async (request: Request) => {
 export async function POST(request: Request) {
   await requireAuth();
 
+  try {
+    return await importWishlist(request);
+  } catch {
+    return Response.json(
+      {
+        error:
+          'Something went wrong while reading that list. Try Amazon’s Download list spreadsheet, or add items by hand.',
+      },
+      {status: 500},
+    );
+  }
+}
+
+const importWishlist = async (request: Request) => {
   const input = await readInput(request);
   const url = normalizeWishlistUrl(input.url);
 
@@ -156,4 +185,4 @@ export async function POST(request: Request) {
   }
 
   return Response.json({items, url});
-}
+};

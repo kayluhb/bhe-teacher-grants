@@ -1,8 +1,12 @@
 import {describe, expect, it} from 'vitest';
 import {
+  formatSchoolDateTime,
+  fulfillQueueMessaging,
   hasReviewStarted,
   isReviewOpen,
   isSubmissionOpen,
+  reviewQueueMessaging,
+  reviewWindowState,
   toDatetimeLocalValue,
   validateCycleInput,
 } from '~/lib/grant-cycle';
@@ -89,5 +93,95 @@ describe('toDatetimeLocalValue', () => {
 
   it('keeps a datetime-local value as-is', () => {
     expect(toDatetimeLocalValue('2026-08-15T00:00')).toBe('2026-08-15T00:00');
+  });
+});
+
+const fall = {
+  ends_at: '2026-10-15T23:59:00Z',
+  is_active: 1,
+  name: 'Fall 2026-27 Teacher Grants',
+  review_ends_at: '2026-10-30T23:59:00Z',
+  review_starts_at: '2026-10-15T23:59:00Z',
+  starts_at: '2026-08-15T00:00:00Z',
+};
+
+describe('formatSchoolDateTime', () => {
+  it('formats stored UTC times in America/Chicago', () => {
+    expect(formatSchoolDateTime('2026-10-15T23:59:00Z')).toMatch(/October 15, 2026/);
+    expect(formatSchoolDateTime('2026-10-15T23:59:00Z')).toMatch(/6:59\sPM/);
+  });
+});
+
+describe('reviewWindowState', () => {
+  it('prefers a currently open window', () => {
+    expect(reviewWindowState([fall], new Date('2026-10-16T00:00:00Z'))).toEqual({
+      cycle: fall,
+      kind: 'open',
+    });
+  });
+
+  it('returns the next upcoming window before review opens', () => {
+    expect(reviewWindowState([fall], new Date('2026-09-01T12:00:00Z'))).toEqual({
+      cycle: fall,
+      kind: 'upcoming',
+    });
+  });
+
+  it('returns the most recently closed window after review ends', () => {
+    expect(reviewWindowState([fall], new Date('2026-11-01T00:00:00Z'))).toEqual({
+      cycle: fall,
+      kind: 'closed',
+    });
+  });
+
+  it('picks the soonest upcoming window when several are scheduled', () => {
+    const spring = {
+      ...fall,
+      name: 'Spring 2026-27 Teacher Grants',
+      review_starts_at: '2027-03-15T23:59:00Z',
+      review_ends_at: '2027-03-30T23:59:00Z',
+    };
+    expect(reviewWindowState([spring, fall], new Date('2026-09-01T12:00:00Z'))).toEqual({
+      cycle: fall,
+      kind: 'upcoming',
+    });
+  });
+});
+
+describe('reviewQueueMessaging', () => {
+  it('says when reviews open and what happens next', () => {
+    const copy = reviewQueueMessaging(
+      {cycle: fall, kind: 'upcoming'},
+      new Date('2026-09-01T12:00:00Z'),
+    );
+    expect(copy.subtitle).toBe("Reviews aren't open yet.");
+    expect(copy.paragraphs[0]).toContain('Fall 2026-27 Teacher Grants');
+    expect(copy.paragraphs[0]).toMatch(/open .+ October 15, 2026/);
+    expect(copy.paragraphs[1]).toContain('Teachers can still submit until then');
+    expect(copy.paragraphs[1]).toContain('After you submit a ballot, the next grant opens');
+  });
+
+  it('skips the still-submitting line once the request window has closed', () => {
+    const copy = reviewQueueMessaging(
+      {
+        cycle: {...fall, ends_at: '2026-10-01T23:59:00Z'},
+        kind: 'upcoming',
+      },
+      new Date('2026-10-10T12:00:00Z'),
+    );
+    expect(copy.paragraphs[1]).toContain('submitted grants will appear here');
+    expect(copy.paragraphs[1]).not.toContain('Teachers can still submit');
+  });
+});
+
+describe('fulfillQueueMessaging', () => {
+  it('says when fulfillment becomes available and what happens next', () => {
+    const copy = fulfillQueueMessaging({cycle: fall, kind: 'upcoming'});
+    expect(copy.subtitle).toBe("Fulfillment isn't ready yet.");
+    expect(copy.paragraphs[0]).toContain('after review');
+    expect(copy.paragraphs[0]).toContain('Fall 2026-27 Teacher Grants');
+    expect(copy.paragraphs[0]).toMatch(/opens .+ October 15, 2026/);
+    expect(copy.paragraphs[1]).toContain('record actual prices from the receipt');
+    expect(copy.paragraphs[1]).toContain('add tracking');
   });
 });

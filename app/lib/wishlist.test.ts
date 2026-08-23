@@ -302,7 +302,10 @@ describe('parseWishlistRows', () => {
 const xmlEscape = (value: string): string =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
-const buildXlsx = (rows: (string | number)[][]): Uint8Array => {
+const buildXlsx = (
+  rows: (string | number)[][],
+  options: {selfClosingEmpty?: boolean} = {},
+): Uint8Array => {
   const strings: string[] = [];
   const intern = (value: string): number => {
     strings.push(value);
@@ -312,6 +315,7 @@ const buildXlsx = (rows: (string | number)[][]): Uint8Array => {
     .map((row, r) => {
       const cells = row.map((value, c) => {
         const ref = `${String.fromCharCode(65 + c)}${r + 1}`;
+        if (value === '' && options.selfClosingEmpty) return `<c r="${ref}" s="1"/>`;
         if (typeof value === 'number') return `<c r="${ref}"><v>${value}</v></c>`;
         return `<c r="${ref}" t="s"><v>${intern(value)}</v></c>`;
       });
@@ -392,6 +396,47 @@ describe('parseWishlistXlsx', () => {
       ],
       ['1', '0803730551', '1.0', '', 'Medium', 'EMPTY', 'In Stock', '$14.24', 'The Best Story'],
     ]);
+    const items = parseWishlistXlsx(bytes);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      asin: '0803730551',
+      item_description: 'The Best Story',
+      quantity: 1,
+      unit_price: 14.24,
+      vendor_url: 'https://www.amazon.com/dp/0803730551',
+    });
+  });
+
+  it('reads an Amazon Business list when empty cells are self-closing', () => {
+    const bytes = buildXlsx(
+      [
+        ['', 'INSTRUCTIONS'],
+        [
+          '',
+          'ASIN or ISBN',
+          'Quantity',
+          'Comment',
+          'Priority',
+          '',
+          'Availability',
+          'Price',
+          'Item description',
+        ],
+        [
+          'Example line for illustrative purposes',
+          'B0774LQ8NG',
+          '999',
+          'This is a good product',
+          'Medium',
+          '',
+          '',
+          '',
+          '',
+        ],
+        ['1', '0803730551', '1.0', '', 'Medium', 'EMPTY', 'In Stock', '$14.24', 'The Best Story'],
+      ],
+      {selfClosingEmpty: true},
+    );
     const items = parseWishlistXlsx(bytes);
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({

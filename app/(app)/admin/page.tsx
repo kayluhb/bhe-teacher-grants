@@ -21,6 +21,7 @@ import {getDb} from '~/lib/db';
 import {listCycles, listSchoolYears} from '~/lib/grants';
 import {isLockedRosterEmail} from '~/lib/login-email';
 import {formatUsd} from '~/lib/money';
+import {DOCUMENT_TITLES} from '~/lib/page-title';
 import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
 
 const ADMIN_TABS = [
@@ -35,6 +36,8 @@ const parseAdminTab = (value: string | undefined): AdminTab =>
   ADMIN_TABS.some((tab) => tab.id === value) ? (value as AdminTab) : 'roster';
 
 const TabField = ({tab}: {tab: AdminTab}) => <input name="tab" type="hidden" value={tab} />;
+
+export const metadata = {title: DOCUMENT_TITLES.admin};
 
 export default async function AdminPage({
   searchParams,

@@ -227,6 +227,7 @@ const parseQty = (raw: string): number => {
 
 export const parseWishlistRows = (rows: string[][]): WishlistItem[] => {
   const headerIndex = rows.findIndex((row) => {
+    if (!row) return false;
     const keys = row.map(headerKey);
     return COLUMN_ALIASES.title.some((alias) => keys.includes(alias));
   });
@@ -242,6 +243,7 @@ export const parseWishlistRows = (rows: string[][]): WishlistItem[] => {
 
   const items: WishlistItem[] = [];
   for (const row of rows.slice(headerIndex + 1)) {
+    if (!row) continue;
     const title = (row[titleCol] ?? '').trim();
     if (!title) continue;
     const href = amazonUrl((row[linkCol] ?? '').trim());
@@ -306,17 +308,20 @@ const sheetRows = (xml: string, strings: string[]): string[][] => {
     xml;
   const grid: string[][] = [];
   for (const match of data.matchAll(
-    xmlRe(`<${XML_NS}c\\b([^>]*)>([\\s\\S]*?)</${XML_NS}c>`, 'gi'),
+    xmlRe(`<${XML_NS}c\\b([^>]*?)(?:/>|>([\\s\\S]*?)</${XML_NS}c>)`, 'gi'),
   )) {
     const ref = /\br="([^"]+)"/i.exec(match[1])?.[1];
     if (!ref) continue;
     const row = rowNumber(ref);
     if (row >= MAX_XLSX_ROWS) continue;
+    const value = cellValue(match[1], match[2] ?? '', strings);
+    if (!value) continue;
     const col = colLetters(ref);
     if (!grid[row]) grid[row] = [];
-    grid[row][col] = cellValue(match[1], match[2], strings);
+    grid[row][col] = value;
   }
   return grid.map((row) => {
+    if (!row) return [];
     const width = row.length;
     return Array.from({length: width}, (_, i) => row[i] ?? '');
   });

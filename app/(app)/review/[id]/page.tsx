@@ -14,8 +14,14 @@ import {
   userCanAccessGrant,
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
+import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {semesterLabel} from '~/lib/school-year';
 import type {Ballot} from '~/lib/votes';
+
+export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
+  const grant = await getGrant(getDb(), (await params).id);
+  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.review, grant?.title)};
+};
 
 export default async function ReviewDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireReviewer();

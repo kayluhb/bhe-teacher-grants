@@ -72,6 +72,20 @@ export const listChairCycles = async (db: D1Database, userId: string) => {
   return rows.results ?? [];
 };
 
+export const listReviewerCycles = async (db: D1Database, userId: string) => {
+  const rows = await db
+    .prepare(
+      `SELECT c.*, y.label AS school_year
+       FROM grant_cycles c
+       JOIN school_years y ON y.id = c.school_year_id
+       JOIN cycle_reviewers r ON r.cycle_id = c.id AND r.user_id = ? AND r.seat != 'chairman'
+       ORDER BY y.sort_order DESC, c.semester ASC`,
+    )
+    .bind(userId)
+    .all<CycleRow>();
+  return rows.results ?? [];
+};
+
 export const getActiveCycle = async (db: D1Database) => {
   return db
     .prepare(

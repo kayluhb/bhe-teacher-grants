@@ -19,6 +19,23 @@ export const parseCycleSemester = (value: string): 'FALL' | 'SPRING' | null =>
 
 const parsedTime = (value: string): number => Date.parse(value);
 
+const SCHOOL_TIME_ZONE = 'America/Chicago';
+
+export const formatSchoolDateTime = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    month: 'long',
+    timeZone: SCHOOL_TIME_ZONE,
+    timeZoneName: 'short',
+    weekday: 'long',
+    year: 'numeric',
+  }).format(date);
+};
+
 export const isSubmissionOpen = (
   cycle: {ends_at: string; is_active: number; starts_at: string},
   now = new Date(),
@@ -45,6 +62,126 @@ export const hasReviewStarted = (
   return now.getTime() >= parsedTime(cycle.review_starts_at);
 };
 
+export type ReviewCycle = {
+  ends_at: string;
+  is_active: number;
+  name: string;
+  review_ends_at: string | null;
+  review_starts_at: string | null;
+  starts_at: string;
+};
+
+export type ReviewWindowState =
+  | {cycle: ReviewCycle; kind: 'closed'}
+  | {cycle: ReviewCycle; kind: 'open'}
+  | {cycle: ReviewCycle; kind: 'upcoming'}
+  | {kind: 'none'};
+
+export type QueueCopy = {paragraphs: string[]; subtitle: string};
+
+const byTime = (value: string | null): number => (value ? parsedTime(value) : Number.NaN);
+
+export const reviewWindowState = (cycles: ReviewCycle[], now = new Date()): ReviewWindowState => {
+  const open = cycles.find((cycle) => isReviewOpen(cycle, now));
+  if (open) return {cycle: open, kind: 'open'};
+  const upcoming = [...cycles]
+    .filter((cycle) => cycle.review_starts_at && now.getTime() < parsedTime(cycle.review_starts_at))
+    .sort((a, b) => byTime(a.review_starts_at) - byTime(b.review_starts_at))[0];
+  if (upcoming) return {cycle: upcoming, kind: 'upcoming'};
+  const closed = [...cycles]
+    .filter((cycle) => cycle.review_ends_at && now.getTime() >= parsedTime(cycle.review_ends_at))
+    .sort((a, b) => byTime(b.review_ends_at) - byTime(a.review_ends_at))[0];
+  if (closed) return {cycle: closed, kind: 'closed'};
+  return {kind: 'none'};
+};
+
+const datedOpen = (cycle: ReviewCycle): string => {
+  const start = cycle.review_starts_at ? formatSchoolDateTime(cycle.review_starts_at) : 'soon';
+  const end = cycle.review_ends_at
+    ? ` and close ${formatSchoolDateTime(cycle.review_ends_at)}`
+    : '';
+  return `They open ${start} for ${cycle.name}${end}.`;
+};
+
+export const reviewQueueMessaging = (state: ReviewWindowState, now = new Date()): QueueCopy => {
+  if (state.kind === 'upcoming') {
+    const submitting = isSubmissionOpen(state.cycle, now);
+    return {
+      paragraphs: [
+        datedOpen(state.cycle),
+        submitting
+          ? 'Teachers can still submit until then. After review opens, those grants will appear here for you to vote on. After you submit a ballot, the next grant opens.'
+          : 'When they do, submitted grants will appear here for you to vote on. After you submit a ballot, the next grant opens.',
+      ],
+      subtitle: "Reviews aren't open yet.",
+    };
+  }
+  if (state.kind === 'closed') {
+    const ended = state.cycle.review_ends_at
+      ? formatSchoolDateTime(state.cycle.review_ends_at)
+      : null;
+    return {
+      paragraphs: [
+        ended
+          ? `Review for ${state.cycle.name} closed ${ended}.`
+          : `Review for ${state.cycle.name} has closed.`,
+      ],
+      subtitle: 'The review window has closed.',
+    };
+  }
+  if (state.kind === 'open') {
+    return {
+      paragraphs: ["You're caught up. There are no grants waiting for your vote."],
+      subtitle:
+        'Grants you still need to vote on. After you submit a ballot, the next grant opens.',
+    };
+  }
+  return {
+    paragraphs: ['Nothing here yet.'],
+    subtitle: 'Grants you still need to vote on. After you submit a ballot, the next grant opens.',
+  };
+};
+
+export const fulfillQueueMessaging = (state: ReviewWindowState): QueueCopy => {
+  if (state.kind === 'upcoming') {
+    const start = state.cycle.review_starts_at
+      ? formatSchoolDateTime(state.cycle.review_starts_at)
+      : 'after review';
+    return {
+      paragraphs: [
+        `Approved grants will appear here after review. Review for ${state.cycle.name} opens ${start}.`,
+        "When a grant is approved, you'll buy the items, record actual prices from the receipt, and add tracking. Teachers confirm delivery from their own portal.",
+      ],
+      subtitle: "Fulfillment isn't ready yet.",
+    };
+  }
+  if (state.kind === 'open') {
+    const end = state.cycle.review_ends_at
+      ? formatSchoolDateTime(state.cycle.review_ends_at)
+      : null;
+    return {
+      paragraphs: [
+        end
+          ? `Review for ${state.cycle.name} is open through ${end}. After the chairman records a decision, approved grants will appear here for you to purchase.`
+          : `Review for ${state.cycle.name} is underway. After the chairman records a decision, approved grants will appear here for you to purchase.`,
+      ],
+      subtitle: 'Waiting on approved grants.',
+    };
+  }
+  if (state.kind === 'closed') {
+    return {
+      paragraphs: [
+        `Review for ${state.cycle.name} has closed. If any grants are approved, they will appear here for you to purchase.`,
+      ],
+      subtitle: 'No approved grants yet.',
+    };
+  }
+  return {
+    paragraphs: ['Nothing here yet.'],
+    subtitle: 'Approved grants to buy, plus orders already placed.',
+  };
+};
+
 export const validateCycleInput = (input: CycleInput): string | null => {
   if (!input.name.trim()) return 'Window name is required.';
   if (input.budgetLimit < 0) return 'Check the dollar amounts.';
@@ -62,8 +199,6 @@ export const validateCycleInput = (input: CycleInput): string | null => {
   }
   return null;
 };
-
-const SCHOOL_TIME_ZONE = 'America/Chicago';
 
 export const toDatetimeLocalValue = (value: string): string => {
   if (!/Z$|[+-]\d{2}:\d{2}$/.test(value)) {

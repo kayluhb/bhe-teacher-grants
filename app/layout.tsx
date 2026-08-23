@@ -1,8 +1,12 @@
 import './app.css';
+import {APP_TITLE} from '~/lib/page-title';
 
 export const metadata = {
   description: 'Barton Hills Elementary PTA teacher grant requests, voting, and fulfillment.',
-  title: 'Teacher Grants | Barton Hills Elementary PTA',
+  title: {
+    default: APP_TITLE,
+    template: `%s | ${APP_TITLE}`,
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

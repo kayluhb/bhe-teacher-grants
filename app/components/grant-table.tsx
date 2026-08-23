@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type {ReactNode} from 'react';
 import {PreviewStack} from '~/components/product-thumb';
 import {StatusPill} from '~/components/status-pill';
 import {formatUsd} from '~/lib/money';
@@ -6,17 +7,31 @@ import {semesterLabel} from '~/lib/school-year';
 import type {GrantRow} from '~/lib/types';
 import {wishlistRetailerLabel} from '~/lib/wishlist';
 
+export const EmptyCopy = ({paragraphs}: {paragraphs: string[]}) => (
+  <>
+    {paragraphs.map((paragraph) => (
+      <p key={paragraph}>{paragraph}</p>
+    ))}
+  </>
+);
+
 export const GrantTable = ({
+  empty,
   grants,
   hrefFor,
   showTeacher,
 }: {
+  empty?: ReactNode;
   grants: GrantRow[];
   hrefFor: (grant: GrantRow) => string;
   showTeacher?: boolean;
 }) => {
   if (grants.length === 0) {
-    return <p className="font-body text-sm text-gray-600">Nothing here yet.</p>;
+    return (
+      <div className="font-body space-y-2 text-sm text-gray-600">
+        {empty ?? <p>Nothing here yet.</p>}
+      </div>
+    );
   }
 
   return (

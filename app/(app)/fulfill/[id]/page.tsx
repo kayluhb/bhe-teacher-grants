@@ -6,6 +6,12 @@ import {requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {getGrant, listGrantItems} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
+import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+
+export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
+  const grant = await getGrant(getDb(), (await params).id);
+  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.fulfill, grant?.title)};
+};
 
 export default async function FulfillDetailPage({params}: {params: Promise<{id: string}>}) {
   await requireRole('admin');

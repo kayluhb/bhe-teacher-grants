@@ -6,7 +6,7 @@ export const HeaderLogo = ({compact = false}: {compact?: boolean}) => (
   <span className={`inline-flex items-center ${compact ? 'gap-1.5' : 'gap-2.5'}`}>
     <svg
       aria-hidden="true"
-      className={compact ? 'h-7 w-auto' : 'h-9 w-auto sm:h-10'}
+      className={`text-white ${compact ? 'h-7 w-auto' : 'h-9 w-auto sm:h-10'}`}
       fill="currentColor"
       height={723}
       viewBox="0 0 1400 723"

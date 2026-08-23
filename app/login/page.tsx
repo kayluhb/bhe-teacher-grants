@@ -12,7 +12,7 @@ export default async function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="bg-eagle-blue shadow-lg">
+      <header className="bg-eagle-blue text-white shadow-lg">
         <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
           <HeaderLogo />
         </div>

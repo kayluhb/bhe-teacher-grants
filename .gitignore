@@ -18,3 +18,4 @@ npm-debug.log*
 .dev.vars
 worker-configuration.d.ts
 .vinext/
+.worktrees/

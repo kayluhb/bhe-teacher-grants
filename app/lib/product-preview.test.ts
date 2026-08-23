@@ -2,8 +2,10 @@ import {describe, expect, it, vi} from 'vitest';
 import {
   amazonImageUrl,
   fetchProductImage,
+  fillMissingItemImages,
   isSafePreviewUrl,
   itemImageUrl,
+  itemVendorUrl,
   parseProductImage,
   stackPreviewImages,
 } from '~/lib/product-preview';
@@ -62,7 +64,18 @@ describe('parseProductImage', () => {
   });
 
   it('returns null when there is no product image', () => {
-    expect(parseProductImage('<html><title>Nope</title></html>', 'https://shop.example.com')).toBeNull();
+    expect(
+      parseProductImage('<html><title>Nope</title></html>', 'https://shop.example.com'),
+    ).toBeNull();
+  });
+
+  it('upgrades an http og:image to https when the product page is https', () => {
+    expect(
+      parseProductImage(
+        '<meta property="og:image" content="http://cdn.example.com/ball.jpg">',
+        'https://shop.example.com/p/1',
+      ),
+    ).toBe('https://cdn.example.com/ball.jpg');
   });
 });
 
@@ -101,6 +114,29 @@ describe('itemImageUrl', () => {
     expect(itemImageUrl({asin: 'B000MARKERS', image_url: null})).toBe(
       'https://images-na.ssl-images-amazon.com/images/P/B000MARKERS.01._SCLZZZZZZZ_.jpg',
     );
+  });
+});
+
+describe('itemVendorUrl', () => {
+  it('prefers a stored https vendor URL', () => {
+    expect(
+      itemVendorUrl({
+        asin: 'B000MARKERS',
+        vendor_url: 'https://www.amazon.com/dp/B000MARKERS/?ref=wl',
+      }),
+    ).toBe('https://www.amazon.com/dp/B000MARKERS/?ref=wl');
+  });
+
+  it('falls back to the Amazon product page when only an ASIN is stored', () => {
+    expect(itemVendorUrl({asin: 'B000MARKERS', vendor_url: null})).toBe(
+      'https://www.amazon.com/dp/B000MARKERS',
+    );
+  });
+
+  it('returns null when there is no safe vendor URL or ASIN', () => {
+    expect(itemVendorUrl({asin: null, vendor_url: 'javascript:alert(1)'})).toBeNull();
+    expect(itemVendorUrl({asin: null, vendor_url: 'http://shop.example.com/p/1'})).toBeNull();
+    expect(itemVendorUrl({asin: null, vendor_url: null})).toBeNull();
   });
 });
 
@@ -143,7 +179,10 @@ describe('fetchProductImage', () => {
   it('extracts an ASIN from an Amazon product URL instead of fetching', async () => {
     const fetchFn = vi.fn();
     await expect(
-      fetchProductImage({asin: null, vendorUrl: 'https://www.amazon.com/dp/B07GSZM4YM/?ref=wl'}, fetchFn),
+      fetchProductImage(
+        {asin: null, vendorUrl: 'https://www.amazon.com/dp/B07GSZM4YM/?ref=wl'},
+        fetchFn,
+      ),
     ).resolves.toBe(
       'https://images-na.ssl-images-amazon.com/images/P/B07GSZM4YM.01._SCLZZZZZZZ_.jpg',
     );
@@ -179,5 +218,57 @@ describe('fetchProductImage', () => {
     await expect(
       fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/kit'}, fetchFn),
     ).resolves.toBeNull();
+  });
+
+  it('parses og:image from the start of an oversized product page', async () => {
+    const html = `<meta property="og:image" content="https://cdn.example.com/tiles.jpg">${'x'.repeat(600_000)}`;
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(html, {
+          headers: {'content-length': String(html.length), 'content-type': 'text/html'},
+          status: 200,
+        }),
+    );
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/tiles'}, fetchFn),
+    ).resolves.toBe('https://cdn.example.com/tiles.jpg');
+  });
+});
+
+describe('fillMissingItemImages', () => {
+  it('fetches and persists an image when the item has a vendor URL but no image', async () => {
+    const persist = vi.fn(async () => {});
+    const fetchFn = vi.fn(
+      async () =>
+        new Response('<meta property="og:image" content="https://cdn.example.com/sand.jpg">', {
+          status: 200,
+        }),
+    );
+    const items = await fillMissingItemImages(
+      [{asin: null, id: 'item-1', image_url: null, vendor_url: 'https://shop.example.com/p/sand'}],
+      persist,
+      fetchFn,
+    );
+    expect(items[0]?.image_url).toBe('https://cdn.example.com/sand.jpg');
+    expect(persist).toHaveBeenCalledWith('item-1', 'https://cdn.example.com/sand.jpg');
+  });
+
+  it('does not fetch when the item already has a displayable image', async () => {
+    const persist = vi.fn(async () => {});
+    const fetchFn = vi.fn();
+    await fillMissingItemImages(
+      [
+        {
+          asin: 'B000MARKERS',
+          id: 'item-1',
+          image_url: null,
+          vendor_url: 'https://shop.example.com/p/1',
+        },
+      ],
+      persist,
+      fetchFn,
+    );
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
   });
 });

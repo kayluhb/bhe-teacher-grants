@@ -26,7 +26,12 @@ export const isSafePreviewUrl = (raw: string): boolean => {
       return false;
     }
     if (host.includes(':')) {
-      if (host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80')) {
+      if (
+        host === '::1' ||
+        host.startsWith('fc') ||
+        host.startsWith('fd') ||
+        host.startsWith('fe80')
+      ) {
         return false;
       }
     }
@@ -42,6 +47,7 @@ const resolveImageUrl = (raw: string, pageUrl?: string): string | null => {
   if (!trimmed) return null;
   try {
     const resolved = new URL(trimmed, pageUrl);
+    if (resolved.protocol === 'http:') resolved.protocol = 'https:';
     return isSafePreviewUrl(resolved.toString()) ? resolved.toString() : null;
   } catch {
     return null;
@@ -92,7 +98,9 @@ const productImageFromLd = (node: unknown): string | null => {
 };
 
 const jsonLdImage = (html: string): string | null => {
-  for (const match of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const match of html.matchAll(
+    /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )) {
     try {
       const found = productImageFromLd(JSON.parse(match[1] ?? ''));
       if (found) return found;
@@ -116,6 +124,8 @@ export const amazonImageUrl = (asin: string): string =>
 
 export const asinFromUrl = (raw: string): string | null => raw.match(AMAZON_ASIN)?.[1] ?? null;
 
+const amazonProductUrl = (asin: string): string => `https://www.amazon.com/dp/${asin.trim()}`;
+
 export const itemImageUrl = (item: {
   asin?: string | null;
   image_url?: string | null;
@@ -124,6 +134,17 @@ export const itemImageUrl = (item: {
   if (stored?.startsWith('https://')) return stored;
   const asin = item.asin?.trim();
   if (asin) return amazonImageUrl(asin);
+  return null;
+};
+
+export const itemVendorUrl = (item: {
+  asin?: string | null;
+  vendor_url?: string | null;
+}): string | null => {
+  const stored = item.vendor_url?.trim();
+  if (stored && isSafePreviewUrl(stored)) return stored;
+  const asin = item.asin?.trim();
+  if (asin) return amazonProductUrl(asin);
   return null;
 };
 
@@ -145,8 +166,6 @@ export const stackPreviewImages = (
 };
 
 const readLimitedText = async (response: Response, max: number): Promise<string | null> => {
-  const length = Number(response.headers.get('content-length') || 0);
-  if (length > max) return null;
   const reader = response.body?.getReader();
   if (!reader) return null;
   const chunks: Uint8Array[] = [];
@@ -154,12 +173,15 @@ const readLimitedText = async (response: Response, max: number): Promise<string 
   for (;;) {
     const {done, value} = await reader.read();
     if (done) break;
-    total += value.byteLength;
-    if (total > max) {
+    const next = total + value.byteLength;
+    if (next > max) {
+      chunks.push(value.subarray(0, max - total));
+      total = max;
       await reader.cancel();
-      return null;
+      break;
     }
     chunks.push(value);
+    total = next;
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
@@ -197,3 +219,28 @@ export const fetchProductImage = async (
     return null;
   }
 };
+
+export const fillMissingItemImages = async <
+  T extends {
+    asin?: string | null;
+    id: string;
+    image_url?: string | null;
+    vendor_url?: string | null;
+  },
+>(
+  items: T[],
+  persist: (id: string, imageUrl: string) => Promise<void>,
+  fetchFn: typeof fetch = fetch,
+): Promise<T[]> =>
+  Promise.all(
+    items.map(async (item) => {
+      if (itemImageUrl(item)) return item;
+      const imageUrl = await fetchProductImage(
+        {asin: item.asin, vendorUrl: item.vendor_url},
+        fetchFn,
+      );
+      if (!imageUrl) return item;
+      await persist(item.id, imageUrl);
+      return {...item, image_url: imageUrl};
+    }),
+  );

@@ -1,10 +1,18 @@
 import {redirect} from 'next/navigation';
 import {ChairDecisionForm} from '~/components/chair-decision-form';
 import {GrantNarrative} from '~/components/grant-narrative';
+import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
-import {getGrant, grantTally, listEligibleVoters, listGrantItems, listVotes} from '~/lib/grants';
+import {
+  getGrant,
+  grantTally,
+  hydrateGrantItemImages,
+  listEligibleVoters,
+  listGrantItems,
+  listVotes,
+} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 
@@ -15,12 +23,16 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/chair');
 
-  const [items, votes, voters, tally] = await Promise.all([
+  const [rawItems, votes, voters, tally] = await Promise.all([
     listGrantItems(db, id),
     listVotes(db, id),
     listEligibleVoters(db, grant),
     grantTally(db, grant),
   ]);
+  const items = await hydrateGrantItemImages(
+    db,
+    rawItems.filter((item) => item.is_ad_hoc === 0),
+  );
 
   return (
     <div className="space-y-6">
@@ -58,18 +70,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
 
       <GrantNarrative grant={grant} />
 
-      <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-        {items
-          .filter((item) => item.is_ad_hoc === 0)
-          .map((item) => (
-            <li className="flex justify-between px-4 py-3" key={item.id}>
-              <span>
-                {item.item_description} <span className="text-gray-500">× {item.quantity}</span>
-              </span>
-              <span className="tabular-nums">{formatUsd(item.total_price)}</span>
-            </li>
-          ))}
-      </ul>
+      <GrantRequestedItems items={items} />
 
       <div>
         <h2 className="font-heading mb-2 font-semibold">Ballots</h2>

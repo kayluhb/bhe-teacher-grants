@@ -9,15 +9,21 @@ export const normalizeEmail = (raw: string): string => raw.trim().toLowerCase();
 
 const domainOf = (email: string): string => email.split('@')[1] ?? '';
 
+const isEmailAddress = (email: string): boolean => {
+  const at = email.indexOf('@');
+  if (at < 1) return false;
+  const domain = email.slice(at + 1);
+  const dot = domain.lastIndexOf('.');
+  return dot > 0 && dot < domain.length - 1 && !email.includes(' ');
+};
+
 export const roleForEmail = (raw: string): Role | null => {
   const email = normalizeEmail(raw);
-  if (!email.includes('@')) return null;
+  if (!isEmailAddress(email)) return null;
   if (email === TREASURER_EMAIL) return 'admin';
   if (email === PRINCIPAL_EMAIL) return 'principal';
-  const domain = domainOf(email);
-  if (domain === AISD_DOMAIN) return 'teacher';
-  if (domain === BHE_DOMAIN) return 'committee';
-  return null;
+  if (domainOf(email) === AISD_DOMAIN) return 'teacher';
+  return 'committee';
 };
 
 export const persistableRole = (role: Role): Role => (role === 'principal' ? 'committee' : role);

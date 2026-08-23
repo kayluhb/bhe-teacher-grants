@@ -1,11 +1,18 @@
 import {redirect} from 'next/navigation';
 import {GrantNarrative} from '~/components/grant-narrative';
+import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {VoteForm} from '~/components/vote-form';
 import {requireReviewer} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {getGrant, listGrantItems, listReviewQueue, listVotes} from '~/lib/grants';
+import {
+  getGrant,
+  hydrateGrantItemImages,
+  listGrantItems,
+  listReviewQueue,
+  listVotes,
+} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 import type {Ballot} from '~/lib/votes';
@@ -23,11 +30,15 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
     redirect('/review');
   }
 
-  const [items, votes, budget] = await Promise.all([
+  const [rawItems, votes, budget] = await Promise.all([
     listGrantItems(db, id),
     listVotes(db, id),
     getCycleBudget(db, grant.cycle_id),
   ]);
+  const items = await hydrateGrantItemImages(
+    db,
+    rawItems.filter((item) => item.is_ad_hoc === 0),
+  );
   const mine = votes.find((row) => row.voter_id === user.id);
 
   return (
@@ -67,18 +78,7 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
 
       <GrantNarrative grant={grant} />
 
-      <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-        {items
-          .filter((item) => item.is_ad_hoc === 0)
-          .map((item) => (
-            <li className="flex justify-between px-4 py-3" key={item.id}>
-              <span>
-                {item.item_description} <span className="text-gray-500">× {item.quantity}</span>
-              </span>
-              <span className="tabular-nums">{formatUsd(item.total_price)}</span>
-            </li>
-          ))}
-      </ul>
+      <GrantRequestedItems items={items} />
 
       {grant.status === 'PENDING' && grant.teacher_id !== user.id ? (
         <VoteForm existing={mine?.vote as Ballot | undefined} grantId={grant.id} />

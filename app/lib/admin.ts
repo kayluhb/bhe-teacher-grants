@@ -9,7 +9,13 @@ import {
   rosterLockError,
 } from '~/lib/login-email';
 import {money} from '~/lib/money';
-import {committeeAddError, committeeRemoveError, draftUserFromEmail} from '~/lib/people';
+import {
+  committeeAddError,
+  committeeRemoveError,
+  draftUserFromEmail,
+  parseUserName,
+  resolvedPersonName,
+} from '~/lib/people';
 import {rosterAssignments, validateReviewerRoster} from '~/lib/reviewers';
 import {normalizeRole, type Role} from '~/lib/roles';
 import {validateSchoolYearDates, validateSchoolYearInput} from '~/lib/school-year';
@@ -108,15 +114,26 @@ export const findOrCreateUser = async (
     .prepare('SELECT id, email, name, role, created_at FROM users WHERE email = ?')
     .bind(email)
     .first<UserRow>();
-  if (existing) return toUserRow(existing);
+  const named = resolvedPersonName(email, input.name);
+  if ('error' in named) return named;
+
+  if (existing) {
+    if (input.name?.trim() && existing.name !== named.name) {
+      await db
+        .prepare(`UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?`)
+        .bind(named.name, existing.id)
+        .run();
+      return toUserRow({...existing, name: named.name});
+    }
+    return toUserRow(existing);
+  }
 
   const draft = draftUserFromEmail(email);
   if ('error' in draft) return draft;
   const id = newId();
-  const name = input.name?.trim() || draft.name;
   await db
     .prepare('INSERT INTO users (id, email, name, role) VALUES (?, ?, ?, ?)')
-    .bind(id, draft.email, name, persistableRole(draft.role))
+    .bind(id, draft.email, named.name, persistableRole(draft.role))
     .run();
   const created = await db
     .prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?')
@@ -197,6 +214,21 @@ export const updateUserRole = async (
   const result = await db
     .prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`)
     .bind(persistableRole(role), input.userId)
+    .run();
+  if (!result.meta.changes) return {error: 'User not found.'};
+  return {ok: true};
+};
+
+export const updateUserName = async (
+  db: D1Database,
+  input: {name: string; userId: string},
+): Promise<Result<{ok: true}>> => {
+  const parsed = parseUserName(input.name);
+  if ('error' in parsed) return parsed;
+
+  const result = await db
+    .prepare(`UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?`)
+    .bind(parsed.name, input.userId)
     .run();
   if (!result.meta.changes) return {error: 'User not found.'};
   return {ok: true};

@@ -10,6 +10,7 @@ import {
   setActiveCycle,
   updateCycle,
   updateSchoolYear,
+  updateUserName,
   updateUserRole,
 } from '~/lib/admin';
 import {type Role, requireRole} from '~/lib/auth';
@@ -33,6 +34,17 @@ export const updateUserRoleAction = async (formData: FormData): Promise<void> =>
   const tab = tabFrom(formData);
   const result = await updateUserRole(getDb(), {
     role: String(formData.get('role') || '') as Role,
+    userId: String(formData.get('user_id') || ''),
+  });
+  if ('error' in result) fail(result.error, tab);
+  revalidatePath('/admin');
+};
+
+export const updateUserNameAction = async (formData: FormData): Promise<void> => {
+  await requireRole('admin');
+  const tab = tabFrom(formData);
+  const result = await updateUserName(getDb(), {
+    name: String(formData.get('name') || ''),
     userId: String(formData.get('user_id') || ''),
   });
   if ('error' in result) fail(result.error, tab);

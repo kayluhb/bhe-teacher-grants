@@ -3,9 +3,12 @@ import {AISD_DOMAIN} from '~/lib/login-email';
 import {
   committeeAddError,
   committeeRemoveError,
+  composeDraftFromSuggestion,
   createEmailFromQuery,
   draftUserFromEmail,
   matchPeople,
+  parseUserName,
+  resolvedPersonName,
   suggestPeople,
 } from '~/lib/people';
 
@@ -61,9 +64,9 @@ describe('suggestPeople', () => {
     ]);
   });
 
-  it('explains why an invalid email cannot be created', () => {
+  it('offers create for a Gmail address', () => {
     expect(suggestPeople(directory, 'kayluhb@gmail.com')).toEqual([
-      {kind: 'invalid', message: 'Enter a valid email address.'},
+      {kind: 'create', email: 'kayluhb@gmail.com'},
     ]);
   });
 
@@ -91,8 +94,12 @@ describe('draftUserFromEmail', () => {
     });
   });
 
-  it('rejects an address outside AISD or BHE', () => {
-    expect(draftUserFromEmail('parent@gmail.com')).toEqual({error: 'Enter a valid email address.'});
+  it('drafts any other email as committee', () => {
+    expect(draftUserFromEmail('parent@gmail.com')).toEqual({
+      email: 'parent@gmail.com',
+      name: 'Parent',
+      role: 'committee',
+    });
   });
 
   it('rejects an invalid address', () => {
@@ -131,5 +138,45 @@ describe('committeeRemoveError', () => {
 
   it('allows removing when another reviewer remains', () => {
     expect(committeeRemoveError(1)).toBeNull();
+  });
+});
+
+describe('parseUserName', () => {
+  it('rejects a blank name', () => {
+    expect(parseUserName('')).toEqual({error: 'Name is required.'});
+  });
+
+  it('rejects a whitespace-only name', () => {
+    expect(parseUserName('   ')).toEqual({error: 'Name is required.'});
+  });
+
+  it('trims a valid name', () => {
+    expect(parseUserName('  Caleb Brown  ')).toEqual({name: 'Caleb Brown'});
+  });
+});
+
+describe('resolvedPersonName', () => {
+  it('stores the typed name instead of the email local part', () => {
+    expect(resolvedPersonName('kayluhb@gmail.com', 'Caleb Brown')).toEqual({name: 'Caleb Brown'});
+  });
+
+  it('falls back to the email local part when no name is given', () => {
+    expect(resolvedPersonName('kayluhb@gmail.com')).toEqual({name: 'Kayluhb'});
+  });
+});
+
+describe('composeDraftFromSuggestion', () => {
+  it('prefills the email when adding from an email query', () => {
+    expect(composeDraftFromSuggestion({email: 'kayluhb@gmail.com', kind: 'create'})).toEqual({
+      email: 'kayluhb@gmail.com',
+      name: 'Kayluhb',
+    });
+  });
+
+  it('prefills the name when adding from a name query', () => {
+    expect(composeDraftFromSuggestion({kind: 'draft', name: 'Caleb Brown'})).toEqual({
+      email: '',
+      name: 'Caleb Brown',
+    });
   });
 });

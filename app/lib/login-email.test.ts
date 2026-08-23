@@ -28,8 +28,14 @@ describe('roleForEmail', () => {
     expect(displayRole('jordan.lee@austinisd.org', 'teacher')).toBe('teacher');
   });
 
-  it('rejects other domains', () => {
-    expect(roleForEmail('someone@gmail.com')).toBeNull();
+  it('maps other emails to committee', () => {
+    expect(roleForEmail('someone@gmail.com')).toBe('committee');
+    expect(roleForEmail('parent@bheeagles.com')).toBe('committee');
+  });
+
+  it('rejects a string that is not an email', () => {
+    expect(roleForEmail('not-an-email')).toBeNull();
+    expect(roleForEmail('kayluhb@')).toBeNull();
   });
 });
 

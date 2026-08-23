@@ -1,7 +1,13 @@
 'use client';
 
 import {useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {type DirectoryPerson, type PersonSuggestion, suggestPeople} from '~/lib/people';
+import {
+  composeDraftFromSuggestion,
+  type DirectoryPerson,
+  type PersonSuggestion,
+  parseUserName,
+  suggestPeople,
+} from '~/lib/people';
 import type {Result} from '~/lib/types';
 
 type MenuBox = {bottom?: number; left: number; top?: number; width: number};
@@ -35,6 +41,7 @@ export const CommitteePicker = ({
   const [draftEmail, setDraftEmail] = useState('');
   const [menu, setMenu] = useState<MenuBox | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   const taken = useMemo(
     () => new Set([...excludeIds, ...selected.map((person) => person.id)]),
@@ -47,10 +54,14 @@ export const CommitteePicker = ({
   const composing = draftName !== null;
   const showMenu = open && !composing && suggestions.length > 0;
 
+  const wasComposing = useRef(false);
   useEffect(() => {
-    if (!composing) return;
-    nameRef.current?.focus();
-  }, [composing]);
+    const entered = composing && !wasComposing.current;
+    wasComposing.current = composing;
+    if (!entered) return;
+    if (draftEmail) nameRef.current?.focus();
+    else emailRef.current?.focus();
+  }, [composing, draftEmail]);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {
@@ -106,14 +117,15 @@ export const CommitteePicker = ({
       setError(suggestion.message);
       return;
     }
-    if (suggestion.kind === 'draft') {
-      setDraftName(suggestion.name);
-      setDraftEmail('');
-      setOpen(false);
-      setError(null);
+    if (suggestion.kind === 'person') {
+      void addPerson(suggestion.person.email);
       return;
     }
-    void addPerson(suggestion.kind === 'create' ? suggestion.email : suggestion.person.email);
+    const draft = composeDraftFromSuggestion(suggestion);
+    setDraftName(draft.name);
+    setDraftEmail(draft.email);
+    setOpen(false);
+    setError(null);
   };
 
   const remove = async (userId: string) => {
@@ -147,11 +159,16 @@ export const CommitteePicker = ({
   };
 
   const submitDraft = () => {
-    if (!draftName?.trim() || !draftEmail.trim()) {
+    const named = parseUserName(draftName ?? '');
+    if ('error' in named) {
+      setError(named.error);
+      return;
+    }
+    if (!draftEmail.trim()) {
       setError('Enter a name and email.');
       return;
     }
-    void addPerson(draftEmail, draftName.trim());
+    void addPerson(draftEmail, named.name);
   };
 
   return (
@@ -211,7 +228,8 @@ export const CommitteePicker = ({
                 event.preventDefault();
                 submitDraft();
               }}
-              placeholder="name@bheeagles.com"
+              placeholder="name@gmail.com"
+              ref={emailRef}
               type="email"
               value={draftEmail}
             />
@@ -262,105 +280,101 @@ export const CommitteePicker = ({
             value={query}
           />
           {showMenu && menu ? (
-                <div
-                  className="z-[100] max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
-                  data-committee-menu=""
-                  id={listId}
-                  onMouseDown={(event) => event.preventDefault()}
-                  ref={menuRef}
-                  role="listbox"
-                  style={{
-                    bottom: menu.bottom,
-                    left: menu.left,
-                    position: 'fixed',
-                    top: menu.top,
-                    width: menu.width,
-                  }}
-                >
-                  {suggestions.map((suggestion, index) => {
-                    const activeRow = index === active;
-                    const rowClass = `flex w-full items-center gap-3 px-3 py-2 text-left text-sm ${
-                      activeRow ? 'bg-eagle-blue/10' : 'hover:bg-warm-white'
-                    }`;
-                    if (suggestion.kind === 'create') {
-                      return (
-                        <button
-                          aria-selected={activeRow}
-                          className={rowClass}
-                          key={`create-${suggestion.email}`}
-                          onClick={() => choose(suggestion)}
-                          role="option"
-                          type="button"
-                        >
-                          <span className="font-heading rounded-full bg-spirit-gold px-2 py-0.5 text-xs font-semibold text-night-blue">
-                            Add
-                          </span>
-                          <span>
-                            <span className="block font-medium text-charcoal">
-                              {suggestion.email}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Create and add to committee
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    }
-                    if (suggestion.kind === 'draft') {
-                      return (
-                        <button
-                          aria-selected={activeRow}
-                          className={rowClass}
-                          key={`draft-${suggestion.name}`}
-                          onClick={() => choose(suggestion)}
-                          role="option"
-                          type="button"
-                        >
-                          <span className="font-heading rounded-full bg-spirit-gold px-2 py-0.5 text-xs font-semibold text-night-blue">
-                            New
-                          </span>
-                          <span>
-                            <span className="block font-medium text-charcoal">
-                              Create “{suggestion.name}”
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Add a name and email, then they can sign in later
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    }
-                    if (suggestion.kind === 'invalid') {
-                      return (
-                        <p
-                          className="px-3 py-2 text-sm text-red-700"
-                          key={`invalid-${suggestion.message}`}
-                          role="alert"
-                        >
-                          {suggestion.message}
-                        </p>
-                      );
-                    }
-                    return (
-                      <button
-                        aria-selected={activeRow}
-                        className={`flex w-full flex-col px-3 py-2 text-left ${
-                          activeRow ? 'bg-eagle-blue/10' : 'hover:bg-warm-white'
-                        }`}
-                        key={suggestion.person.id}
-                        onClick={() => choose(suggestion)}
-                        role="option"
-                        type="button"
-                      >
-                        <span className="font-heading text-sm font-semibold text-charcoal">
-                          {suggestion.person.name}
+            <div
+              className="z-[100] max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
+              data-committee-menu=""
+              id={listId}
+              onMouseDown={(event) => event.preventDefault()}
+              ref={menuRef}
+              role="listbox"
+              style={{
+                bottom: menu.bottom,
+                left: menu.left,
+                position: 'fixed',
+                top: menu.top,
+                width: menu.width,
+              }}
+            >
+              {suggestions.map((suggestion, index) => {
+                const activeRow = index === active;
+                const rowClass = `flex w-full items-center gap-3 px-3 py-2 text-left text-sm ${
+                  activeRow ? 'bg-eagle-blue/10' : 'hover:bg-warm-white'
+                }`;
+                if (suggestion.kind === 'create') {
+                  return (
+                    <button
+                      aria-selected={activeRow}
+                      className={rowClass}
+                      key={`create-${suggestion.email}`}
+                      onClick={() => choose(suggestion)}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="font-heading rounded-full bg-spirit-gold px-2 py-0.5 text-xs font-semibold text-night-blue">
+                        Add
+                      </span>
+                      <span>
+                        <span className="block font-medium text-charcoal">{suggestion.email}</span>
+                        <span className="text-xs text-gray-500">Create and add to committee</span>
+                      </span>
+                    </button>
+                  );
+                }
+                if (suggestion.kind === 'draft') {
+                  return (
+                    <button
+                      aria-selected={activeRow}
+                      className={rowClass}
+                      key={`draft-${suggestion.name}`}
+                      onClick={() => choose(suggestion)}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="font-heading rounded-full bg-spirit-gold px-2 py-0.5 text-xs font-semibold text-night-blue">
+                        New
+                      </span>
+                      <span>
+                        <span className="block font-medium text-charcoal">
+                          Create “{suggestion.name}”
                         </span>
-                        <span className="text-xs text-gray-500">{suggestion.person.email}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
+                        <span className="text-xs text-gray-500">
+                          Add a name and email, then they can sign in later
+                        </span>
+                      </span>
+                    </button>
+                  );
+                }
+                if (suggestion.kind === 'invalid') {
+                  return (
+                    <p
+                      className="px-3 py-2 text-sm text-red-700"
+                      key={`invalid-${suggestion.message}`}
+                      role="alert"
+                    >
+                      {suggestion.message}
+                    </p>
+                  );
+                }
+                return (
+                  <button
+                    aria-selected={activeRow}
+                    className={`flex w-full flex-col px-3 py-2 text-left ${
+                      activeRow ? 'bg-eagle-blue/10' : 'hover:bg-warm-white'
+                    }`}
+                    key={suggestion.person.id}
+                    onClick={() => choose(suggestion)}
+                    role="option"
+                    type="button"
+                  >
+                    <span className="font-heading text-sm font-semibold text-charcoal">
+                      {suggestion.person.name}
+                    </span>
+                    <span className="text-xs text-gray-500">{suggestion.person.email}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       )}
       {error ? (
@@ -369,7 +383,8 @@ export const CommitteePicker = ({
         </p>
       ) : (
         <p className="text-xs text-gray-500">
-          Search a name to create someone new, or type an AISD or BHE email. They can sign in later.
+          Search a name to create someone new, or type an email. AISD stays teacher; everyone else
+          joins as committee.
         </p>
       )}
     </div>

@@ -10,6 +10,7 @@ import {
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {money} from '~/lib/money';
+import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
 import {tallyVotes, validateChairDecision} from '~/lib/votes';
@@ -50,6 +51,20 @@ export const listCycles = async (db: D1Database) => {
     )
     .all<CycleRow>();
   return rows.results;
+};
+
+export const listChairCycles = async (db: D1Database, userId: string) => {
+  const rows = await db
+    .prepare(
+      `SELECT c.*, y.label AS school_year
+       FROM grant_cycles c
+       JOIN school_years y ON y.id = c.school_year_id
+       JOIN cycle_reviewers r ON r.cycle_id = c.id AND r.user_id = ? AND r.seat = 'chairman'
+       ORDER BY y.sort_order DESC, c.semester ASC`,
+    )
+    .bind(userId)
+    .all<CycleRow>();
+  return rows.results ?? [];
 };
 
 export const getActiveCycle = async (db: D1Database) => {
@@ -101,11 +116,25 @@ export const listGrants = async (
     .prepare(`${GRANT_SELECT} ${where} ORDER BY g.created_at DESC`)
     .bind(...bindings)
     .all<GrantRow>();
-  return rows.results;
+  return attachPreviewImages(db, rows.results ?? []);
 };
 
 export const getGrant = async (db: D1Database, grantId: string) => {
   return db.prepare(`${GRANT_SELECT} WHERE g.id = ?`).bind(grantId).first<GrantRow>();
+};
+
+const attachPreviewImages = async (db: D1Database, grants: GrantRow[]): Promise<GrantRow[]> => {
+  if (grants.length === 0) return grants;
+  const rows = await db
+    .prepare(
+      `SELECT grant_id, asin, image_url FROM grant_items
+       WHERE grant_id IN (${grants.map(() => '?').join(', ')}) AND is_ad_hoc = 0
+       ORDER BY created_at ASC`,
+    )
+    .bind(...grants.map((grant) => grant.id))
+    .all<{asin: string | null; grant_id: string; image_url: string | null}>();
+  const stacks = stackPreviewImages(rows.results ?? []);
+  return grants.map((grant) => ({...grant, preview_images: stacks[grant.id] ?? []}));
 };
 
 export const listGrantItems = async (db: D1Database, grantId: string) => {
@@ -135,12 +164,15 @@ const writeAudit = (
     .bind(newId(), grantId, actor.id, actor.role, previous, next, notes);
 
 const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =>
-  items.map((item) =>
-    db
+  items.map((item) => {
+    const asin = item.asin?.trim() || asinFromUrl(item.vendor_url ?? '') || null;
+    const imageUrl = item.image_url?.trim() || itemImageUrl({asin, image_url: null});
+    return db
       .prepare(
         `INSERT INTO grant_items (
-           id, grant_id, item_description, quantity, unit_price, vendor_url, asin, source, quote_r2_key
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           id, grant_id, item_description, quantity, unit_price, vendor_url, asin, source,
+           quote_r2_key, image_url
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         newId(),
@@ -149,11 +181,12 @@ const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =
         item.quantity,
         money(item.unit_price),
         item.vendor_url || null,
-        item.asin || null,
+        asin,
         item.source === 'WISHLIST' ? 'WISHLIST' : 'MANUAL',
         item.quote_r2_key || null,
-      ),
-  );
+        imageUrl,
+      );
+  });
 
 export const saveGrant = async (
   db: D1Database,
@@ -653,7 +686,10 @@ export const listReviewQueue = async (db: D1Database, userId: string, now = new 
   const openIds = new Set(
     (cycles.results ?? []).filter((cycle) => isReviewOpen(cycle, now)).map((cycle) => cycle.id),
   );
-  return (rows.results ?? []).filter((grant) => openIds.has(grant.cycle_id));
+  return attachPreviewImages(
+    db,
+    (rows.results ?? []).filter((grant) => openIds.has(grant.cycle_id)),
+  );
 };
 
 export const listChairQueue = async (db: D1Database, userId: string, now = new Date()) => {
@@ -676,7 +712,7 @@ export const listChairQueue = async (db: D1Database, userId: string, now = new D
     const tally = await grantTally(db, grant);
     if (tally.complete) ready.push(grant);
   }
-  return ready;
+  return attachPreviewImages(db, ready);
 };
 
 export const chairmanForGrant = async (db: D1Database, cycleId: string) => {

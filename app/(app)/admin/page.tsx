@@ -2,16 +2,21 @@ import Link from 'next/link';
 import {
   createCycleAction,
   createSchoolYearAction,
+  deleteUserAction,
   setActiveCycleAction,
   updateCycleAction,
+  updateSchoolYearAction,
   updateUserRoleAction,
 } from '~/admin/actions';
+import {DeletePersonForm} from '~/components/delete-person-form';
 import {FormDialog} from '~/components/form-dialog';
 import {GrantWindowForm} from '~/components/grant-window-form';
+import {SchoolYearForm} from '~/components/school-year-form';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {ASSIGNABLE_ROLES, ROLE_LABELS, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {listCycles, listSchoolYears} from '~/lib/grants';
+import {isLockedRosterEmail} from '~/lib/login-email';
 import {formatUsd} from '~/lib/money';
 import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
 
@@ -27,8 +32,6 @@ const parseAdminTab = (value: string | undefined): AdminTab =>
   ADMIN_TABS.some((tab) => tab.id === value) ? (value as AdminTab) : 'roster';
 
 const TabField = ({tab}: {tab: AdminTab}) => <input name="tab" type="hidden" value={tab} />;
-
-const fieldClass = 'w-full rounded-lg border border-gray-300 px-3 py-2';
 
 export default async function AdminPage({
   searchParams,
@@ -84,9 +87,9 @@ export default async function AdminPage({
       {tab === 'roster' ? (
         <section className="space-y-4">
           <p className="text-sm text-gray-600">
-            People appear here after they sign in. AISD emails are teachers except
-            kathryn.achtermann@austinisd.org (principal). BHE emails are committee except
-            treasurer@bheeagles.com.
+            People appear here after they sign in, or after the chair adds them to a committee. AISD
+            emails are teachers except kathryn.achtermann@austinisd.org (principal). Other emails
+            are committee except treasurer@bheeagles.com.
           </p>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="min-w-full text-sm">
@@ -103,31 +106,41 @@ export default async function AdminPage({
                     <td className="px-4 py-2">{user.name}</td>
                     <td className="px-4 py-2">{user.email}</td>
                     <td className="px-4 py-2">
-                      {user.role === 'principal' ? (
-                        <span>{ROLE_LABELS.principal}</span>
-                      ) : (
-                        <form action={updateUserRoleAction} className="flex gap-2">
-                          <TabField tab={tab} />
-                          <input name="user_id" type="hidden" value={user.id} />
-                          <select
-                            className="rounded-lg border border-gray-300 px-2 py-1"
-                            defaultValue={user.role}
-                            name="role"
-                          >
-                            {ASSIGNABLE_ROLES.map((role) => (
-                              <option key={role} value={role}>
-                                {ROLE_LABELS[role]}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            className="whitespace-nowrap text-sm text-eagle-blue underline"
-                            type="submit"
-                          >
-                            Save
-                          </button>
-                        </form>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isLockedRosterEmail(user.email) ? (
+                          <span>{ROLE_LABELS[user.role]}</span>
+                        ) : (
+                          <form action={updateUserRoleAction} className="flex gap-2">
+                            <TabField tab={tab} />
+                            <input name="user_id" type="hidden" value={user.id} />
+                            <select
+                              className="rounded-lg border border-gray-300 px-2 py-1"
+                              defaultValue={user.role}
+                              name="role"
+                            >
+                              {ASSIGNABLE_ROLES.map((role) => (
+                                <option key={role} value={role}>
+                                  {ROLE_LABELS[role]}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="whitespace-nowrap text-sm text-eagle-blue underline"
+                              type="submit"
+                            >
+                              Save
+                            </button>
+                          </form>
+                        )}
+                        {isLockedRosterEmail(user.email) ? null : (
+                          <DeletePersonForm
+                            action={deleteUserAction}
+                            name={user.name}
+                            tab={tab}
+                            userId={user.id}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -142,36 +155,11 @@ export default async function AdminPage({
           <div className="flex items-center justify-end">
             <FormDialog
               description="Set the school year label and calendar dates used on grants and reports."
+              padded={false}
               title="Add school year"
               triggerLabel="Add year"
             >
-              <form action={createSchoolYearAction} className="grid gap-3">
-                <TabField tab={tab} />
-                <label className="block text-sm font-medium text-charcoal">
-                  Label
-                  <input
-                    className={`mt-1 ${fieldClass}`}
-                    name="label"
-                    placeholder="2026-27"
-                    required
-                  />
-                </label>
-                <label className="block text-sm font-medium text-charcoal">
-                  Starts
-                  <input className={`mt-1 ${fieldClass}`} name="starts_on" required type="date" />
-                </label>
-                <label className="block text-sm font-medium text-charcoal">
-                  Ends
-                  <input className={`mt-1 ${fieldClass}`} name="ends_on" required type="date" />
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input name="is_default" type="checkbox" value="1" />
-                  Current year
-                </label>
-                <button className="btn btn-brand" type="submit">
-                  Add year
-                </button>
-              </form>
+              <SchoolYearForm action={createSchoolYearAction} submitLabel="Add year" tab={tab} />
             </FormDialog>
           </div>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -182,6 +170,9 @@ export default async function AdminPage({
                   <th className="px-4 py-2">Starts</th>
                   <th className="px-4 py-2">Ends</th>
                   <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -191,6 +182,22 @@ export default async function AdminPage({
                     <td className="px-4 py-2">{year.starts_on}</td>
                     <td className="px-4 py-2">{year.ends_on}</td>
                     <td className="px-4 py-2">{year.is_default ? 'Current' : ''}</td>
+                    <td className="px-4 py-2">
+                      <FormDialog
+                        description="Update this year's calendar dates and current-year status."
+                        padded={false}
+                        title="Edit school year"
+                        triggerClassName="whitespace-nowrap text-eagle-blue underline"
+                        triggerLabel="Edit"
+                      >
+                        <SchoolYearForm
+                          action={updateSchoolYearAction}
+                          submitLabel="Save year"
+                          tab={tab}
+                          year={year}
+                        />
+                      </FormDialog>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -204,6 +211,7 @@ export default async function AdminPage({
           <div className="flex items-center justify-end">
             <FormDialog
               description="Create a Fall or Spring window with a budget."
+              padded={false}
               title="Add grant window"
               triggerLabel="Add window"
             >
@@ -254,6 +262,7 @@ export default async function AdminPage({
                     <td className="px-4 py-2">
                       <FormDialog
                         description="Update this window's budget and dates."
+                        padded={false}
                         title="Edit grant window"
                         triggerClassName="whitespace-nowrap text-eagle-blue underline"
                         triggerLabel="Edit"

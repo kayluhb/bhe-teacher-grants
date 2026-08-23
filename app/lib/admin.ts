@@ -1,9 +1,18 @@
-import {normalizeRole, type Role} from '~/lib/auth';
 import {newId} from '~/lib/db';
 import {type CycleInput, parseCycleSemester, validateCycleInput} from '~/lib/grant-cycle';
-import {displayRole, normalizeEmail, PRINCIPAL_EMAIL, persistableRole} from '~/lib/login-email';
+import {
+  deleteUserError,
+  displayRole,
+  isLockedRosterEmail,
+  normalizeEmail,
+  persistableRole,
+  rosterLockError,
+} from '~/lib/login-email';
 import {money} from '~/lib/money';
+import {committeeAddError, committeeRemoveError, draftUserFromEmail} from '~/lib/people';
 import {rosterAssignments, validateReviewerRoster} from '~/lib/reviewers';
+import {normalizeRole, type Role} from '~/lib/roles';
+import {validateSchoolYearDates, validateSchoolYearInput} from '~/lib/school-year';
 import type {Result} from '~/lib/types';
 
 const parseCycle = (
@@ -85,6 +94,91 @@ export const listCycleReviewers = async (db: D1Database, cycleId: string) => {
   return rows.results ?? [];
 };
 
+const toUserRow = (row: UserRow): UserRow => ({
+  ...row,
+  role: displayRole(row.email, normalizeRole(row.role) ?? row.role),
+});
+
+export const findOrCreateUser = async (
+  db: D1Database,
+  input: {email: string; name?: string},
+): Promise<Result<UserRow>> => {
+  const email = normalizeEmail(input.email);
+  const existing = await db
+    .prepare('SELECT id, email, name, role, created_at FROM users WHERE email = ?')
+    .bind(email)
+    .first<UserRow>();
+  if (existing) return toUserRow(existing);
+
+  const draft = draftUserFromEmail(email);
+  if ('error' in draft) return draft;
+  const id = newId();
+  const name = input.name?.trim() || draft.name;
+  await db
+    .prepare('INSERT INTO users (id, email, name, role) VALUES (?, ?, ?, ?)')
+    .bind(id, draft.email, name, persistableRole(draft.role))
+    .run();
+  const created = await db
+    .prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?')
+    .bind(id)
+    .first<UserRow>();
+  if (!created) return {error: 'Could not add that person.'};
+  return toUserRow(created);
+};
+
+export const addCommitteeMember = async (
+  db: D1Database,
+  input: {cycleId: string; email: string; name?: string},
+): Promise<Result<UserRow>> => {
+  const cycle = await db
+    .prepare('SELECT id FROM grant_cycles WHERE id = ?')
+    .bind(input.cycleId)
+    .first();
+  if (!cycle) return {error: 'Grant window not found.'};
+
+  const user = await findOrCreateUser(db, input);
+  if ('error' in user) return user;
+  if (isLockedRosterEmail(user.email)) {
+    return {error: 'Committee reviewers cannot also hold an officer seat.'};
+  }
+
+  const reviewers = await listCycleReviewers(db, input.cycleId);
+  const officerIds = reviewers.filter((row) => row.seat !== 'committee').map((row) => row.user_id);
+  const committeeIds = reviewers
+    .filter((row) => row.seat === 'committee')
+    .map((row) => row.user_id);
+  const error = committeeAddError(user.id, officerIds, committeeIds);
+  if (error) return {error};
+  if (committeeIds.includes(user.id)) return user;
+
+  await db
+    .prepare('INSERT INTO cycle_reviewers (id, cycle_id, user_id, seat) VALUES (?, ?, ?, ?)')
+    .bind(newId(), input.cycleId, user.id, 'committee')
+    .run();
+  return user;
+};
+
+export const removeCommitteeMember = async (
+  db: D1Database,
+  input: {cycleId: string; userId: string},
+): Promise<Result<{ok: true}>> => {
+  const reviewers = await listCycleReviewers(db, input.cycleId);
+  const committee = reviewers.filter((row) => row.seat === 'committee');
+  if (!committee.some((row) => row.user_id === input.userId)) {
+    return {error: 'That person is not on this committee.'};
+  }
+  const error = committeeRemoveError(committee.length - 1);
+  if (error) return {error};
+
+  await db
+    .prepare(
+      `DELETE FROM cycle_reviewers WHERE cycle_id = ? AND user_id = ? AND seat = 'committee'`,
+    )
+    .bind(input.cycleId, input.userId)
+    .run();
+  return {ok: true};
+};
+
 export const updateUserRole = async (
   db: D1Database,
   input: {role: Role; userId: string},
@@ -97,9 +191,8 @@ export const updateUserRole = async (
     .bind(input.userId)
     .first<{email: string}>();
   if (!existing) return {error: 'User not found.'};
-  if (normalizeEmail(existing.email) === PRINCIPAL_EMAIL) {
-    return {error: 'The principal role is tied to that AISD email.'};
-  }
+  const lock = rosterLockError(existing.email, 'role');
+  if (lock) return {error: lock};
 
   const result = await db
     .prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`)
@@ -109,13 +202,43 @@ export const updateUserRole = async (
   return {ok: true};
 };
 
+export const deleteUser = async (
+  db: D1Database,
+  input: {actorId: string; userId: string},
+): Promise<Result<{ok: true}>> => {
+  const existing = await db
+    .prepare('SELECT email FROM users WHERE id = ?')
+    .bind(input.userId)
+    .first<{email: string}>();
+  if (!existing) return {error: 'User not found.'};
+
+  const grant = await db
+    .prepare('SELECT id FROM grants WHERE teacher_id = ?')
+    .bind(input.userId)
+    .first();
+  const error = deleteUserError({
+    actorId: input.actorId,
+    email: existing.email,
+    hasGrants: Boolean(grant),
+    userId: input.userId,
+  });
+  if (error) return {error};
+
+  await db.batch([
+    db.prepare('DELETE FROM grant_audit_logs WHERE actor_id = ?').bind(input.userId),
+    db.prepare('DELETE FROM login_otps WHERE email = ?').bind(normalizeEmail(existing.email)),
+    db.prepare('DELETE FROM users WHERE id = ?').bind(input.userId),
+  ]);
+  return {ok: true};
+};
+
 export const createSchoolYear = async (
   db: D1Database,
   input: {endsOn: string; isDefault: boolean; label: string; startsOn: string},
 ): Promise<Result<{id: string}>> => {
+  const error = validateSchoolYearInput(input);
+  if (error) return {error};
   const label = input.label.trim();
-  if (!/^\d{4}-\d{2}$/.test(label)) return {error: 'Use a label like 2026-27.'};
-  if (!input.startsOn || !input.endsOn) return {error: 'Start and end dates are required.'};
 
   const existing = await db.prepare('SELECT id FROM school_years WHERE id = ?').bind(label).first();
   if (existing) return {error: 'That school year already exists.'};
@@ -141,6 +264,36 @@ export const createSchoolYear = async (
   );
   await db.batch(statements);
   return {id: label};
+};
+
+export const updateSchoolYear = async (
+  db: D1Database,
+  input: {endsOn: string; isDefault: boolean; startsOn: string; yearId: string},
+): Promise<Result<{ok: true}>> => {
+  const error = validateSchoolYearDates(input);
+  if (error) return {error};
+
+  const existing = await db
+    .prepare('SELECT id FROM school_years WHERE id = ?')
+    .bind(input.yearId)
+    .first();
+  if (!existing) return {error: 'School year not found.'};
+
+  const statements: D1PreparedStatement[] = [];
+  if (input.isDefault) {
+    statements.push(db.prepare('UPDATE school_years SET is_default = 0'));
+  }
+  statements.push(
+    db
+      .prepare(
+        `UPDATE school_years
+         SET starts_on = ?, ends_on = ?, is_default = ?, updated_at = datetime('now')
+         WHERE id = ?`,
+      )
+      .bind(input.startsOn, input.endsOn, input.isDefault ? 1 : 0, input.yearId),
+  );
+  await db.batch(statements);
+  return {ok: true};
 };
 
 export const createCycle = async (

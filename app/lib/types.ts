@@ -4,6 +4,7 @@ import type {GrantStatus} from '~/lib/status';
 
 export type GrantItemInput = {
   asin?: string | null;
+  image_url?: string | null;
   item_description: string;
   quantity: number;
   quote_r2_key?: string | null;
@@ -38,6 +39,7 @@ export type GrantRow = {
   variance_note: string | null;
   vendor_name: string | null;
   wishlist_url: string | null;
+  preview_images: string[];
 };
 
 export type GrantItemRow = {
@@ -47,6 +49,7 @@ export type GrantItemRow = {
   actual_unit_price: number | null;
   asin: string | null;
   id: string;
+  image_url: string | null;
   is_ad_hoc: number;
   item_description: string;
   item_status: string;

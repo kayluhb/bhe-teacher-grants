@@ -1,31 +1,42 @@
 {
-  "name": "bhe-teacher-grants",
-  "compatibility_date": "2026-08-22",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "worker.ts",
-  "triggers": {
-    "crons": ["0 13 * * *"]
-  },
-  "assets": {
-    "directory": "dist/client",
-    "not_found_handling": "none",
-    "binding": "ASSETS"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "bhe-teacher-grants-db",
-      "database_id": "00000000-0000-0000-0000-000000000001",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "FILES_BUCKET",
-      "bucket_name": "bhe-teacher-grant-files"
-    }
-  ],
-  "vars": {
-    "APP_PUBLIC_URL": "http://localhost:3000"
-  }
+	"name": "bhe-teacher-grants",
+	"account_id": "28cb21eb78ddb822672cc9e9e1c2606c",
+	"compatibility_date": "2026-08-22",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "worker.ts",
+	"routes": [
+		{
+			"pattern": "grants.bheeagles.com",
+			"custom_domain": true
+		}
+	],
+	"triggers": {
+		"crons": [
+			"0 13 * * *"
+		]
+	},
+	"assets": {
+		"directory": "dist/client",
+		"not_found_handling": "none",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "bhe-teacher-grants-db",
+			"database_id": "54debc70-793b-4dd1-83d0-013594bc89eb",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "FILES_BUCKET",
+			"bucket_name": "bhe-teacher-grant-files"
+		}
+	],
+	"vars": {
+		"APP_PUBLIC_URL": "https://grants.bheeagles.com"
+	}
 }

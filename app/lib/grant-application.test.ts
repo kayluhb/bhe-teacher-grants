@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  BENEFIT_SCOPE_DESCRIPTIONS,
   BENEFIT_SCOPE_LABELS,
   BENEFIT_SCOPES,
   gradesImpactedRequired,
@@ -17,6 +18,13 @@ describe('BENEFIT_SCOPES', () => {
       'Multiple grades',
       'Whole school',
     ]);
+  });
+
+  it('explains each scope on the grant detail', () => {
+    expect(BENEFIT_SCOPE_DESCRIPTIONS.CLASS).toMatch(/this class/i);
+    expect(BENEFIT_SCOPE_DESCRIPTIONS.WHOLE_GRADE).toMatch(/grade/i);
+    expect(BENEFIT_SCOPE_DESCRIPTIONS.MULTIPLE_GRADES).toMatch(/more than one grade/i);
+    expect(BENEFIT_SCOPE_DESCRIPTIONS.WHOLE_SCHOOL).toMatch(/schoolwide/i);
   });
 });
 

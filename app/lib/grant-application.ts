@@ -11,6 +11,13 @@ export const BENEFIT_SCOPE_LABELS: Record<BenefitScope, string> = {
   WHOLE_SCHOOL: 'Whole school',
 };
 
+export const BENEFIT_SCOPE_DESCRIPTIONS: Record<BenefitScope, string> = {
+  CLASS: 'These items stay with this class.',
+  MULTIPLE_GRADES: 'Shared by more than one grade.',
+  WHOLE_GRADE: 'Shared across every class in the grade.',
+  WHOLE_SCHOOL: 'Available to students and staff schoolwide.',
+};
+
 const TITLE_MAX = 80;
 
 export const isBenefitScope = (value: string): value is BenefitScope =>

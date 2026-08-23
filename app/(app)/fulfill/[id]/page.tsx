@@ -6,7 +6,6 @@ import {requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {getGrant, listGrantItems} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
-import {wishlistRetailerLabel} from '~/lib/wishlist';
 
 export default async function FulfillDetailPage({params}: {params: Promise<{id: string}>}) {
   await requireRole('admin');
@@ -32,16 +31,6 @@ export default async function FulfillDetailPage({params}: {params: Promise<{id: 
         <StatusPill status={grant.status} />
       </div>
       <GrantNarrative grant={grant} />
-      {grant.wishlist_url ? (
-        <a
-          className="font-medium text-eagle-blue underline"
-          href={grant.wishlist_url}
-          rel="noopener"
-          target="_blank"
-        >
-          Open {wishlistRetailerLabel(grant.wishlist_url) ?? ''} wishlist
-        </a>
-      ) : null}
 
       {grant.status === 'APPROVED' ? (
         <FulfillForm grant={grant} items={items} />

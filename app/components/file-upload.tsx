@@ -40,19 +40,29 @@ export const FileUpload = ({
 
   return (
     <div>
-      <label className="font-body text-sm font-medium text-charcoal">
-        {label}
+      <p className="font-body text-sm font-medium text-charcoal">{label}</p>
+      <label className="btn btn-secondary mt-1 w-fit cursor-pointer gap-2">
         <input
           accept="application/pdf,image/jpeg,image/png,image/webp"
-          className="font-body mt-1 block w-full text-sm"
+          className="sr-only"
+          disabled={busy}
           onChange={onChange}
           required={required && !key}
           type="file"
         />
+        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 16 16">
+          <path
+            d="M8 10.5V3.5M8 3.5L5.5 6M8 3.5L10.5 6M3 12.5h10"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.75"
+          />
+        </svg>
+        {busy ? 'Uploading…' : key ? 'Change file' : 'Choose file'}
       </label>
       <input name={name} type="hidden" value={key} />
-      {busy ? <p className="mt-1 text-xs text-gray-500">Uploading…</p> : null}
-      {key ? <p className="mt-1 text-xs text-creek-green">Uploaded.</p> : null}
+      {key && !busy ? <p className="mt-1 text-xs text-creek-green">Uploaded.</p> : null}
       {error ? <p className="mt-1 text-xs text-red-700">{error}</p> : null}
     </div>
   );

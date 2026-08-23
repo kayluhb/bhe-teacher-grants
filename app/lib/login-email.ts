@@ -25,6 +25,37 @@ export const persistableRole = (role: Role): Role => (role === 'principal' ? 'co
 export const displayRole = (email: string, role: Role): Role =>
   normalizeEmail(email) === PRINCIPAL_EMAIL ? 'principal' : role;
 
+export const rosterLockError = (email: string, kind: 'delete' | 'role'): string | null => {
+  const normalized = normalizeEmail(email);
+  if (normalized === PRINCIPAL_EMAIL) {
+    return kind === 'delete'
+      ? 'The principal cannot be removed from the roster.'
+      : 'The principal role is tied to that AISD email.';
+  }
+  if (normalized === TREASURER_EMAIL) {
+    return kind === 'delete'
+      ? 'The treasurer cannot be removed from the roster.'
+      : 'The treasurer role is tied to that BHE email.';
+  }
+  return null;
+};
+
+export const isLockedRosterEmail = (email: string): boolean =>
+  rosterLockError(email, 'role') !== null;
+
+export const deleteUserError = (input: {
+  actorId: string;
+  email: string;
+  hasGrants: boolean;
+  userId: string;
+}): string | null => {
+  const lock = rosterLockError(input.email, 'delete');
+  if (lock) return lock;
+  if (input.userId === input.actorId) return 'You cannot remove yourself.';
+  if (input.hasGrants) return 'This person has grant requests and cannot be removed.';
+  return null;
+};
+
 export const nameFromEmail = (raw: string): string => {
   const local = normalizeEmail(raw).split('@')[0] ?? '';
   return local

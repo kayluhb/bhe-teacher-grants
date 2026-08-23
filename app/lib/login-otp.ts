@@ -60,7 +60,7 @@ const loadOtp = async (email: string) =>
 export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> => {
   const email = normalizeEmail(rawEmail);
   if (!roleForEmail(email)) {
-    return {error: 'Use your AISD (@austinisd.org) or BHE PTA (@bheeagles.com) email.'};
+    return {error: 'Enter a valid email address.'};
   }
 
   const now = Date.now();
@@ -137,7 +137,7 @@ const upsertUser = async (email: string): Promise<string> => {
 
   const userId = newId();
   const role = roleForEmail(email);
-  if (!role) throw new Error('Unsupported email domain');
+  if (!role) throw new Error('Enter a valid email address.');
   await db
     .prepare('INSERT INTO users (id, email, name, role) VALUES (?, ?, ?, ?)')
     .bind(userId, email, nameFromEmail(email), persistableRole(role))

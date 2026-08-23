@@ -32,8 +32,8 @@ export default async function LoginPage() {
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="font-body mb-6 text-center text-sm text-gray-600">
-            Sign in with your <span className="font-medium">@austinisd.org</span> or{' '}
-            <span className="font-medium">@bheeagles.com</span> email. We’ll email a one-time code.
+            Teachers sign in with <span className="font-medium">@austinisd.org</span>. Other emails
+            work too. We’ll email a one-time code.
           </p>
           <LoginForm />
         </div>

@@ -21,7 +21,7 @@ DEV_ROLE=teacher pnpm dev
 
 To try the OTP login form locally, set `DEV_ROLE=otp`. Codes print to the server log when Resend is not configured. You can request another code after a 60s cooldown (5 per hour).
 
-Seeded accounts: treasurer (`treasurer@bheeagles.com`; `DEV_ROLE=admin` or `treasurer`), `teacher` (also a Fall 2026 committee reviewer), `committee`, `principal`, and `chairman`. AISD (`@austinisd.org`) emails are teachers. Other `@bheeagles.com` emails are committee.
+Seeded accounts: treasurer (`treasurer@bheeagles.com`; `DEV_ROLE=admin` or `treasurer`), `teacher` (also a Fall 2026 committee reviewer), `committee`, `principal`, and `chairman`. AISD (`@austinisd.org`) emails are teachers. Other emails are committee.
 
 ## Scripts
 
@@ -35,7 +35,7 @@ Seeded accounts: treasurer (`treasurer@bheeagles.com`; `DEV_ROLE=admin` or `trea
 
 ## Production
 
-Create a real D1 database and R2 bucket, put their IDs in `wrangler.jsonc`, then:
+The production hostname is `https://grants.bheeagles.com`. Create a real D1 database and R2 bucket, put their IDs in `wrangler.jsonc`, then:
 
 ```bash
 wrangler secret put SESSION_SECRET
@@ -44,4 +44,4 @@ pnpm db:migrate:remote
 pnpm deploy
 ```
 
-Sign-in is a one-time code emailed to `@austinisd.org` or `@bheeagles.com`.
+Sign-in is a one-time code emailed to you. Teachers use `@austinisd.org`; other emails can sign in as committee.

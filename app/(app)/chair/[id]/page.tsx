@@ -7,7 +7,6 @@ import {getDb} from '~/lib/db';
 import {getGrant, grantTally, listEligibleVoters, listGrantItems, listVotes} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
-import {wishlistRetailerLabel} from '~/lib/wishlist';
 
 export default async function ChairDetailPage({params}: {params: Promise<{id: string}>}) {
   await requireChairman();
@@ -58,16 +57,6 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
       </div>
 
       <GrantNarrative grant={grant} />
-      {grant.wishlist_url ? (
-        <a
-          className="font-medium text-eagle-blue underline"
-          href={grant.wishlist_url}
-          rel="noopener"
-          target="_blank"
-        >
-          Open {wishlistRetailerLabel(grant.wishlist_url) ?? ''} wishlist
-        </a>
-      ) : null}
 
       <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
         {items

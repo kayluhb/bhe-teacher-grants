@@ -1,0 +1,88 @@
+{
+  "chairman": [
+    {
+      "approved_amount": null,
+      "cycle_id": "cycle_fall_2026",
+      "grade_level_subject": "Art, all grades",
+      "id": "tour_chair_1",
+      "requested_amount": 186.2,
+      "school_year": "2026-27",
+      "school_year_id": "2026-27",
+      "semester": "FALL",
+      "status": "PENDING",
+      "teacher_email": "morgan.adebayo@austinisd.org",
+      "teacher_id": "user_teacher_art",
+      "teacher_name": "Morgan Adebayo",
+      "title": "Drying rack and washable tempera for art",
+      "wishlist_url": null,
+      "preview_images": [
+        "https://images-na.ssl-images-amazon.com/images/P/0803730551.01._SCLZZZZZZZ_.jpg"
+      ]
+    }
+  ],
+  "fulfill": [
+    {
+      "approved_amount": 214.5,
+      "cycle_id": "cycle_fall_2026",
+      "grade_level_subject": "2nd grade reading",
+      "id": "tour_fulfill_1",
+      "requested_amount": 214.5,
+      "school_year": "2026-27",
+      "school_year_id": "2026-27",
+      "semester": "FALL",
+      "status": "APPROVED",
+      "teacher_email": "teacher@austinisd.org",
+      "teacher_id": "user_teacher",
+      "teacher_name": "Jordan Lee",
+      "title": "Classroom library bins and picture books",
+      "wishlist_url": "https://www.amazon.com/hz/wishlist/ls/TOURDEMO",
+      "preview_images": [
+        "https://images-na.ssl-images-amazon.com/images/P/0803730551.01._SCLZZZZZZZ_.jpg",
+        "https://images-na.ssl-images-amazon.com/images/P/B07GSZM4YM.01._SCLZZZZZZZ_.jpg"
+      ]
+    }
+  ],
+  "reviewer": [
+    {
+      "approved_amount": null,
+      "cycle_id": "cycle_fall_2026",
+      "grade_level_subject": "Kindergarten",
+      "id": "tour_review_1",
+      "requested_amount": 97.4,
+      "school_year": "2026-27",
+      "school_year_id": "2026-27",
+      "semester": "FALL",
+      "status": "PENDING",
+      "teacher_email": "priya.shah@austinisd.org",
+      "teacher_id": "user_teacher_k",
+      "teacher_name": "Priya Shah",
+      "title": "Sensory bin fillers and calm-down tools",
+      "wishlist_url": null,
+      "preview_images": [
+        "https://images-na.ssl-images-amazon.com/images/P/B07GSZM4YM.01._SCLZZZZZZZ_.jpg"
+      ]
+    }
+  ],
+  "teacher": [
+    {
+      "approved_amount": null,
+      "cycle_id": "cycle_fall_2026",
+      "grade_level_subject": "2nd grade reading",
+      "id": "tour_teacher_1",
+      "requested_amount": 214.5,
+      "school_year": "2026-27",
+      "school_year_id": "2026-27",
+      "semester": "FALL",
+      "status": "PENDING",
+      "teacher_email": "teacher@austinisd.org",
+      "teacher_id": "user_teacher",
+      "teacher_name": "Jordan Lee",
+      "title": "Classroom library bins and picture books",
+      "wishlist_url": "https://www.amazon.com/hz/wishlist/ls/TOURDEMO",
+      "preview_images": [
+        "https://images-na.ssl-images-amazon.com/images/P/0803730551.01._SCLZZZZZZZ_.jpg",
+        "https://images-na.ssl-images-amazon.com/images/P/B07GSZM4YM.01._SCLZZZZZZZ_.jpg"
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useState} from 'react';
+import {TourHelpButton} from '~/components/tour-help-button';
 import type {Portal} from '~/lib/reviewers';
 import {ROLE_LABELS, type Role, type User} from '~/lib/roles';
 
@@ -19,7 +20,10 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = [
-    ...LINKS.filter((link) => user.role === 'admin' || link.roles.includes(user.role)),
+    ...LINKS.filter((link) => {
+      if (link.href === '/review') return Boolean(portals?.includes('reviewer'));
+      return user.role === 'admin' || link.roles.includes(user.role);
+    }),
     ...(portals?.includes('reviewer') && user.role === 'teacher'
       ? [{href: '/review', label: 'Review'}]
       : []),
@@ -99,6 +103,9 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         <div className="mt-auto border-t border-white/10 px-5 py-4">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-white/70">{ROLE_LABELS[user.role]}</p>
+          <div className="mt-3">
+            <TourHelpButton />
+          </div>
           <form action="/api/auth/logout" method="post">
             <button className="mt-3 text-xs text-white/70 underline hover:text-white" type="submit">
               Sign out

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import {PreviewStack} from '~/components/product-thumb';
 import {StatusPill} from '~/components/status-pill';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
@@ -36,14 +37,22 @@ export const GrantTable = ({
           {grants.map((grant) => (
             <tr className="border-t border-gray-100" key={grant.id}>
               <td className="px-4 py-3">
-                <Link className="font-medium text-eagle-blue hover:underline" href={hrefFor(grant)}>
-                  {grant.title}
-                </Link>
-                {grant.wishlist_url ? (
-                  <span className="ml-2 rounded-full border border-spirit-gold/40 bg-spirit-gold/15 px-2 py-0.5 text-[10px] font-medium text-night-blue">
-                    {wishlistRetailerLabel(grant.wishlist_url) ?? 'Wishlist'}
-                  </span>
-                ) : null}
+                <div className="flex items-center gap-3">
+                  <PreviewStack urls={grant.preview_images ?? []} />
+                  <div>
+                    <Link
+                      className="font-medium text-eagle-blue hover:underline"
+                      href={hrefFor(grant)}
+                    >
+                      {grant.title}
+                    </Link>
+                    {grant.wishlist_url ? (
+                      <span className="ml-2 rounded-full border border-spirit-gold/40 bg-spirit-gold/15 px-2 py-0.5 text-[10px] font-medium text-night-blue">
+                        {wishlistRetailerLabel(grant.wishlist_url) ?? 'Wishlist'}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
               </td>
               {showTeacher ? <td className="px-4 py-3">{grant.teacher_name}</td> : null}
               <td className="px-4 py-3">

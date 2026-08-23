@@ -5,8 +5,11 @@ import {redirect} from 'next/navigation';
 import {
   createCycle,
   createSchoolYear,
+  deleteUser,
+  findOrCreateUser,
   setActiveCycle,
   updateCycle,
+  updateSchoolYear,
   updateUserRole,
 } from '~/lib/admin';
 import {type Role, requireRole} from '~/lib/auth';
@@ -23,6 +26,8 @@ const fail = (error: string, tab?: string): never => toAdmin(tab, error);
 
 const tabFrom = (formData: FormData) => String(formData.get('tab') || '');
 
+export type AdminFormState = {error?: string};
+
 export const updateUserRoleAction = async (formData: FormData): Promise<void> => {
   await requireRole('admin');
   const tab = tabFrom(formData);
@@ -34,7 +39,21 @@ export const updateUserRoleAction = async (formData: FormData): Promise<void> =>
   revalidatePath('/admin');
 };
 
-export const createSchoolYearAction = async (formData: FormData): Promise<void> => {
+export const deleteUserAction = async (formData: FormData): Promise<void> => {
+  const actor = await requireRole('admin');
+  const tab = tabFrom(formData);
+  const result = await deleteUser(getDb(), {
+    actorId: actor.id,
+    userId: String(formData.get('user_id') || ''),
+  });
+  if ('error' in result) fail(result.error, tab);
+  revalidatePath('/admin');
+};
+
+export const createSchoolYearAction = async (
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> => {
   await requireRole('admin');
   const tab = tabFrom(formData);
   const result = await createSchoolYear(getDb(), {
@@ -43,8 +62,26 @@ export const createSchoolYearAction = async (formData: FormData): Promise<void> 
     label: String(formData.get('label') || ''),
     startsOn: String(formData.get('starts_on') || ''),
   });
-  if ('error' in result) fail(result.error, tab);
+  if ('error' in result) return {error: result.error};
   revalidatePath('/admin');
+  return toAdmin(tab);
+};
+
+export const updateSchoolYearAction = async (
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> => {
+  await requireRole('admin');
+  const tab = tabFrom(formData);
+  const result = await updateSchoolYear(getDb(), {
+    endsOn: String(formData.get('ends_on') || ''),
+    isDefault: formData.get('is_default') === '1',
+    startsOn: String(formData.get('starts_on') || ''),
+    yearId: String(formData.get('year_id') || ''),
+  });
+  if ('error' in result) return {error: result.error};
+  revalidatePath('/admin');
+  return toAdmin(tab);
 };
 
 const cycleFromForm = (formData: FormData) => ({
@@ -63,26 +100,32 @@ const cycleFromForm = (formData: FormData) => ({
   treasurerUserId: String(formData.get('treasurer_user_id') || ''),
 });
 
-export const createCycleAction = async (formData: FormData): Promise<void> => {
+export const createCycleAction = async (
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> => {
   await requireRole('admin');
   const tab = tabFrom(formData);
   const result = await createCycle(getDb(), cycleFromForm(formData));
-  if ('error' in result) fail(result.error, tab);
+  if ('error' in result) return {error: result.error};
   revalidatePath('/admin');
-  toAdmin(tab);
+  return toAdmin(tab);
 };
 
-export const updateCycleAction = async (formData: FormData): Promise<void> => {
+export const updateCycleAction = async (
+  _prev: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> => {
   await requireRole('admin');
   const tab = tabFrom(formData);
   const result = await updateCycle(getDb(), {
     ...cycleFromForm(formData),
     cycleId: String(formData.get('cycle_id') || ''),
   });
-  if ('error' in result) fail(result.error, tab);
+  if ('error' in result) return {error: result.error};
   revalidatePath('/admin');
   revalidatePath('/grants');
-  toAdmin(tab);
+  return toAdmin(tab);
 };
 
 export const setActiveCycleAction = async (formData: FormData): Promise<void> => {
@@ -92,4 +135,9 @@ export const setActiveCycleAction = async (formData: FormData): Promise<void> =>
   if ('error' in result) fail(result.error, tab);
   revalidatePath('/admin');
   revalidatePath('/grants');
+};
+
+export const ensureUserAction = async (email: string, name?: string) => {
+  await requireRole('admin');
+  return findOrCreateUser(getDb(), {email, name});
 };

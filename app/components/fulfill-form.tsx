@@ -2,9 +2,11 @@
 
 import {useMemo, useState} from 'react';
 import {FileUpload} from '~/components/file-upload';
+import {ProductThumb} from '~/components/product-thumb';
 import {fulfillGrantAction} from '~/fulfill/actions';
 import {sumActuals, variance} from '~/lib/fulfillment';
 import {formatUsd} from '~/lib/money';
+import {itemImageUrl} from '~/lib/product-preview';
 import type {GrantItemRow, GrantRow} from '~/lib/types';
 
 type LineState = {
@@ -151,10 +153,15 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
               return (
                 <tr className="border-t border-gray-100" key={item.id}>
                   <td className="px-3 py-2">
-                    <p className="font-medium">{item.item_description}</p>
-                    <p className="tabular-nums text-gray-500">
-                      {item.quantity} × {formatUsd(item.unit_price)}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <ProductThumb alt="" url={itemImageUrl(item)} />
+                      <div>
+                        <p className="font-medium">{item.item_description}</p>
+                        <p className="tabular-nums text-gray-500">
+                          {item.quantity} × {formatUsd(item.unit_price)}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <select

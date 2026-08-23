@@ -27,7 +27,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-charcoal">
+        <h1 className="font-heading text-3xl font-bold text-charcoal" data-tour="page-heading">
           Welcome, {user.name.split(' ')[0]}
         </h1>
         <p className="font-body mt-1 text-gray-600">
@@ -41,6 +41,7 @@ export default async function HomePage() {
             hint="Need a vote"
             label="Pending grants"
             tone="gold"
+            tour="stat-pending"
             value={String(awaitingVote)}
           />
         ) : null}
@@ -48,6 +49,7 @@ export default async function HomePage() {
           <StatCard
             hint="Approved, not yet bought"
             label="To purchase"
+            tour="stat-purchase"
             value={String(awaitingPurchase)}
           />
         ) : null}
@@ -56,6 +58,7 @@ export default async function HomePage() {
             hint="After committed + spent"
             label="Remaining this window"
             tone="green"
+            tour="stat-budget"
             value={formatUsd(budget.remaining)}
           />
         ) : null}
@@ -68,12 +71,12 @@ export default async function HomePage() {
           </Link>
         ) : null}
         {user.role === 'committee' || user.role === 'admin' || user.role === 'principal' ? (
-          <Link className="btn btn-brand" href="/review">
+          <Link className="btn btn-brand" data-tour="home-review" href="/review">
             Review queue
           </Link>
         ) : null}
         {user.role === 'admin' ? (
-          <Link className="btn btn-brand" href="/fulfill">
+          <Link className="btn btn-brand" data-tour="home-fulfill" href="/fulfill">
             Fulfillment
           </Link>
         ) : null}

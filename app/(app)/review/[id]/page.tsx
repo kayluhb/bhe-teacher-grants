@@ -9,7 +9,6 @@ import {getGrant, listGrantItems, listReviewQueue, listVotes} from '~/lib/grants
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 import type {Ballot} from '~/lib/votes';
-import {wishlistRetailerLabel} from '~/lib/wishlist';
 
 export default async function ReviewDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireReviewer();
@@ -67,16 +66,6 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
       </div>
 
       <GrantNarrative grant={grant} />
-      {grant.wishlist_url ? (
-        <a
-          className="font-medium text-eagle-blue underline"
-          href={grant.wishlist_url}
-          rel="noopener"
-          target="_blank"
-        >
-          Open {wishlistRetailerLabel(grant.wishlist_url) ?? ''} wishlist
-        </a>
-      ) : null}
 
       <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
         {items

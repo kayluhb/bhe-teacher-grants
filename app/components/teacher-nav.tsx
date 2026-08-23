@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useState} from 'react';
+import {TourHelpButton} from '~/components/tour-help-button';
 import type {Portal} from '~/lib/reviewers';
 import {ROLE_LABELS, type User} from '~/lib/roles';
 
@@ -35,6 +36,7 @@ export const TeacherNav = ({
                 ? 'bg-white text-eagle-blue'
                 : 'text-white/85 hover:bg-white/10 hover:text-white'
             }`}
+            data-tour={link.href === '/review' ? 'nav-review' : undefined}
             href={link.href}
             key={link.href}
             onClick={() => setOpen(false)}
@@ -47,7 +49,7 @@ export const TeacherNav = ({
   );
 
   return (
-    <header className="bg-gradient-to-r from-eagle-blue to-night-blue text-white">
+    <header className="shrink-0 bg-gradient-to-r from-eagle-blue to-night-blue text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
         <div>
           <p className="font-heading text-lg font-bold leading-tight">My teacher grants</p>
@@ -55,6 +57,7 @@ export const TeacherNav = ({
         </div>
         <div className="hidden md:block">{nav}</div>
         <div className="hidden items-center gap-4 md:flex">
+          <TourHelpButton />
           <div className="text-right">
             <p className="text-sm font-medium">{user.name}</p>
             <p className="text-xs text-white/70">{ROLE_LABELS[user.role]}</p>
@@ -92,6 +95,9 @@ export const TeacherNav = ({
           {nav}
           <div className="border-t border-white/10 pt-3">
             <p className="text-sm font-medium">{user.name}</p>
+            <div className="mt-3">
+              <TourHelpButton />
+            </div>
             <form action="/api/auth/logout" method="post">
               <button className="mt-2 text-xs text-white/70 underline" type="submit">
                 Sign out

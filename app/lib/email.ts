@@ -2,6 +2,7 @@ import {env} from 'cloudflare:workers';
 
 export const sendEmail = async (input: {
   html: string;
+  replyTo?: string | string[];
   subject: string;
   to: string | string[];
 }): Promise<boolean> => {
@@ -11,7 +12,7 @@ export const sendEmail = async (input: {
     body: JSON.stringify({
       from: 'PTA Treasurer <treasurer@mail.bheeagles.com>',
       html: input.html,
-      reply_to: 'treasurer@bheeagles.com',
+      reply_to: input.replyTo ?? 'treasurer@bheeagles.com',
       subject: input.subject,
       to: input.to,
     }),
@@ -30,7 +31,12 @@ export const sendEmail = async (input: {
   return true;
 };
 
-export const notifyQuietly = (input: {html: string; subject: string; to: string | string[]}) => {
+export const notifyQuietly = (input: {
+  html: string;
+  replyTo?: string | string[];
+  subject: string;
+  to: string | string[];
+}) => {
   void sendEmail(input).catch((error) => {
     console.error('Email send failed', error);
   });

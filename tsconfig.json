@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "~/*": ["./app/*"],
+      "next/cache": ["./node_modules/vinext/dist/shims/cache"],
+      "next/font/local": ["./node_modules/vinext/dist/shims/font-local"],
+      "next/headers": ["./node_modules/vinext/dist/shims/headers"],
+      "next/image": ["./node_modules/vinext/dist/shims/image"],
+      "next/link": ["./node_modules/vinext/dist/shims/link"],
+      "next/metadata": ["./node_modules/vinext/dist/shims/metadata"],
+      "next/navigation": ["./node_modules/vinext/dist/shims/navigation"]
+    }
+  },
+  "include": ["app", "*.ts"],
+  "exclude": ["node_modules"]
+}

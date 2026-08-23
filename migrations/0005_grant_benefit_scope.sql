@@ -1,0 +1,1 @@
+ALTER TABLE grants ADD COLUMN benefit_scope TEXT NOT NULL DEFAULT 'CLASS';

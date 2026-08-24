@@ -1,14 +1,16 @@
 import {redirect} from 'next/navigation';
 import {HeaderLogo} from '~/components/header-logo';
-import {getSession, homePath} from '~/lib/auth';
+import {getSession} from '~/lib/auth';
+import {getDb} from '~/lib/db';
 import {APP_TITLE, DOCUMENT_TITLES} from '~/lib/page-title';
+import {homePathForPortals, listPortals} from '~/lib/portals';
 import {LoginForm} from '~/login/login-form';
 
 export const metadata = {title: DOCUMENT_TITLES.login};
 
 export default async function LoginPage() {
   const user = await getSession();
-  if (user) redirect(homePath(user.role));
+  if (user) redirect(homePathForPortals(user, await listPortals(getDb(), user)));
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -7,7 +7,7 @@ import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
 import {APP_TITLE} from '~/lib/page-title';
 import type {Portal} from '~/lib/reviewers';
-import {ROLE_LABELS, type Role, type User} from '~/lib/roles';
+import {displayRoleLabel, type Role, type User} from '~/lib/roles';
 
 const LINKS: {href: string; label: string; roles: Role[]}[] = [
   {href: '/', label: 'Home', roles: ['committee', 'admin', 'principal']},
@@ -107,7 +107,7 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         {nav}
         <div className="mt-auto border-t border-white/10 px-5 py-4">
           <p className="text-sm font-medium">{user.name}</p>
-          <p className="text-xs text-white/85">{ROLE_LABELS[user.role]}</p>
+          <p className="text-xs text-white/85">{displayRoleLabel(user, portals)}</p>
           <div className="mt-3">
             <TourHelpButton />
           </div>

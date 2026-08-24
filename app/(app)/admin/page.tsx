@@ -20,6 +20,7 @@ import {Select} from '~/components/select';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {ASSIGNABLE_ROLES, ROLE_LABELS, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {formatSchoolCompactDateTime, formatSchoolDateRange} from '~/lib/grant-cycle';
 import {listCycles, listSchoolYears} from '~/lib/grants';
 import {isLockedRosterEmail} from '~/lib/login-email';
 import {formatUsd} from '~/lib/money';
@@ -38,6 +39,16 @@ const parseAdminTab = (value: string | undefined): AdminTab =>
   ADMIN_TABS.some((tab) => tab.id === value) ? (value as AdminTab) : 'roster';
 
 const TabField = ({tab}: {tab: AdminTab}) => <input name="tab" type="hidden" value={tab} />;
+
+const DateRangeCell = ({end, start}: {end: string | null; start: string | null}) => {
+  if (!start || !end) return <span className="text-gray-400">—</span>;
+  return (
+    <div className="whitespace-nowrap leading-5" title={formatSchoolDateRange(start, end)}>
+      <div>{formatSchoolCompactDateTime(start)}</div>
+      <div className="text-gray-500">– {formatSchoolCompactDateTime(end)}</div>
+    </div>
+  );
+};
 
 export const metadata = {title: DOCUMENT_TITLES.admin};
 
@@ -251,6 +262,8 @@ export default async function AdminPage({
               <thead className="bg-warm-white text-left text-xs text-gray-500 uppercase">
                 <tr>
                   <th className="px-4 py-2">Window</th>
+                  <th className="px-4 py-2">Submissions</th>
+                  <th className="px-4 py-2">Review</th>
                   <th className="px-4 py-2">Budget</th>
                   <th className="px-4 py-2">Open</th>
                   <th className="px-4 py-2">
@@ -263,6 +276,12 @@ export default async function AdminPage({
                   <tr className="border-t border-gray-100" key={cycle.id}>
                     <td className="px-4 py-2">
                       {semesterLabel(cycle.semester)} {cycle.school_year}
+                    </td>
+                    <td className="px-4 py-2">
+                      <DateRangeCell end={cycle.ends_at} start={cycle.starts_at} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <DateRangeCell end={cycle.review_ends_at} start={cycle.review_starts_at} />
                     </td>
                     <td className="px-4 py-2 tabular-nums">{formatUsd(cycle.budget_limit)}</td>
                     <td className="px-4 py-2">

@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
+  formatSchoolCompactDateTime,
+  formatSchoolDateRange,
   formatSchoolDateTime,
   fulfillQueueMessaging,
   hasReviewStarted,
@@ -109,6 +111,25 @@ describe('formatSchoolDateTime', () => {
   it('formats stored UTC times in America/Chicago', () => {
     expect(formatSchoolDateTime('2026-10-15T23:59:00Z')).toMatch(/October 15, 2026/);
     expect(formatSchoolDateTime('2026-10-15T23:59:00Z')).toMatch(/6:59\sPM/);
+  });
+});
+
+describe('formatSchoolCompactDateTime', () => {
+  it('formats stored UTC times compactly in America/Chicago', () => {
+    expect(formatSchoolCompactDateTime('2026-10-15T23:59:00Z')).toMatch(/Oct 15, 2026/);
+    expect(formatSchoolCompactDateTime('2026-10-15T23:59:00Z')).toMatch(/6:59\sPM/);
+  });
+
+  it('returns the original value when the timestamp is invalid', () => {
+    expect(formatSchoolCompactDateTime('not-a-date')).toBe('not-a-date');
+  });
+});
+
+describe('formatSchoolDateRange', () => {
+  it('joins two compact Chicago times with an en dash', () => {
+    expect(formatSchoolDateRange('2026-08-15T00:00:00Z', '2026-10-15T23:59:00Z')).toMatch(
+      /Aug 14, 2026.+7:00\sPM.+Oct 15, 2026.+6:59\sPM/,
+    );
   });
 });
 

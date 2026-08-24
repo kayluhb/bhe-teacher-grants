@@ -36,6 +36,11 @@ export const tallyVotes = (
   };
 };
 
+export const nextBallotHref = (remaining: {id: string}[], currentGrantId: string) => {
+  const next = remaining.find((grant) => grant.id !== currentGrantId);
+  return next ? `/review/${next.id}` : '/review';
+};
+
 export const validateChairDecision = (input: {
   complete: boolean;
   isChairman: boolean;

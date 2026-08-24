@@ -735,6 +735,7 @@ export const listReviewQueue = async (db: D1Database, userId: string, now = new 
        WHERE g.status = 'PENDING'
          AND g.teacher_id != ?
          AND r.seat != 'chairman'
+         AND v.grant_id IS NULL
        ORDER BY g.created_at ASC`,
     )
     .bind(userId, userId, userId)

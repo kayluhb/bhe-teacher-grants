@@ -124,8 +124,8 @@ export const reviewQueueMessaging = (state: ReviewWindowState, now = new Date())
       paragraphs: [
         datedOpen(state.cycle),
         submitting
-          ? 'Teachers can still submit until then. After review opens, those grants will appear here for you to vote on. After you submit a ballot, the next grant opens.'
-          : 'When they do, submitted grants will appear here for you to vote on. After you submit a ballot, the next grant opens.',
+          ? 'Teachers can still submit until then. After review opens, those grants will appear here for you to rank. After you submit a rank, the next grant opens.'
+          : 'When they do, submitted grants will appear here for you to rank. After you submit a rank, the next grant opens.',
       ],
       subtitle: "Reviews aren't open yet.",
     };
@@ -145,14 +145,13 @@ export const reviewQueueMessaging = (state: ReviewWindowState, now = new Date())
   }
   if (state.kind === 'open') {
     return {
-      paragraphs: ["You're caught up. There are no grants waiting for your vote."],
-      subtitle:
-        'Grants you still need to vote on. After you submit a ballot, the next grant opens.',
+      paragraphs: ["You're caught up. There are no grants waiting for your rank."],
+      subtitle: 'Grants you still need to rank. After you submit a rank, the next grant opens.',
     };
   }
   return {
     paragraphs: ['Nothing here yet.'],
-    subtitle: 'Grants you still need to vote on. After you submit a ballot, the next grant opens.',
+    subtitle: 'Grants you still need to rank. After you submit a rank, the next grant opens.',
   };
 };
 

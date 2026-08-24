@@ -179,7 +179,7 @@ describe('reviewQueueMessaging', () => {
     expect(copy.paragraphs[0]).toContain('Fall 2026-27 Teacher Grants');
     expect(copy.paragraphs[0]).toMatch(/open .+ October 15, 2026/);
     expect(copy.paragraphs[1]).toContain('Teachers can still submit until then');
-    expect(copy.paragraphs[1]).toContain('After you submit a ballot, the next grant opens');
+    expect(copy.paragraphs[1]).toContain('After you submit a rank, the next grant opens');
   });
 
   it('skips the still-submitting line once the request window has closed', () => {

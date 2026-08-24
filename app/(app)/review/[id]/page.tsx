@@ -16,7 +16,7 @@ import {
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {semesterLabel} from '~/lib/school-year';
-import type {Ballot} from '~/lib/votes';
+import {BALLOT_LABELS, isBallot} from '~/lib/votes';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const grant = await getGrant(getDb(), (await params).id);
@@ -72,8 +72,10 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Your ballot</p>
-          <p className="font-heading text-xl font-bold">{mine?.vote ?? 'Not voted'}</p>
+          <p className="text-xs text-gray-500 uppercase">Your rank</p>
+          <p className="font-heading text-xl font-bold">
+            {mine && isBallot(mine.vote) ? BALLOT_LABELS[mine.vote] : 'Not ranked'}
+          </p>
         </div>
       </div>
 
@@ -82,7 +84,10 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
       <GrantRequestedItems items={items} />
 
       {grant.status === 'PENDING' && grant.teacher_id !== user.id ? (
-        <VoteForm existing={mine?.vote as Ballot | undefined} grantId={grant.id} />
+        <VoteForm
+          existing={mine && isBallot(mine.vote) ? mine.vote : undefined}
+          grantId={grant.id}
+        />
       ) : null}
     </div>
   );

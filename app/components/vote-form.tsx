@@ -2,7 +2,7 @@
 
 import {useState} from 'react';
 import {RadioGroup} from '~/components/radio-group';
-import type {Ballot} from '~/lib/votes';
+import {BALLOT_LABELS, BALLOTS, type Ballot} from '~/lib/votes';
 import {castVoteAction} from '~/review/actions';
 
 export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId: string}) => {
@@ -26,22 +26,18 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
   return (
     <form className="space-y-3 rounded-xl border border-gray-200 bg-white p-4" onSubmit={onSubmit}>
       <input name="grant_id" type="hidden" value={grantId} />
-      <p className="font-heading font-semibold text-charcoal">Cast your vote</p>
+      <p className="font-heading font-semibold text-charcoal">Rank this request</p>
       {existing ? (
         <p className="text-sm text-gray-600">
-          Current ballot: {existing}. You can change it while voting is open.
+          Current rank: {BALLOT_LABELS[existing]}. You can change it while review is open.
         </p>
       ) : null}
       <RadioGroup
-        aria-label="Vote"
+        aria-label="Rank"
         className="flex flex-wrap gap-x-6 gap-y-3"
         defaultValue={existing ?? undefined}
         name="vote"
-        options={[
-          {label: 'Approve', value: 'APPROVE'},
-          {label: 'Reject', value: 'REJECT'},
-          {label: 'Abstain', value: 'ABSTAIN'},
-        ]}
+        options={BALLOTS.map((value) => ({label: BALLOT_LABELS[value], value}))}
         required
       />
       <label className="font-body block text-sm text-charcoal">
@@ -57,7 +53,7 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
         </p>
       ) : null}
       <button className="btn btn-brand" disabled={pending} type="submit">
-        {pending ? 'Saving…' : 'Submit vote'}
+        {pending ? 'Saving…' : 'Submit rank'}
       </button>
     </form>
   );

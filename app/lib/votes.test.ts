@@ -1,11 +1,11 @@
 import {describe, expect, it} from 'vitest';
-import {nextBallotHref, tallyVotes, validateChairDecision} from '~/lib/votes';
+import {ballotLeaning, nextBallotHref, tallyVotes, validateChairDecision} from '~/lib/votes';
 
 const voters = ['treasurer', 'principal', 'committee'];
 
 describe('tallyVotes', () => {
   it('stays incomplete until every required voter has a ballot', () => {
-    const tally = tallyVotes([{vote: 'APPROVE', voterId: 'treasurer'}], voters, 'teacher');
+    const tally = tallyVotes([{vote: 'HIGH', voterId: 'treasurer'}], voters, 'teacher');
     expect(tally.complete).toBe(false);
     expect(tally.notVoted).toBe(2);
   });
@@ -13,8 +13,8 @@ describe('tallyVotes', () => {
   it('is complete when every required voter has voted, including abstain', () => {
     const tally = tallyVotes(
       [
-        {vote: 'APPROVE', voterId: 'treasurer'},
-        {vote: 'REJECT', voterId: 'principal'},
+        {vote: 'HIGH', voterId: 'treasurer'},
+        {vote: 'LOW', voterId: 'principal'},
         {vote: 'ABSTAIN', voterId: 'committee'},
       ],
       voters,
@@ -24,27 +24,43 @@ describe('tallyVotes', () => {
     expect(tally.notVoted).toBe(0);
   });
 
-  it('still reports an advisory majority without changing completeness', () => {
+  it('leans High from ranked ballots even while the roster is incomplete', () => {
     const tally = tallyVotes(
       [
-        {vote: 'APPROVE', voterId: 'treasurer'},
-        {vote: 'APPROVE', voterId: 'principal'},
+        {vote: 'HIGH', voterId: 'treasurer'},
+        {vote: 'HIGH', voterId: 'principal'},
       ],
       voters,
       'teacher',
     );
-    expect(tally.outcome).toBe('APPROVED');
+    expect(tally.leaning).toBe('HIGH');
     expect(tally.complete).toBe(false);
   });
 
   it('ignores the submitting teacher even if listed as eligible', () => {
     const tally = tallyVotes(
-      [{vote: 'APPROVE', voterId: 'teacher'}],
+      [{vote: 'HIGH', voterId: 'teacher'}],
       [...voters, 'teacher'],
       'teacher',
     );
-    expect(tally.approve).toBe(0);
+    expect(tally.high).toBe(0);
     expect(tally.complete).toBe(false);
+  });
+});
+
+describe('ballotLeaning', () => {
+  it('returns the unique mode of High / Medium / Low', () => {
+    expect(ballotLeaning(['HIGH', 'HIGH', 'LOW'])).toBe('HIGH');
+  });
+
+  it('ignores abstain when finding the mode', () => {
+    expect(ballotLeaning(['HIGH', 'ABSTAIN', 'ABSTAIN'])).toBe('HIGH');
+  });
+
+  it('returns null on a tie or when nobody ranked', () => {
+    expect(ballotLeaning(['HIGH', 'MEDIUM', 'LOW'])).toBeNull();
+    expect(ballotLeaning(['HIGH', 'HIGH', 'MEDIUM', 'MEDIUM'])).toBeNull();
+    expect(ballotLeaning(['ABSTAIN', 'ABSTAIN'])).toBeNull();
   });
 });
 
@@ -73,7 +89,7 @@ describe('validateChairDecision', () => {
 
   it('rejects an incomplete roster', () => {
     expect(validateChairDecision({complete: false, isChairman: true, reviewStarted: true})).toBe(
-      'Every required reviewer must vote first.',
+      'Every required reviewer must rank first.',
     );
   });
 });

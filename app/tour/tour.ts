@@ -146,7 +146,7 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Only grants you have not voted on, in an open review window. After you submit a ballot, the grant leaves this list.',
+        'Only grants you have not ranked, in an open review window. After you submit a rank, the grant leaves this list.',
       title: 'Your review queue',
     },
   },
@@ -154,8 +154,8 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a request to Approve, Reject, or Abstain. You will not see anyone else’s votes. Abstain still counts as done so the chairman is not blocked. Your own submission never shows up here.',
-      title: 'Cast a private ballot',
+        'Open a request to rank High, Medium, or Low, or Abstain. You will not see anyone else’s ranks. Abstain still counts as done so the chairman is not blocked. Your own submission never shows up here.',
+      title: 'Cast a private rank',
     },
   },
 ];
@@ -182,7 +182,7 @@ const CHAIRMAN_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a grant to see the full tally. You may follow it or override it. The teacher is emailed after you record the outcome.',
+        'Open a grant to see the rank counts and what the committee is leaning. You may follow that or override it. The teacher is emailed after you record the outcome.',
       title: 'Record the outcome',
     },
   },
@@ -228,7 +228,7 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'You vote in the reviewer portal, the same as the principal and committee. Ballots stay private until the chairman decides.',
+        'You rank grants in the reviewer portal, the same as the principal and committee. Ranks stay private until the chairman decides.',
       title: 'Review queue',
     },
   },

@@ -6,7 +6,7 @@ import {useState} from 'react';
 import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
 import type {Portal} from '~/lib/reviewers';
-import {ROLE_LABELS, type User} from '~/lib/roles';
+import {displayRoleLabel, type User} from '~/lib/roles';
 
 export const TeacherNav = ({
   canSubmit,
@@ -61,7 +61,7 @@ export const TeacherNav = ({
           <TourHelpButton />
           <div className="text-right">
             <p className="text-sm font-medium">{user.name}</p>
-            <p className="text-xs text-white/85">{ROLE_LABELS[user.role]}</p>
+            <p className="text-xs text-white/85">{displayRoleLabel(user, portals)}</p>
           </div>
           <form action="/api/auth/logout" method="post">
             <button className="text-xs text-white/85 underline hover:text-white" type="submit">

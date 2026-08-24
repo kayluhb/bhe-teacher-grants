@@ -13,9 +13,12 @@ export const VoteForm = ({grantId, existing}: {existing?: Ballot | null; grantId
     event.preventDefault();
     setPending(true);
     setError(null);
-    const result = await castVoteAction(new FormData(event.currentTarget));
-    if (result && 'error' in result) {
-      setError(result.error);
+    try {
+      const result = await castVoteAction(new FormData(event.currentTarget));
+      if (result && 'error' in result) {
+        setError(result.error);
+      }
+    } finally {
       setPending(false);
     }
   };

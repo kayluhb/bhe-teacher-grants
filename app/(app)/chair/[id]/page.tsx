@@ -16,6 +16,7 @@ import {
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
@@ -90,7 +91,8 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
             const ballot = votes.find((row) => row.voter_id === voter.id);
             return (
               <li className="rounded-lg border border-gray-200 bg-white px-3 py-2" key={voter.id}>
-                <span className="font-medium">{voter.name}</span> · {ballot?.vote ?? 'Not voted'}
+                <span className="font-medium">{voter.name}</span> · {SEAT_LABELS[voter.role]} ·{' '}
+                {ballot?.vote ?? 'Not voted'}
                 {ballot?.comment ? <p className="text-gray-600">{ballot.comment}</p> : null}
               </li>
             );

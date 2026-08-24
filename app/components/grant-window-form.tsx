@@ -112,50 +112,54 @@ export const GrantWindowForm = ({
             type="number"
           />
         </label>
-        <label className="block text-sm font-medium text-charcoal">
-          Submissions open
-          <input
-            className={`mt-1 ${fieldClass}`}
-            defaultValue={cycle ? toDatetimeLocalValue(cycle.starts_at) : undefined}
-            name="starts_at"
-            required
-            type="datetime-local"
-          />
-        </label>
-        <label className="block text-sm font-medium text-charcoal">
-          Submissions close
-          <input
-            className={`mt-1 ${fieldClass}`}
-            defaultValue={cycle ? toDatetimeLocalValue(cycle.ends_at) : undefined}
-            name="ends_at"
-            required
-            type="datetime-local"
-          />
-        </label>
-        <label className="block text-sm font-medium text-charcoal">
-          Review opens
-          <input
-            className={`mt-1 ${fieldClass}`}
-            defaultValue={
-              cycle?.review_starts_at ? toDatetimeLocalValue(cycle.review_starts_at) : undefined
-            }
-            name="review_starts_at"
-            required
-            type="datetime-local"
-          />
-        </label>
-        <label className="block text-sm font-medium text-charcoal">
-          Review closes
-          <input
-            className={`mt-1 ${fieldClass}`}
-            defaultValue={
-              cycle?.review_ends_at ? toDatetimeLocalValue(cycle.review_ends_at) : undefined
-            }
-            name="review_ends_at"
-            required
-            type="datetime-local"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block min-w-0 text-sm font-medium text-charcoal">
+            Submissions open
+            <input
+              className={`mt-1 ${fieldClass}`}
+              defaultValue={cycle ? toDatetimeLocalValue(cycle.starts_at) : undefined}
+              name="starts_at"
+              required
+              type="datetime-local"
+            />
+          </label>
+          <label className="block min-w-0 text-sm font-medium text-charcoal">
+            Submissions close
+            <input
+              className={`mt-1 ${fieldClass}`}
+              defaultValue={cycle ? toDatetimeLocalValue(cycle.ends_at) : undefined}
+              name="ends_at"
+              required
+              type="datetime-local"
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block min-w-0 text-sm font-medium text-charcoal">
+            Review opens
+            <input
+              className={`mt-1 ${fieldClass}`}
+              defaultValue={
+                cycle?.review_starts_at ? toDatetimeLocalValue(cycle.review_starts_at) : undefined
+              }
+              name="review_starts_at"
+              required
+              type="datetime-local"
+            />
+          </label>
+          <label className="block min-w-0 text-sm font-medium text-charcoal">
+            Review closes
+            <input
+              className={`mt-1 ${fieldClass}`}
+              defaultValue={
+                cycle?.review_ends_at ? toDatetimeLocalValue(cycle.review_ends_at) : undefined
+              }
+              name="review_ends_at"
+              required
+              type="datetime-local"
+            />
+          </label>
+        </div>
         {personSelect('treasurer_user_id', 'treasurer', 'Treasurer')}
         {personSelect('principal_user_id', 'principal', 'Principal')}
         {personSelect('chairman_user_id', 'chairman', 'Chairman')}

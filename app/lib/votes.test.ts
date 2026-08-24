@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {tallyVotes, validateChairDecision} from '~/lib/votes';
+import {nextBallotHref, tallyVotes, validateChairDecision} from '~/lib/votes';
 
 const voters = ['treasurer', 'principal', 'committee'];
 
@@ -45,6 +45,16 @@ describe('tallyVotes', () => {
     );
     expect(tally.approve).toBe(0);
     expect(tally.complete).toBe(false);
+  });
+});
+
+describe('nextBallotHref', () => {
+  it('skips the grant just voted so the reviewer is not sent back to the same page', () => {
+    expect(nextBallotHref([{id: 'current'}, {id: 'next'}], 'current')).toBe('/review/next');
+  });
+
+  it('returns the review queue when the current grant is the last remaining', () => {
+    expect(nextBallotHref([{id: 'current'}], 'current')).toBe('/review');
   });
 });
 

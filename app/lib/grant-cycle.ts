@@ -21,20 +21,34 @@ const parsedTime = (value: string): number => Date.parse(value);
 
 const SCHOOL_TIME_ZONE = 'America/Chicago';
 
-export const formatSchoolDateTime = (value: string): string => {
+const formatInSchoolZone = (value: string, options: Intl.DateTimeFormatOptions): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-US', {timeZone: SCHOOL_TIME_ZONE, ...options}).format(date);
+};
+
+export const formatSchoolDateTime = (value: string): string =>
+  formatInSchoolZone(value, {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
     month: 'long',
-    timeZone: SCHOOL_TIME_ZONE,
     timeZoneName: 'short',
     weekday: 'long',
     year: 'numeric',
-  }).format(date);
-};
+  });
+
+export const formatSchoolCompactDateTime = (value: string): string =>
+  formatInSchoolZone(value, {
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+export const formatSchoolDateRange = (start: string, end: string): string =>
+  `${formatSchoolCompactDateTime(start)} – ${formatSchoolCompactDateTime(end)}`;
 
 export const isSubmissionOpen = (
   cycle: {ends_at: string; is_active: number; starts_at: string},

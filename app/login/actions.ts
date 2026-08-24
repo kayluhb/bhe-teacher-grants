@@ -5,13 +5,9 @@ import {getSession} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {requestOtp, verifyOtp} from '~/lib/login-otp';
 import {homePathForPortals, listPortals} from '~/lib/portals';
+import type {LoginState} from '~/login/login-state';
 
-export type LoginState = {
-  cooldownSeconds?: number;
-  email?: string;
-  error?: string;
-  step: 'email' | 'code';
-};
+const stamped = (state: LoginState): LoginState => ({...state, at: Date.now()});
 
 export const sendCodeAction = async (
   _prev: LoginState,
@@ -20,14 +16,14 @@ export const sendCodeAction = async (
   const email = String(formData.get('email') || '');
   const result = await requestOtp(email);
   if ('error' in result) {
-    return {
+    return stamped({
       cooldownSeconds: result.cooldownSeconds,
       email,
       error: result.error,
       step: result.cooldownSeconds ? 'code' : 'email',
-    };
+    });
   }
-  return {cooldownSeconds: result.cooldownSeconds, email, step: 'code'};
+  return stamped({cooldownSeconds: result.cooldownSeconds, email, step: 'code'});
 };
 
 export const verifyCodeAction = async (
@@ -37,7 +33,7 @@ export const verifyCodeAction = async (
   const email = String(formData.get('email') || '');
   const result = await verifyOtp(email, String(formData.get('code') || ''));
   if ('error' in result) {
-    return {email, error: result.error, step: 'code'};
+    return stamped({email, error: result.error, step: 'code'});
   }
   const user = await getSession();
   if (!user) redirect('/login');

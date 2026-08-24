@@ -9,6 +9,7 @@ export const DOCUMENT_TITLES = {
   grantsNew: 'Create grant',
   home: 'Home',
   login: 'Sign in',
+  notFound: 'Not found',
   portal: 'My grants',
   portalNew: 'New grant',
   review: 'Review',

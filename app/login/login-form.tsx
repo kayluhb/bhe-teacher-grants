@@ -1,16 +1,18 @@
 'use client';
 
 import {useActionState, useEffect, useState} from 'react';
-import {type LoginState, sendCodeAction, verifyCodeAction} from '~/login/actions';
+import {sendCodeAction, verifyCodeAction} from '~/login/actions';
+import {type LoginState, latestLoginState} from '~/login/login-state';
 
 const INITIAL: LoginState = {step: 'email'};
 
 export const LoginForm = () => {
   const [emailState, sendCode, sending] = useActionState(sendCodeAction, INITIAL);
   const [codeState, verifyCode, verifying] = useActionState(verifyCodeAction, INITIAL);
-  const email = codeState.email || emailState.email || '';
-  const step = codeState.step === 'code' || emailState.step === 'code' ? 'code' : 'email';
-  const error = codeState.error || emailState.error;
+  const latest = latestLoginState(emailState, codeState);
+  const email = latest.email || emailState.email || codeState.email || '';
+  const step = latest.step;
+  const error = latest.error;
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {

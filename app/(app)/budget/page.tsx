@@ -70,7 +70,7 @@ export default async function BudgetPage({
       )}
       {snapshot && 'cycle_variance' in snapshot ? (
         <p className="text-sm">
-          Cycle variance:{' '}
+          {'semester' in snapshot ? 'Cycle variance' : 'Year variance'}:{' '}
           <span className={snapshot.cycle_variance > 0 ? 'text-red-700' : 'text-creek-green'}>
             {formatUsd(snapshot.cycle_variance)}
           </span>

@@ -6,15 +6,10 @@ import {VoteForm} from '~/components/vote-form';
 import {requireReviewer} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {
-  getGrant,
-  hydrateGrantItemImages,
-  listGrantItems,
-  listVotes,
-  userCanAccessGrant,
-} from '~/lib/grants';
+import {getGrant, listGrantItems, listVotes, userCanAccessGrant} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+import {withItemImages} from '~/lib/product-preview';
 import {semesterLabel} from '~/lib/school-year';
 import {BALLOT_LABELS, isBallot} from '~/lib/votes';
 
@@ -36,10 +31,7 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
     listVotes(db, id),
     getCycleBudget(db, grant.cycle_id),
   ]);
-  const items = await hydrateGrantItemImages(
-    db,
-    rawItems.filter((item) => item.is_ad_hoc === 0),
-  );
+  const items = withItemImages(rawItems.filter((item) => item.is_ad_hoc === 0));
   const mine = votes.find((row) => row.voter_id === user.id);
 
   return (

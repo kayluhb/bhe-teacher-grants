@@ -8,7 +8,6 @@ import {getDb} from '~/lib/db';
 import {
   getGrant,
   grantTally,
-  hydrateGrantItemImages,
   listEligibleVoters,
   listGrantItems,
   listReviewerRows,
@@ -16,6 +15,7 @@ import {
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+import {withItemImages} from '~/lib/product-preview';
 import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
 import {BALLOT_LABELS, isBallot} from '~/lib/votes';
@@ -42,10 +42,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
     listEligibleVoters(db, grant),
     grantTally(db, grant),
   ]);
-  const items = await hydrateGrantItemImages(
-    db,
-    rawItems.filter((item) => item.is_ad_hoc === 0),
-  );
+  const items = withItemImages(rawItems.filter((item) => item.is_ad_hoc === 0));
 
   return (
     <div className="space-y-6">

@@ -154,7 +154,7 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a request to rank High, Medium, or Low, or Abstain. You will not see anyone else’s ranks. Abstain still counts as done so the chairman is not blocked. Your own submission never shows up here.',
+        'Open a request to rank High Priority, Medium Priority, or Low Priority — or Abstain. Rankings are private and help sequence funding; your own grant never appears here.',
       title: 'Cast a private rank',
     },
   },
@@ -174,7 +174,7 @@ const CHAIRMAN_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Search by name or email to add reviewers. A new person can be created here; they can sign in later.',
+        'Five-member committee: Principal, Faculty Rep, Finance Chair (Treasurer), and two board members. Search by name or email to add reviewers. Alternates may serve if someone has a conflict of interest.',
       title: 'Your committee',
     },
   },
@@ -182,7 +182,7 @@ const CHAIRMAN_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a grant to see the rank counts and what the committee is leaning. You may follow that or override it. The teacher is emailed after you record the outcome.',
+        'Open a grant to see the priority rank counts and what the committee is leaning. You may follow that or override it. The teacher is emailed automatically after you record the outcome. After the cycle closes, remember to request outcome stories from funded teachers.',
       title: 'Record the outcome',
     },
   },

@@ -6,9 +6,9 @@ export type Ballot = (typeof BALLOTS)[number];
 
 export const BALLOT_LABELS: Record<Ballot, string> = {
   ABSTAIN: 'Abstain',
-  HIGH: 'High',
-  LOW: 'Low',
-  MEDIUM: 'Medium',
+  HIGH: 'High Priority',
+  LOW: 'Low Priority',
+  MEDIUM: 'Medium Priority',
 };
 
 export const isBallot = (value: string): value is Ballot =>

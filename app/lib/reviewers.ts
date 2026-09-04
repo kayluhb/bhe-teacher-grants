@@ -1,10 +1,10 @@
 export type ReviewerSeat = 'treasurer' | 'principal' | 'chairman' | 'committee';
 
 export const SEAT_LABELS: Record<ReviewerSeat, string> = {
-  chairman: 'Chair',
-  committee: 'Committee',
+  chairman: 'Grant Chair',
+  committee: 'Committee (Faculty Rep / Board)',
   principal: 'Principal',
-  treasurer: 'Treasurer',
+  treasurer: 'Finance Chair (Treasurer)',
 };
 
 export type ReviewerAssignment = {

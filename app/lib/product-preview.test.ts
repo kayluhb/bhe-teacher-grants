@@ -8,6 +8,7 @@ import {
   itemVendorUrl,
   parseProductImage,
   stackPreviewImages,
+  withItemImages,
 } from '~/lib/product-preview';
 
 describe('parseProductImage', () => {
@@ -234,6 +235,43 @@ describe('fetchProductImage', () => {
     await expect(
       fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/tiles'}, fetchFn),
     ).resolves.toBe('https://cdn.example.com/tiles.jpg');
+  });
+});
+
+describe('withItemImages', () => {
+  it('uses stored and ASIN image URLs without fetching vendor pages', () => {
+    const fetchFn = vi.fn();
+    vi.stubGlobal('fetch', fetchFn);
+    try {
+      const items = withItemImages([
+        {
+          asin: 'B000MARKERS',
+          id: 'amazon',
+          image_url: null,
+          vendor_url: 'https://shop.example.com/p/markers',
+        },
+        {
+          asin: null,
+          id: 'vendor',
+          image_url: null,
+          vendor_url: 'https://shop.example.com/p/sand',
+        },
+        {
+          asin: null,
+          id: 'stored',
+          image_url: 'https://cdn.example.com/stored.jpg',
+          vendor_url: 'https://shop.example.com/p/stored',
+        },
+      ]);
+      expect(fetchFn).not.toHaveBeenCalled();
+      expect(items.map((item) => item.image_url)).toEqual([
+        'https://images-na.ssl-images-amazon.com/images/P/B000MARKERS.01._SCLZZZZZZZ_.jpg',
+        null,
+        'https://cdn.example.com/stored.jpg',
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

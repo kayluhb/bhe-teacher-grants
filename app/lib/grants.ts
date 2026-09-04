@@ -10,15 +10,10 @@ import {
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {finiteMoney, money} from '~/lib/money';
-import {
-  asinFromUrl,
-  fillMissingItemImages,
-  itemImageUrl,
-  stackPreviewImages,
-} from '~/lib/product-preview';
+import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
-import {tallyVotes, validateChairDecision} from '~/lib/votes';
+import {BALLOT_LABELS, type Ballot, tallyVotes, validateChairDecision} from '~/lib/votes';
 import {normalizeWishlistUrl} from '~/lib/wishlist';
 
 const GRANT_SELECT = `
@@ -187,11 +182,6 @@ export const listGrantItems = async (db: D1Database, grantId: string) => {
     .all<GrantItemRow>();
   return rows.results ?? [];
 };
-
-export const hydrateGrantItemImages = async (db: D1Database, items: GrantItemRow[]) =>
-  fillMissingItemImages(items, async (id, imageUrl) => {
-    await db.prepare('UPDATE grant_items SET image_url = ? WHERE id = ?').bind(imageUrl, id).run();
-  });
 
 const requestedTotal = (items: GrantItemInput[]) =>
   money(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0));
@@ -412,7 +402,7 @@ export const grantTally = async (db: D1Database, grant: GrantRow) => {
   ]);
   return tallyVotes(
     votes.map((row) => ({
-      vote: row.vote as 'APPROVE' | 'REJECT' | 'ABSTAIN',
+      vote: row.vote as Ballot,
       voterId: row.voter_id,
     })),
     requiredVoterIds(assignmentsOf(reviewers), grant.teacher_id),
@@ -425,14 +415,14 @@ export const castVote = async (
   input: {
     comment: string | null;
     grantId: string;
-    vote: 'APPROVE' | 'REJECT' | 'ABSTAIN';
+    vote: Ballot;
     voter: User;
   },
 ): Promise<Result<{complete: boolean; status: string}>> => {
   const grant = await getGrant(db, input.grantId);
   if (!grant) return {error: 'Grant not found.'};
-  if (grant.status !== 'PENDING') return {error: 'Voting is closed for this grant.'};
-  if (grant.teacher_id === input.voter.id) return {error: 'You cannot vote on your own grant.'};
+  if (grant.status !== 'PENDING') return {error: 'Ranking is closed for this grant.'};
+  if (grant.teacher_id === input.voter.id) return {error: 'You cannot rank your own grant.'};
 
   const cycle = await db
     .prepare('SELECT * FROM grant_cycles WHERE id = ?')
@@ -464,7 +454,7 @@ export const castVote = async (
     input.voter,
     'PENDING',
     'PENDING',
-    `${input.voter.name} voted ${input.vote}`,
+    `${input.voter.name} ranked ${BALLOT_LABELS[input.vote]}`,
   ).run();
 
   const tally = await grantTally(db, grant);

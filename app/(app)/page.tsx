@@ -83,6 +83,14 @@ export default async function HomePage() {
             Fulfillment
           </Link>
         ) : null}
+        {user.role === 'committee' || user.role === 'admin' || user.role === 'principal' ? (
+          <Link
+            className="rounded-lg border border-eagle-blue/30 bg-eagle-blue/5 px-3 py-1.5 text-sm font-medium text-eagle-blue hover:bg-eagle-blue/10"
+            href="/process"
+          >
+            Process guide →
+          </Link>
+        ) : null}
       </div>
     </div>
   );

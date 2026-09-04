@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {ChairCommittee} from '~/components/chair-committee';
 import {TourGrantTable} from '~/components/tour-grant-table';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
@@ -27,13 +28,21 @@ export default async function ChairPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-bold text-charcoal" data-tour="page-heading">
-          Chair
-        </h1>
-        <p className="font-body mt-1 text-gray-600">
-          Grants whose required ballots are in. Record the official outcome, including overrides.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-3xl font-bold text-charcoal" data-tour="page-heading">
+            Chair
+          </h1>
+          <p className="font-body mt-1 text-gray-600">
+            Grants whose required ballots are in. Record the official outcome, including overrides.
+          </p>
+        </div>
+        <Link
+          className="shrink-0 rounded-lg border border-eagle-blue/30 bg-eagle-blue/5 px-3 py-1.5 text-sm font-medium text-eagle-blue hover:bg-eagle-blue/10"
+          href="/process"
+        >
+          Process guide & email templates →
+        </Link>
       </div>
       {windows.map(({cycle, reviewers}) => {
         const committee = reviewers

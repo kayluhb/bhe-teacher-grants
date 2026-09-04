@@ -31,7 +31,12 @@ export const ChairCommittee = ({
         </p>
         <h2 className="font-heading text-xl font-bold text-charcoal">Committee · {cycleLabel}</h2>
         <p className="font-body mt-1 text-sm text-gray-600">
-          Search people already on the roster, or type an email to add someone new.
+          Five members: Principal, BHE PTA Faculty Rep, Finance Chair (Treasurer), and two
+          additional board members/committee chairs. Alternates may serve in case of absence or
+          conflict of interest.
+        </p>
+        <p className="font-body mt-1 text-sm text-gray-600">
+          Add the committee members below (officers are assigned in Admin).
         </p>
       </div>
       <CommitteePicker

@@ -7,13 +7,13 @@ import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
 import {castVote, listReviewQueue, setApprovedAmount} from '~/lib/grants';
 import {runReviewNotifications} from '~/lib/review-notifications';
-import {nextBallotHref} from '~/lib/votes';
+import {isBallot, nextBallotHref} from '~/lib/votes';
 
 export const castVoteAction = async (formData: FormData) => {
   const user = await requireReviewer();
   const vote = String(formData.get('vote') || '');
-  if (vote !== 'APPROVE' && vote !== 'REJECT' && vote !== 'ABSTAIN') {
-    return {error: 'Invalid vote.'};
+  if (!isBallot(vote)) {
+    return {error: 'Invalid rank.'};
   }
 
   const grantId = String(formData.get('grant_id') || '');

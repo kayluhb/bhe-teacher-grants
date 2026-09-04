@@ -12,6 +12,7 @@ export const DOCUMENT_TITLES = {
   notFound: 'Not found',
   portal: 'My grants',
   portalNew: 'New grant',
+  process: 'Process guide',
   review: 'Review',
 } as const;
 

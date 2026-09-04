@@ -8,7 +8,6 @@ import {getDb} from '~/lib/db';
 import {
   getGrant,
   grantTally,
-  hydrateGrantItemImages,
   listEligibleVoters,
   listGrantItems,
   listReviewerRows,
@@ -16,8 +15,10 @@ import {
 } from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+import {withItemImages} from '~/lib/product-preview';
 import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
+import {BALLOT_LABELS, isBallot} from '~/lib/votes';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const grant = await getGrant(getDb(), (await params).id);
@@ -41,10 +42,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
     listEligibleVoters(db, grant),
     grantTally(db, grant),
   ]);
-  const items = await hydrateGrantItemImages(
-    db,
-    rawItems.filter((item) => item.is_ad_hoc === 0),
-  );
+  const items = withItemImages(rawItems.filter((item) => item.is_ad_hoc === 0));
 
   return (
     <div className="space-y-6">
@@ -66,17 +64,19 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Advisory tally</p>
+          <p className="text-xs text-gray-500 uppercase">Ranks</p>
           <p className="font-heading text-xl font-bold">
-            {tally.approve}–{tally.reject}
+            {tally.high} High · {tally.medium} Medium · {tally.low} Low
             <span className="font-body ml-2 text-sm font-normal text-gray-500">
-              {tally.notVoted} not voted
+              {tally.abstain} abstain · {tally.notVoted} not ranked
             </span>
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Advice</p>
-          <p className="font-heading text-xl font-bold">{tally.outcome ?? 'No majority'}</p>
+          <p className="text-xs text-gray-500 uppercase">Leaning</p>
+          <p className="font-heading text-xl font-bold">
+            {tally.leaning ? BALLOT_LABELS[tally.leaning] : 'No majority'}
+          </p>
         </div>
       </div>
 
@@ -92,7 +92,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
             return (
               <li className="rounded-lg border border-gray-200 bg-white px-3 py-2" key={voter.id}>
                 <span className="font-medium">{voter.name}</span> · {SEAT_LABELS[voter.role]} ·{' '}
-                {ballot?.vote ?? 'Not voted'}
+                {ballot && isBallot(ballot.vote) ? BALLOT_LABELS[ballot.vote] : 'Not ranked'}
                 {ballot?.comment ? <p className="text-gray-600">{ballot.comment}</p> : null}
               </li>
             );

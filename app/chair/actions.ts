@@ -28,18 +28,19 @@ export const decideGrantAction = async (formData: FormData) => {
   if ('error' in result) return result;
 
   const grant = await getGrant(db, grantId);
-  const email = grant
-    ? teacherGrantDecisionEmail({
-        amount: grant.approved_amount ?? grant.requested_amount,
-        chairmanEmail: user.email,
-        chairmanName: user.name,
-        outcome: result.status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
-        teacherEmail: grant.teacher_email,
-        teacherName: grant.teacher_name,
-        title: grant.title,
-      })
-    : null;
-  if (email) notifyQuietly(email);
+  if (grant) {
+    const email = teacherGrantDecisionEmail({
+      amount: grant.approved_amount ?? grant.requested_amount,
+      chairmanEmail: user.email,
+      chairmanName: user.name,
+      outcome: result.status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
+      rejectionComment: result.status === 'REJECTED' ? comment : null,
+      teacherEmail: grant.teacher_email,
+      teacherName: grant.teacher_name,
+      title: grant.title,
+    });
+    notifyQuietly(email);
+  }
 
   const remaining = await listChairQueue(db, user.id);
   revalidatePath('/chair');

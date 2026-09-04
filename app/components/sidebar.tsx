@@ -15,6 +15,7 @@ const LINKS: {href: string; label: string; roles: Role[]}[] = [
   {href: '/review', label: 'Review', roles: ['committee', 'admin', 'principal']},
   {href: '/fulfill', label: 'Fulfill', roles: ['admin']},
   {href: '/budget', label: 'Budget', roles: ['committee', 'admin', 'principal']},
+  {href: '/process', label: 'Process', roles: ['committee', 'admin', 'principal']},
   {href: '/admin', label: 'Admin', roles: ['admin']},
 ];
 

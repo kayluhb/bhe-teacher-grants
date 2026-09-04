@@ -74,7 +74,7 @@ export const planReviewNotifications = (input: {
     openStamps.push(cycle.id);
     for (const reviewer of voterReviewers(cycle.reviewers)) {
       emails.push({
-        html: `<p>Review is open for ${escapeHtml(cycle.name)}. Please finish your votes before the deadline.</p><p><a href="${origin}/review">Open the review queue</a></p>`,
+        html: `<p>Review is open for ${escapeHtml(cycle.name)}. Please finish your ranks before the deadline.</p><p><a href="${origin}/review">Open the review queue</a></p>`,
         subject: `Review is open: ${cycle.name}`,
         to: reviewer.email,
       });
@@ -104,8 +104,8 @@ export const planReviewNotifications = (input: {
       reminderStamps.push({cycleId: cycle.id, threshold, userId: reviewer.userId});
       const when = threshold === '1d' ? 'tomorrow' : 'in 3 days';
       emails.push({
-        html: `<p>Review for ${escapeHtml(cycle.name)} closes ${when}. You still need to vote on:</p><ul>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join('')}</ul><p><a href="${origin}/review">Open the review queue</a></p>`,
-        subject: `Reminder: ${titles.length} grant${titles.length === 1 ? '' : 's'} still need your vote`,
+        html: `<p>Review for ${escapeHtml(cycle.name)} closes ${when}. You still need to rank:</p><ul>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join('')}</ul><p><a href="${origin}/review">Open the review queue</a></p>`,
+        subject: `Reminder: ${titles.length} grant${titles.length === 1 ? '' : 's'} still need your rank`,
         to: reviewer.email,
       });
     }

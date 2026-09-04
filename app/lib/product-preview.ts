@@ -211,6 +211,15 @@ export const fetchProductImage = async (
   }
 };
 
+export const withItemImages = <
+  T extends {
+    asin?: string | null;
+    image_url?: string | null;
+  },
+>(
+  items: T[],
+): T[] => items.map((item) => ({...item, image_url: itemImageUrl(item)}));
+
 export const fillMissingItemImages = async <
   T extends {
     asin?: string | null;

@@ -6,7 +6,7 @@ import {listGrants, resolveListFilters} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 
 export async function GET(request: Request) {
-  await requireRole('committee', 'principal');
+  await requireRole('principal', 'chair');
   const url = new URL(request.url);
   const filters = await resolveListFilters(getDb(), {
     semester: url.searchParams.get('semester') ?? undefined,

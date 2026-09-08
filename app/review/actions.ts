@@ -7,7 +7,7 @@ import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
 import {castVote, listReviewQueue, setApprovedAmount} from '~/lib/grants';
 import {runReviewNotifications} from '~/lib/review-notifications';
-import {isBallot, nextBallotHref} from '~/lib/votes';
+import {isBallot, nextBallotHref, splitReviewQueue} from '~/lib/votes';
 
 export const castVoteAction = async (formData: FormData) => {
   const user = await requireReviewer();
@@ -39,7 +39,7 @@ export const castVoteAction = async (formData: FormData) => {
   revalidatePath('/review');
   revalidatePath(`/review/${grantId}`);
   revalidatePath('/chair');
-  redirect(nextBallotHref(remaining, grantId));
+  redirect(nextBallotHref(splitReviewQueue(remaining).pending, grantId));
 };
 
 export const setApprovedAmountAction = async (formData: FormData): Promise<void> => {

@@ -2,6 +2,7 @@
 
 import {useRouter} from 'next/navigation';
 import {addCommitteeMemberAction, removeCommitteeMemberAction} from '~/chair/actions';
+import {CommitteeCompositionDialog} from '~/components/committee-composition-dialog';
 import {CommitteePicker} from '~/components/committee-picker';
 import type {DirectoryPerson} from '~/lib/people';
 
@@ -26,17 +27,19 @@ export const ChairCommittee = ({
       data-tour="committee"
     >
       <div className="mb-4">
-        <p className="font-heading text-xs font-semibold tracking-[0.18em] text-spirit-gold uppercase">
-          Roll call
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="font-heading text-xs font-semibold tracking-[0.18em] text-spirit-gold uppercase">
+            Roll call
+          </p>
+          <span id="committee-composition">
+            <CommitteeCompositionDialog />
+          </span>
+        </div>
         <h2 className="font-heading text-xl font-bold text-charcoal">Committee · {cycleLabel}</h2>
         <p className="font-body mt-1 text-sm text-gray-600">
-          Five members: Principal, BHE PTA Faculty Rep, Finance Chair (Treasurer), and two
-          additional board members/committee chairs. Alternates may serve in case of absence or
-          conflict of interest.
-        </p>
-        <p className="font-body mt-1 text-sm text-gray-600">
-          Add the committee members below (officers are assigned in Admin).
+          Principal and Treasurer are already assigned in Admin. Add the remaining three seats
+          here: one Faculty Rep and two board members or committee chairs. Alternates may serve
+          for absence or conflict of interest.
         </p>
       </div>
       <CommitteePicker

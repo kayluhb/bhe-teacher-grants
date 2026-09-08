@@ -69,6 +69,16 @@ export const nextBallotHref = (remaining: {id: string}[], currentGrantId: string
   return next ? `/review/${next.id}` : '/review';
 };
 
+export const splitReviewQueue = <T extends {my_vote: Ballot | null}>(grants: T[]) => ({
+  pending: grants.filter((grant) => grant.my_vote == null),
+  ranked: grants.filter((grant) => grant.my_vote != null),
+});
+
+export const isChairActor = (
+  actor: {id: string; role: string},
+  seatedChairmanId: string | null | undefined,
+) => actor.role === 'chair' || seatedChairmanId === actor.id;
+
 export const validateChairDecision = (input: {
   complete: boolean;
   isChairman: boolean;

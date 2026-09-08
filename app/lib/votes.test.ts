@@ -1,7 +1,36 @@
 import {describe, expect, it} from 'vitest';
-import {ballotLeaning, nextBallotHref, tallyVotes, validateChairDecision} from '~/lib/votes';
+import {
+  ballotLeaning,
+  isChairActor,
+  nextBallotHref,
+  splitReviewQueue,
+  tallyVotes,
+  validateChairDecision,
+} from '~/lib/votes';
 
 const voters = ['treasurer', 'principal', 'committee'];
+
+describe('splitReviewQueue', () => {
+  it('puts unvoted grants in pending and voted grants in ranked', () => {
+    expect(
+      splitReviewQueue([
+        {id: 'a', my_vote: null},
+        {id: 'b', my_vote: 'HIGH'},
+        {id: 'c', my_vote: 'ABSTAIN'},
+        {id: 'd', my_vote: null},
+      ]),
+    ).toEqual({
+      pending: [
+        {id: 'a', my_vote: null},
+        {id: 'd', my_vote: null},
+      ],
+      ranked: [
+        {id: 'b', my_vote: 'HIGH'},
+        {id: 'c', my_vote: 'ABSTAIN'},
+      ],
+    });
+  });
+});
 
 describe('tallyVotes', () => {
   it('stays incomplete until every required voter has a ballot', () => {
@@ -71,6 +100,21 @@ describe('nextBallotHref', () => {
 
   it('returns the review queue when the current grant is the last remaining', () => {
     expect(nextBallotHref([{id: 'current'}], 'current')).toBe('/review');
+  });
+});
+
+describe('isChairActor', () => {
+  it('allows the chair role even when the actor is not the seated chairman id', () => {
+    expect(isChairActor({id: 'admin', role: 'chair'}, 'user_chairman')).toBe(true);
+  });
+
+  it('allows a seated chairman under another role', () => {
+    expect(isChairActor({id: 'user_chairman', role: 'admin'}, 'user_chairman')).toBe(true);
+  });
+
+  it('rejects anyone else', () => {
+    expect(isChairActor({id: 'admin', role: 'admin'}, 'user_chairman')).toBe(false);
+    expect(isChairActor({id: 'committee', role: 'committee'}, 'user_chairman')).toBe(false);
   });
 });
 

@@ -390,8 +390,9 @@ export const CommitteePicker = ({
         </p>
       ) : (
         <p className="text-xs text-gray-500">
-          Search a name to create someone new, or type an email. AISD stays teacher; everyone else
-          joins as committee.
+          Search by name or enter an email to add someone. The Faculty Rep signs in with their
+          AISD email (they stay a teacher). The other two members use a non-AISD email and join as
+          committee.
         </p>
       )}
     </div>

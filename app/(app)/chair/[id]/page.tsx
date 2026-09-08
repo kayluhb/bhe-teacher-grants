@@ -18,7 +18,7 @@ import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {withItemImages} from '~/lib/product-preview';
 import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
-import {BALLOT_LABELS, isBallot} from '~/lib/votes';
+import {BALLOT_LABELS, isBallot, isChairActor} from '~/lib/votes';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const grant = await getGrant(getDb(), (await params).id);
@@ -32,7 +32,8 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
   const grant = await getGrant(db, id);
   if (!grant || grant.status === 'DRAFT') redirect('/chair');
   const chairs = await listReviewerRows(db, grant.cycle_id);
-  if (!chairs.some((row) => row.seat === 'chairman' && row.userId === user.id)) {
+  const seatedChairman = chairs.find((row) => row.seat === 'chairman');
+  if (!isChairActor(user, seatedChairman?.userId)) {
     redirect('/chair');
   }
 

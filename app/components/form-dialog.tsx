@@ -41,7 +41,7 @@ export const FormDialog = ({
   padded?: boolean;
   title: string;
   triggerClassName?: string;
-  triggerLabel: string;
+  triggerLabel: ReactNode;
 }) => (
   <Dialog.Root onOpenChange={onOpenChange} open={open}>
     <Dialog.Trigger className={triggerClassName} type="button">

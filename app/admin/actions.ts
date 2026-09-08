@@ -1,5 +1,6 @@
 'use server';
 
+import {env} from 'cloudflare:workers';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {
@@ -16,6 +17,8 @@ import {
 } from '~/lib/admin';
 import {type Role, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {cycleInputFromFormData} from '~/lib/grant-cycle';
+import {deleteGrantFiles} from '~/lib/grant-files';
 
 const toAdmin = (tab?: string, error?: string): never => {
   const params = new URLSearchParams();
@@ -75,7 +78,13 @@ export const deleteUserAction = async (formData: FormData): Promise<void> => {
     userId: String(formData.get('user_id') || ''),
   });
   if ('error' in result) fail(result.error, tab);
+  await deleteGrantFiles(env.FILES_BUCKET, result.fileKeys);
   revalidatePath('/admin');
+  revalidatePath('/grants');
+  revalidatePath('/portal');
+  revalidatePath('/review');
+  revalidatePath('/chair');
+  revalidatePath('/fulfill');
 };
 
 export const createSchoolYearAction = async (
@@ -112,31 +121,17 @@ export const updateSchoolYearAction = async (
   return toAdmin(tab);
 };
 
-const cycleFromForm = (formData: FormData) => ({
-  budgetLimit: Number(formData.get('budget_limit') || 0),
-  chairmanUserId: String(formData.get('chairman_user_id') || ''),
-  committeeUserIds: formData.getAll('committee_user_ids').map(String),
-  endsAt: String(formData.get('ends_at') || ''),
-  isActive: formData.get('is_active') === '1',
-  name: String(formData.get('name') || ''),
-  principalUserId: String(formData.get('principal_user_id') || ''),
-  reviewEndsAt: String(formData.get('review_ends_at') || ''),
-  reviewStartsAt: String(formData.get('review_starts_at') || ''),
-  schoolYearId: String(formData.get('school_year_id') || ''),
-  semester: String(formData.get('semester') || ''),
-  startsAt: String(formData.get('starts_at') || ''),
-  treasurerUserId: String(formData.get('treasurer_user_id') || ''),
-});
-
 export const createCycleAction = async (
   _prev: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> => {
   await requireRole('admin');
   const tab = tabFrom(formData);
-  const result = await createCycle(getDb(), cycleFromForm(formData));
+  const result = await createCycle(getDb(), cycleInputFromFormData(formData));
   if ('error' in result) return {error: result.error};
   revalidatePath('/admin');
+  revalidatePath('/chair');
+  revalidatePath('/chair/windows');
   return toAdmin(tab);
 };
 
@@ -147,11 +142,13 @@ export const updateCycleAction = async (
   await requireRole('admin');
   const tab = tabFrom(formData);
   const result = await updateCycle(getDb(), {
-    ...cycleFromForm(formData),
+    ...cycleInputFromFormData(formData),
     cycleId: String(formData.get('cycle_id') || ''),
   });
   if ('error' in result) return {error: result.error};
   revalidatePath('/admin');
+  revalidatePath('/chair');
+  revalidatePath('/chair/windows');
   revalidatePath('/grants');
   return toAdmin(tab);
 };
@@ -162,10 +159,12 @@ export const setActiveCycleAction = async (formData: FormData): Promise<void> =>
   const result = await setActiveCycle(getDb(), String(formData.get('cycle_id') || ''));
   if ('error' in result) fail(result.error, tab);
   revalidatePath('/admin');
+  revalidatePath('/chair');
+  revalidatePath('/chair/windows');
   revalidatePath('/grants');
 };
 
 export const ensureUserAction = async (email: string, name?: string) => {
-  await requireRole('admin');
+  await requireRole('admin', 'chair');
   return findOrCreateUser(getDb(), {email, name});
 };

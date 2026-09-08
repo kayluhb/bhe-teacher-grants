@@ -5,24 +5,32 @@ import {usePathname} from 'next/navigation';
 import {useState} from 'react';
 import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
+import {ViewAsForm} from '~/components/view-as-form';
 import {APP_TITLE} from '~/lib/page-title';
 import type {Portal} from '~/lib/reviewers';
-import {displayRoleLabel, type Role, type User} from '~/lib/roles';
+import {displayRoleLabel, homePath, type Role, type User} from '~/lib/roles';
+import {isViewingAs} from '~/lib/view-as';
 
 const LINKS: {href: string; label: string; roles: Role[]}[] = [
-  {href: '/', label: 'Home', roles: ['committee', 'admin', 'principal']},
+  {href: '/', label: 'Home', roles: ['admin', 'principal', 'committee', 'teacher']},
   {href: '/grants', label: 'Grants', roles: ['admin']},
   {href: '/review', label: 'Review', roles: ['committee', 'admin', 'principal']},
   {href: '/fulfill', label: 'Fulfill', roles: ['admin']},
-  {href: '/budget', label: 'Budget', roles: ['committee', 'admin', 'principal']},
-  {href: '/process', label: 'Process', roles: ['committee', 'admin', 'principal']},
+  {href: '/budget', label: 'Budget', roles: ['admin', 'principal', 'chair']},
   {href: '/admin', label: 'Admin', roles: ['admin']},
 ];
 
 export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const homeHref = homePath(user.role);
   const links = [
+    ...(portals?.includes('chairman')
+      ? [
+          {href: '/chair', label: user.role === 'chair' ? 'Home' : 'Chair'},
+          {href: '/chair/windows', label: 'Grant windows'},
+        ]
+      : []),
     ...LINKS.filter((link) => {
       if (link.href === '/review') return Boolean(portals?.includes('reviewer'));
       return user.role === 'admin' || link.roles.includes(user.role);
@@ -30,7 +38,6 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
     ...(portals?.includes('reviewer') && user.role === 'teacher'
       ? [{href: '/review', label: 'Review'}]
       : []),
-    ...(portals?.includes('chairman') ? [{href: '/chair', label: 'Chair'}] : []),
     ...(portals?.includes('teacher') ? [{href: '/portal', label: 'My grants'}] : []),
   ].filter((link, index, list) => list.findIndex((item) => item.href === link.href) === index);
 
@@ -38,12 +45,16 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
     <nav className="flex flex-col gap-1 px-3">
       {links.map((link) => {
         const active =
-          pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
+          link.href === '/chair'
+            ? pathname === '/chair' || Boolean(pathname?.match(/^\/chair\/[^/]+$/))
+            : pathname === link.href ||
+              (link.href !== '/' && Boolean(pathname?.startsWith(link.href)));
         return (
           <Link
             className={`rounded-lg px-3 py-2 text-sm font-medium ${
               active ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`}
+            data-tour={link.href === '/chair/windows' ? 'nav-windows' : undefined}
             href={link.href}
             key={link.href}
             onClick={() => setOpen(false)}
@@ -58,7 +69,7 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
   return (
     <>
       <div className="flex h-16 items-center justify-between bg-eagle-blue px-4 text-white md:hidden">
-        <Link aria-label="Barton Hills Elementary PTA home" className="min-w-0" href="/">
+        <Link aria-label="Barton Hills Elementary PTA home" className="min-w-0" href={homeHref}>
           <HeaderLogo compact />
         </Link>
         <button
@@ -100,7 +111,11 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         }`}
       >
         <div className="px-4 py-5">
-          <Link aria-label="Barton Hills Elementary PTA home" className="block min-w-0" href="/">
+          <Link
+            aria-label="Barton Hills Elementary PTA home"
+            className="block min-w-0"
+            href={homeHref}
+          >
             <HeaderLogo compact />
           </Link>
           <p className="font-body mt-2 text-xs text-white/85">{APP_TITLE}</p>
@@ -108,7 +123,12 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         {nav}
         <div className="mt-auto border-t border-white/10 px-5 py-4">
           <p className="text-sm font-medium">{user.name}</p>
-          <p className="text-xs text-white/85">{displayRoleLabel(user, portals)}</p>
+          <p className="text-xs text-white/85">
+            {isViewingAs(user)
+              ? `Preview: ${displayRoleLabel(user, portals)}`
+              : displayRoleLabel(user, portals)}
+          </p>
+          <ViewAsForm user={user} />
           <div className="mt-3">
             <TourHelpButton />
           </div>

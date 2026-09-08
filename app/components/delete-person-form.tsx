@@ -15,7 +15,7 @@ export const DeletePersonForm = ({
   userId: string;
 }) => (
   <FormDialog
-    description={`${name} can sign in again later and will reappear on the roster.`}
+    description={`${name} will be removed from the roster. Any of their grant requests will be permanently deleted. They can sign in again later and will reappear on the roster.`}
     title={`Remove ${name}?`}
     triggerClassName="whitespace-nowrap text-sm text-red-700 underline"
     triggerLabel="Delete"

@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import type {Role} from '~/lib/roles';
 import {
   hasSeenTour,
   markTourSeen,
@@ -34,9 +35,9 @@ const TourContext = createContext<TourContextValue>({
 
 export const useTour = () => useContext(TourContext);
 
-export const TourProvider = ({children}: {children: ReactNode}) => {
+export const TourProvider = ({children, role}: {children: ReactNode; role?: Role}) => {
   const pathname = usePathname() ?? '/';
-  const page = tourPageFromPath(pathname);
+  const page = tourPageFromPath(pathname, role);
   const [active, setActive] = useState(false);
   const pageRef = useRef(page);
   pageRef.current = page;

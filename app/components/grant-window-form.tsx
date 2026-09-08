@@ -1,7 +1,6 @@
 'use client';
 
 import {useActionState} from 'react';
-import type {AdminFormState} from '~/admin/actions';
 import {DialogSubmitBar} from '~/components/form-dialog';
 import {GrantWindowCommitteeField} from '~/components/grant-window-committee-field';
 import {Select} from '~/components/select';
@@ -12,6 +11,8 @@ import type {CycleRow} from '~/lib/types';
 const fieldClass = 'w-full rounded-lg border border-gray-300 px-3 py-2';
 
 export type CycleReviewerValue = {seat: string; user_id: string};
+
+type WindowFormState = {error?: string};
 
 const officerId = (reviewers: CycleReviewerValue[] | undefined, seat: string) =>
   reviewers?.find((row) => row.seat === seat)?.user_id ?? '';
@@ -25,11 +26,11 @@ export const GrantWindowForm = ({
   users,
   years,
 }: {
-  action: (prev: AdminFormState, formData: FormData) => Promise<AdminFormState>;
+  action: (prev: WindowFormState, formData: FormData) => Promise<WindowFormState>;
   cycle?: CycleRow;
   reviewers?: CycleReviewerValue[];
   submitLabel: string;
-  tab: string;
+  tab?: string;
   users: UserRow[];
   years: {id: string; label: string}[];
 }) => {
@@ -49,7 +50,6 @@ export const GrantWindowForm = ({
           value: user.id,
         }))}
         placeholder="Select…"
-        required
       />
     </label>
   );
@@ -65,8 +65,8 @@ export const GrantWindowForm = ({
       }}
     >
       <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto px-5">
-        <input name="tab" type="hidden" value={tab} />
         {cycle ? <input name="cycle_id" type="hidden" value={cycle.id} /> : null}
+        {tab ? <input name="tab" type="hidden" value={tab} /> : null}
         <label className="block text-sm font-medium text-charcoal" htmlFor="school_year_id">
           School year
           <Select

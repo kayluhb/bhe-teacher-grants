@@ -3,6 +3,7 @@ import {redirect} from 'next/navigation';
 import {getDb} from '~/lib/db';
 import {displayRole} from '~/lib/login-email';
 import {homePath, normalizeRole, type Role, type User} from '~/lib/roles';
+import {applyViewAs, isViewingAs, parseViewAsRole, VIEW_AS_COOKIE} from '~/lib/view-as';
 
 export {
   ASSIGNABLE_ROLES,
@@ -28,6 +29,12 @@ const DEV_USERS: Record<Role, User> = {
     name: 'PTA Treasurer',
     role: 'admin',
   },
+  chair: {
+    email: 'chair@bheeagles.com',
+    id: 'user_chairman',
+    name: 'Chris Hall',
+    role: 'chair',
+  },
   committee: {
     email: 'committee@bheeagles.com',
     id: 'user_committee',
@@ -48,24 +55,22 @@ const DEV_USERS: Record<Role, User> = {
   },
 };
 
-const CHAIRMAN_USER: User = {
-  email: 'chair@bheeagles.com',
-  id: 'user_chairman',
-  name: 'Chris Hall',
-  role: 'committee',
-};
-
 const parseDevUser = (): User | null => {
   const raw = process.env.DEV_ROLE;
   if (raw === 'otp' || raw === 'none') return null;
-  if (raw === 'chairman') return CHAIRMAN_USER;
   return DEV_USERS[normalizeRole(raw || '') ?? 'admin'];
+};
+
+const withViewAs = async (user: User): Promise<User> => {
+  const cookieStore = await cookies();
+  const viewAs = parseViewAsRole(cookieStore.get(VIEW_AS_COOKIE)?.value);
+  return applyViewAs(user, viewAs);
 };
 
 export const getSession = async (): Promise<User | null> => {
   if (isDev) {
     const user = parseDevUser();
-    if (user) return user;
+    if (user) return withViewAs(user);
   }
 
   const cookieStore = await cookies();
@@ -82,7 +87,8 @@ export const getSession = async (): Promise<User | null> => {
     .bind(sessionId)
     .first<User>();
   if (!row) return null;
-  return {...row, role: displayRole(row.email, normalizeRole(row.role) ?? row.role)};
+  const user = {...row, role: displayRole(row.email, normalizeRole(row.role) ?? row.role)};
+  return withViewAs(user);
 };
 
 export const requireAuth = async (): Promise<User> => {
@@ -106,6 +112,12 @@ export const requireTeacher = async (): Promise<User> => {
 
 export const requireReviewer = async (): Promise<User> => {
   const user = await requireAuth();
+  if (isViewingAs(user)) {
+    if (user.role === 'committee' || user.role === 'principal' || user.role === 'admin') {
+      return user;
+    }
+    redirect(homePath(user.role));
+  }
   const {listUserSeats} = await import('~/lib/grants');
   const seats = await listUserSeats(getDb(), user.id);
   if (!seats.some((seat) => seat === 'treasurer' || seat === 'principal' || seat === 'committee')) {
@@ -116,6 +128,8 @@ export const requireReviewer = async (): Promise<User> => {
 
 export const requireChairman = async (): Promise<User> => {
   const user = await requireAuth();
+  if (user.role === 'chair') return user;
+  if (isViewingAs(user)) redirect(homePath(user.role));
   const {listUserSeats} = await import('~/lib/grants');
   const seats = await listUserSeats(getDb(), user.id);
   if (!seats.includes('chairman')) redirect(homePath(user.role));
@@ -151,4 +165,5 @@ export const destroySession = async (): Promise<void> => {
     await getDb().prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
   }
   cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete(VIEW_AS_COOKIE);
 };

@@ -1,21 +1,25 @@
 import Link from 'next/link';
+import {DeleteGrantForm} from '~/components/delete-grant-form';
 import {DeliveryForm} from '~/components/delivery-form';
 import {GrantForm} from '~/components/grant-form';
 import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatCard} from '~/components/stat-card';
 import {StatusPill} from '~/components/status-pill';
+import {deleteGrantAction} from '~/grants/actions';
 import {formatUsd} from '~/lib/money';
 import {semesterLabel} from '~/lib/school-year';
 import type {CycleRow, GrantItemRow, GrantRow} from '~/lib/types';
 
 export const GrantDetail = ({
   backHref,
+  canDelete = false,
   cycle,
   grant,
   items,
 }: {
   backHref: string;
+  canDelete?: boolean;
   cycle: CycleRow | null;
   grant: GrantRow;
   items: GrantItemRow[];
@@ -29,7 +33,12 @@ export const GrantDetail = ({
         <h1 className="font-heading mt-1 text-3xl font-bold text-charcoal">{grant.title}</h1>
         <p className="font-body mt-1 text-sm text-gray-600">Submitted by {grant.teacher_name}</p>
       </div>
-      <StatusPill status={grant.status} />
+      <div className="flex flex-col items-end gap-2">
+        <StatusPill status={grant.status} />
+        {canDelete ? (
+          <DeleteGrantForm action={deleteGrantAction} grantId={grant.id} title={grant.title} />
+        ) : null}
+      </div>
     </div>
 
     {grant.status === 'DRAFT' && cycle ? (

@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  cycleInputFromFormData,
   formatSchoolCompactDateTime,
   formatSchoolDateRange,
   formatSchoolDateTime,
@@ -29,6 +30,48 @@ const valid = {
   treasurerUserId: 'user_admin',
 };
 
+describe('cycleInputFromFormData', () => {
+  it('reads window fields from form data for admin and chair saves', () => {
+    const formData = new FormData();
+    formData.set('budget_limit', '10000');
+    formData.set('chairman_user_id', 'user_chairman');
+    formData.append('committee_user_ids', 'user_c1');
+    formData.append('committee_user_ids', 'user_c2');
+    formData.set('ends_at', '2026-10-15T23:59');
+    formData.set('is_active', '1');
+    formData.set('name', 'Fall 2026-27');
+    formData.set('principal_user_id', 'user_principal');
+    formData.set('review_ends_at', '2026-10-30T23:59');
+    formData.set('review_starts_at', '2026-10-15T23:59');
+    formData.set('school_year_id', '2026-27');
+    formData.set('semester', 'FALL');
+    formData.set('starts_at', '2026-08-15T00:00');
+    formData.set('treasurer_user_id', 'user_admin');
+
+    expect(cycleInputFromFormData(formData)).toEqual({
+      budgetLimit: 10000,
+      chairmanUserId: 'user_chairman',
+      committeeUserIds: ['user_c1', 'user_c2'],
+      endsAt: '2026-10-15T23:59',
+      isActive: true,
+      name: 'Fall 2026-27',
+      principalUserId: 'user_principal',
+      reviewEndsAt: '2026-10-30T23:59',
+      reviewStartsAt: '2026-10-15T23:59',
+      schoolYearId: '2026-27',
+      semester: 'FALL',
+      startsAt: '2026-08-15T00:00',
+      treasurerUserId: 'user_admin',
+    });
+  });
+
+  it('treats a missing open checkbox as inactive', () => {
+    const formData = new FormData();
+    formData.set('budget_limit', '5000');
+    expect(cycleInputFromFormData(formData).isActive).toBe(false);
+  });
+});
+
 describe('validateCycleInput', () => {
   it('accepts a complete window', () => {
     expect(validateCycleInput(valid)).toBeNull();
@@ -46,10 +89,8 @@ describe('validateCycleInput', () => {
     expect(validateCycleInput({...valid, semester: 'SUMMER'})).toBe('Pick Fall or Spring.');
   });
 
-  it('requires review to start at or after submissions close', () => {
-    expect(validateCycleInput({...valid, reviewStartsAt: '2026-10-14T00:00'})).toBe(
-      'Review must start when submissions close or later.',
-    );
+  it('allows review to overlap an open submission window', () => {
+    expect(validateCycleInput({...valid, reviewStartsAt: '2026-10-14T00:00'})).toBeNull();
   });
 
   it('requires review close after review open', () => {
@@ -179,7 +220,7 @@ describe('reviewQueueMessaging', () => {
     expect(copy.paragraphs[0]).toContain('Fall 2026-27 Teacher Grants');
     expect(copy.paragraphs[0]).toMatch(/open .+ October 15, 2026/);
     expect(copy.paragraphs[1]).toContain('Teachers can still submit until then');
-    expect(copy.paragraphs[1]).toContain('After you submit a rank, the next grant opens');
+    expect(copy.paragraphs[1]).toContain('After review opens, those grants will appear here');
   });
 
   it('skips the still-submitting line once the request window has closed', () => {
@@ -192,6 +233,12 @@ describe('reviewQueueMessaging', () => {
     );
     expect(copy.paragraphs[1]).toContain('submitted grants will appear here');
     expect(copy.paragraphs[1]).not.toContain('Teachers can still submit');
+  });
+
+  it('describes the open queue with ranked grants kept below', () => {
+    const copy = reviewQueueMessaging({cycle: fall, kind: 'open'});
+    expect(copy.subtitle).toContain('your ranks stay listed below');
+    expect(copy.paragraphs[0]).toContain("You're caught up");
   });
 });
 

@@ -58,7 +58,7 @@ export const validateGrantNarrative = (input: {
   return {
     benefitScope: input.benefitScope,
     description,
-    gradesImpacted: input.benefitScope === 'CLASS' ? '' : gradesImpacted,
+    gradesImpacted: gradesImpactedRequired(input.benefitScope) ? gradesImpacted : '',
     title: titleFromDescription(description),
   };
 };

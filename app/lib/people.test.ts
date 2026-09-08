@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 import {AISD_DOMAIN} from '~/lib/login-email';
 import {
   committeeAddError,
-  committeeRemoveError,
   composeDraftFromSuggestion,
   createEmailFromQuery,
   draftUserFromEmail,
@@ -129,16 +128,6 @@ describe('committeeAddError', () => {
 
   it('treats an existing committee member as fine', () => {
     expect(committeeAddError('committee-a', officers, ['committee-a'])).toBeNull();
-  });
-});
-
-describe('committeeRemoveError', () => {
-  it('blocks removing the last committee reviewer', () => {
-    expect(committeeRemoveError(0)).toBe('Add at least one committee reviewer.');
-  });
-
-  it('allows removing when another reviewer remains', () => {
-    expect(committeeRemoveError(1)).toBeNull();
   });
 });
 

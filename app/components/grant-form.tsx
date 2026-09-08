@@ -226,7 +226,7 @@ export const GrantForm = ({
     [benefitScope, description, gradesImpacted, items],
   );
   const summary = useMemo(() => summarizeGrantItems(items), [items]);
-  const showGrades = Boolean(benefitScope && benefitScope !== 'CLASS');
+  const showGrades = Boolean(benefitScope && gradesImpactedRequired(benefitScope));
   const retailer = wishlistRetailerLabel(wishlistUrl);
   const benefitLabel = benefitScope ? BENEFIT_SCOPE_LABELS[benefitScope] : null;
 
@@ -357,7 +357,7 @@ export const GrantForm = ({
       checks={checks}
       cycleName={cycleName}
       error={error}
-      gradesImpacted={gradesImpacted.trim()}
+      gradesImpacted={showGrades ? gradesImpacted.trim() : ''}
       onSaveDraft={() => submit(false)}
       onSubmit={() => submit(true)}
       pending={pending}
@@ -416,15 +416,14 @@ export const GrantForm = ({
             />
           </fieldset>
 
-          {benefitScope && benefitScope !== 'CLASS' ? (
+          {showGrades ? (
             <label className="font-body block text-sm font-medium text-charcoal">
-              {gradesImpactedRequired(benefitScope)
-                ? 'If you answered "Multiple grades" or "Whole grade" above, what grades are impacted?'
-                : 'What grades are impacted? (optional)'}
+              If you answered &quot;Multiple grades&quot; or &quot;Whole grade&quot; above, what grades
+              are impacted?
               <input
                 className={inputClass}
                 onChange={(event) => setGradesImpacted(event.target.value)}
-                required={gradesImpactedRequired(benefitScope)}
+                required
                 value={gradesImpacted}
               />
             </label>
@@ -575,13 +574,24 @@ export const GrantForm = ({
                         value={item.unit_price}
                       />
                     </label>
-                    <button
-                      className="text-sm text-red-700 md:col-span-1 md:self-end md:pb-2"
-                      onClick={() => setItems((current) => current.filter((_, i) => i !== index))}
-                      type="button"
-                    >
-                      Remove
-                    </button>
+                    {items.length > 1 ? (
+                      <button
+                        aria-label="Remove item"
+                        className="flex h-9 w-9 items-center justify-center self-end rounded-lg text-red-700 hover:bg-red-50 md:col-span-1"
+                        onClick={() => setItems((current) => current.filter((_, i) => i !== index))}
+                        type="button"
+                      >
+                        <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <path
+                            d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                          />
+                        </svg>
+                      </button>
+                    ) : null}
                     <label className="font-body text-xs font-medium text-charcoal md:col-span-12">
                       Vendor URL
                       <input

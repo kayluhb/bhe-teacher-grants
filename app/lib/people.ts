@@ -89,9 +89,6 @@ export const committeeAddError = (
   return null;
 };
 
-export const committeeRemoveError = (remainingCommitteeCount: number): string | null =>
-  remainingCommitteeCount < 1 ? 'Add at least one committee reviewer.' : null;
-
 export const parseUserName = (raw: string): Result<{name: string}> => {
   const name = raw.trim();
   if (!name) return {error: 'Name is required.'};

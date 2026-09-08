@@ -11,6 +11,7 @@ import {
   roleForEmail,
   UNKNOWN_LOGIN_EMAIL_ERROR,
 } from '~/lib/login-email';
+import {recordLoginEvent} from '~/lib/login-events';
 import {
   cooldownSeconds,
   generateOtp,
@@ -58,6 +59,14 @@ const hashesMatch = (left: string, right: string): boolean => {
 
 const loadOtp = async (email: string) =>
   getDb().prepare('SELECT * FROM login_otps WHERE email = ?').bind(email).first<OtpRow>();
+
+const userIdForEmail = async (email: string): Promise<string | null> => {
+  const row = await getDb()
+    .prepare('SELECT id FROM users WHERE email = ?')
+    .bind(email)
+    .first<{id: string}>();
+  return row?.id ?? null;
+};
 
 export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> => {
   const email = normalizeEmail(rawEmail);
@@ -134,6 +143,12 @@ export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> =>
     .bind(email, await hashOtp(email, code), now, now + OTP_TTL_MS, sendCount, windowStartedAt)
     .run();
 
+  await recordLoginEvent(getDb(), {
+    email,
+    kind: 'otp_sent',
+    userId: await userIdForEmail(email),
+  });
+
   return {cooldownSeconds: cooldownSeconds(OTP_COOLDOWN_MS), ok: true};
 };
 
@@ -167,21 +182,38 @@ export const verifyOtp = async (rawEmail: string, rawCode: string): Promise<OtpV
   const now = Date.now();
   if (row.expires_at <= now) return {error: 'That code expired. Request a new one.'};
   if (row.attempts >= OTP_MAX_ATTEMPTS) {
+    await recordLoginEvent(getDb(), {
+      email,
+      kind: 'otp_locked',
+      userId: await userIdForEmail(email),
+    });
     return {error: 'Too many attempts. Request a new code after the cooldown.'};
   }
 
   const matches = hashesMatch(row.code_hash, await hashOtp(email, code));
   if (!matches) {
+    const attempts = row.attempts + 1;
     await getDb()
       .prepare('UPDATE login_otps SET attempts = attempts + 1 WHERE email = ?')
       .bind(email)
       .run();
+    const userId = await userIdForEmail(email);
+    await recordLoginEvent(getDb(), {email, kind: 'otp_failed', userId});
+    if (attempts >= OTP_MAX_ATTEMPTS) {
+      await recordLoginEvent(getDb(), {email, kind: 'otp_locked', userId});
+    }
     return {error: 'That code is incorrect.'};
   }
 
   const user = await upsertUser(email);
   if ('error' in user) return user;
-  await getDb().prepare('DELETE FROM login_otps WHERE email = ?').bind(email).run();
+  await getDb().batch([
+    getDb().prepare('DELETE FROM login_otps WHERE email = ?').bind(email),
+    getDb()
+      .prepare(`UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?`)
+      .bind(new Date().toISOString(), new Date().toISOString(), user.id),
+  ]);
+  await recordLoginEvent(getDb(), {email, kind: 'otp_success', userId: user.id});
   await createSession(user.id);
   const userRow = await getDb()
     .prepare('SELECT email, role FROM users WHERE id = ?')

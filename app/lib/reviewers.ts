@@ -32,12 +32,8 @@ export const validateReviewerRoster = (input: {
   const principal = input.principalUserId.trim();
   const chairman = input.chairmanUserId.trim();
   const committee = [...new Set(input.committeeUserIds.map((id) => id.trim()).filter(Boolean))];
-  if (!treasurer || !principal || !chairman) {
-    return 'Pick a treasurer, principal, and chairman.';
-  }
-  if (committee.length === 0) return 'Add at least one committee reviewer.';
-  const officers = [treasurer, principal, chairman];
-  if (new Set(officers).size !== 3) {
+  const officers = [treasurer, principal, chairman].filter(Boolean);
+  if (new Set(officers).size !== officers.length) {
     return 'Treasurer, principal, and chairman must be different people.';
   }
   if (committee.some((id) => officers.includes(id))) {
@@ -51,14 +47,21 @@ export const rosterAssignments = (input: {
   committeeUserIds: string[];
   principalUserId: string;
   treasurerUserId: string;
-}): ReviewerAssignment[] => [
-  {seat: 'treasurer', userId: input.treasurerUserId},
-  {seat: 'principal', userId: input.principalUserId},
-  {seat: 'chairman', userId: input.chairmanUserId},
-  ...[...new Set(input.committeeUserIds.filter(Boolean))].map((userId) => ({
-    seat: 'committee' as const,
-    userId,
-  })),
-];
+}): ReviewerAssignment[] => {
+  const seats: {seat: ReviewerSeat; userId: string}[] = [
+    {seat: 'treasurer', userId: input.treasurerUserId.trim()},
+    {seat: 'principal', userId: input.principalUserId.trim()},
+    {seat: 'chairman', userId: input.chairmanUserId.trim()},
+  ];
+  return [
+    ...seats.filter((row) => row.userId),
+    ...[...new Set(input.committeeUserIds.map((id) => id.trim()).filter(Boolean))].map(
+      (userId) => ({
+        seat: 'committee' as const,
+        userId,
+      }),
+    ),
+  ];
+};
 
 export type Portal = 'teacher' | 'reviewer' | 'chairman' | 'treasurer';

@@ -1,11 +1,13 @@
 'use server';
 
+import {env} from 'cloudflare:workers';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {requireAuth, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
-import {confirmDelivery, saveGrant} from '~/lib/grants';
+import {deleteGrantFiles} from '~/lib/grant-files';
+import {confirmDelivery, deleteGrant, saveGrant} from '~/lib/grants';
 import {escapeHtml} from '~/lib/html';
 import {grantPath} from '~/lib/roles';
 import type {GrantItemInput} from '~/lib/types';
@@ -41,6 +43,22 @@ export const saveGrantAction = async (formData: FormData) => {
   revalidatePath('/grants');
   revalidatePath('/portal');
   redirect(grantPath(user.role, result.grantId));
+};
+
+export const deleteGrantAction = async (formData: FormData): Promise<void> => {
+  await requireRole('admin');
+  const grantId = String(formData.get('grant_id') || '');
+  const result = await deleteGrant(getDb(), grantId);
+  if ('error' in result) redirect(`/grants/${grantId}?error=${encodeURIComponent(result.error)}`);
+
+  await deleteGrantFiles(env.FILES_BUCKET, result.fileKeys);
+  revalidatePath('/grants');
+  revalidatePath('/portal');
+  revalidatePath('/review');
+  revalidatePath('/chair');
+  revalidatePath('/fulfill');
+  revalidatePath('/budget');
+  redirect('/grants');
 };
 
 export const confirmDeliveryAction = async (formData: FormData) => {

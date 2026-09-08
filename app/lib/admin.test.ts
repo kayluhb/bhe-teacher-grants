@@ -8,9 +8,9 @@ describe('rosterLockError', () => {
     );
   });
 
-  it('blocks changing the treasurer role', () => {
+  it('blocks changing the admin role', () => {
     expect(rosterLockError('treasurer@bheeagles.com', 'role')).toBe(
-      'The treasurer role is tied to that BHE email.',
+      'The admin role is tied to that BHE email.',
     );
   });
 
@@ -20,9 +20,9 @@ describe('rosterLockError', () => {
     );
   });
 
-  it('blocks removing the treasurer', () => {
+  it('blocks removing the admin', () => {
     expect(rosterLockError('treasurer@bheeagles.com', 'delete')).toBe(
-      'The treasurer cannot be removed from the roster.',
+      'The admin cannot be removed from the roster.',
     );
   });
 
@@ -36,11 +36,10 @@ describe('deleteUserError', () => {
   const removable = {
     actorId: 'user_admin',
     email: 'teacher@austinisd.org',
-    hasGrants: false,
     userId: 'user_teacher',
   };
 
-  it('allows removing a person with no grant requests', () => {
+  it('allows removing a person even when they have grant requests', () => {
     expect(deleteUserError(removable)).toBeNull();
   });
 
@@ -50,19 +49,13 @@ describe('deleteUserError', () => {
     );
   });
 
-  it('blocks removing a person who has grant requests', () => {
-    expect(deleteUserError({...removable, hasGrants: true})).toBe(
-      'This person has grant requests and cannot be removed.',
-    );
-  });
-
-  it('blocks removing the treasurer even with no grants', () => {
+  it('blocks removing the admin', () => {
     expect(
       deleteUserError({
         ...removable,
         email: 'treasurer@bheeagles.com',
         userId: 'user_admin',
       }),
-    ).toBe('The treasurer cannot be removed from the roster.');
+    ).toBe('The admin cannot be removed from the roster.');
   });
 });

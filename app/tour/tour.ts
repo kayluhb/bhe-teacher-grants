@@ -1,3 +1,4 @@
+import type {Role} from '~/lib/roles';
 import type {GrantStatus} from '~/lib/status';
 import type {GrantRow} from '~/lib/types';
 import fixtures from '~/tour/fixtures.json';
@@ -22,14 +23,19 @@ export type TourStorage = {
 };
 
 const TOUR_HOMES: Record<string, TourPage> = {
-  '/': 'treasurer',
   '/chair': 'chairman',
   '/fulfill': 'fulfill',
   '/portal': 'teacher',
   '/review': 'reviewer',
 };
 
-export const tourPageFromPath = (pathname: string): TourPage | null => TOUR_HOMES[pathname] ?? null;
+export const tourPageFromPath = (pathname: string, role?: Role): TourPage | null => {
+  if (pathname === '/') {
+    // Shared home hosts role guides; only the admin home has the treasurer tour.
+    return role === 'admin' || role === undefined ? 'treasurer' : null;
+  }
+  return TOUR_HOMES[pathname] ?? null;
+};
 
 export const tourStorageKey = (page: TourPage): string => `bhe-tour:${page}`;
 
@@ -100,8 +106,8 @@ const TEACHER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Every request you submit lives here, across school years. Open a row to read the details or confirm delivery.',
-      title: 'Your grants',
+        'Every request you have submitted lives here, across school years. Open a row for details or to confirm delivery.',
+      title: 'My grants',
     },
   },
   {
@@ -109,7 +115,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'A gold banner means a window is open for new requests. If the window is closed, you can still read past grants.',
+        'A gold banner means a window is open for new requests. When it is closed, you can still read past grants.',
       title: 'When you can apply',
     },
   },
@@ -118,7 +124,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Open the form, add line items (a public wishlist is optional), and send it in. Voting does not start until the review window opens.',
+        'Open the form, add line items (a public wishlist is optional), and send it in. Voting starts when the review window opens.',
       title: 'Submit a grant',
     },
   },
@@ -126,7 +132,7 @@ const TEACHER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Watch a request move from draft to voting, approved, purchased, then delivered. Click a title for the full story.',
+        'Watch a request move from Draft to Voting, then Approved or Rejected, Purchased, and Delivered. Click a title for the full story.',
       title: 'Track the status',
     },
   },
@@ -146,7 +152,7 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Only grants you have not ranked, in an open review window. After you submit a rank, the grant leaves this list.',
+        'Grants that still need your rank appear first. When the review window is closed, the empty state explains when ranking opens again.',
       title: 'Your review queue',
     },
   },
@@ -154,8 +160,17 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a request to rank High Priority, Medium Priority, or Low Priority — or Abstain. Rankings are private and help sequence funding; your own grant never appears here.',
+        'Open a request to rank High, Medium, or Low Priority — or Abstain. Ranks are private and help sequence funding; your own grant never appears here.',
       title: 'Cast a private rank',
+    },
+  },
+  {
+    element: '[data-tour="ranked-section"]',
+    optional: true,
+    popover: {
+      description:
+        'After you submit a rank, the grant moves here so you can revisit what you voted without changing the pending queue.',
+      title: 'Already ranked',
     },
   },
 ];
@@ -165,8 +180,17 @@ const CHAIRMAN_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Grants appear here only after every required reviewer has voted. The submitting teacher is recused, so their ballot is not required.',
-      title: 'Ready for a decision',
+        'Confirm the committee, track ranks as they come in, and record outcomes once every required ballot is in. The submitting teacher is recused, so their vote is not required.',
+      title: 'Chair home',
+    },
+  },
+  {
+    element: '[data-tour="nav-windows"]',
+    optional: true,
+    popover: {
+      description:
+        'Publish or edit grant windows — school year, dates, budget, and officers. School years themselves are managed in Admin.',
+      title: 'Grant windows',
     },
   },
   {
@@ -174,16 +198,43 @@ const CHAIRMAN_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Five-member committee: Principal, Faculty Rep, Finance Chair (Treasurer), and two board members. Search by name or email to add reviewers. Alternates may serve if someone has a conflict of interest.',
+        'Principal and Treasurer come from the window officers. Add the Faculty Rep and board members here. Use the help icon next to Roll call for seat rules and alternates.',
       title: 'Your committee',
+    },
+  },
+  {
+    element: '[data-tour="eval-email"]',
+    optional: true,
+    popover: {
+      description:
+        'Send evaluation instructions to the voters for this window. Replies go to your email. Seat the committee above before sending.',
+      title: 'Email the committee',
     },
   },
   {
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a grant to see the priority rank counts and what the committee is leaning. You may follow that or override it. The teacher is emailed automatically after you record the outcome. After the cycle closes, remember to request outcome stories from funded teachers.',
-      title: 'Record the outcome',
+        'Open a grant to see rank tallies and what the committee is leaning. Record approve or reject when voting is complete — the teacher is emailed automatically.',
+      title: 'Chair queue',
+    },
+  },
+  {
+    element: '[data-tour="chair-playbook"]',
+    optional: true,
+    popover: {
+      description:
+        'Status-aware checklist for the cycle — some steps auto-complete; mark outreach steps when you finish them.',
+      title: 'Chair playbook',
+    },
+  },
+  {
+    element: '[data-tour="email-templates"]',
+    optional: true,
+    popover: {
+      description:
+        'Copy launch, reminder, evaluation, approval, rejection, and outcome-story emails. Replace placeholders with this cycle\'s details.',
+      title: 'Email templates',
     },
   },
 ];
@@ -193,7 +244,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'This is the treasurer home for the active window: what still needs a vote, what to buy, and what budget remains.',
+        'Admin home for the active window: what still needs a vote, what to buy, and what budget remains. Roster, school years, and windows live under Admin in the sidebar; Budget and Grants are there too.',
       title: 'Window at a glance',
     },
   },
@@ -201,7 +252,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="stat-pending"]',
     optional: true,
     popover: {
-      description: 'Submitted grants still waiting on reviewer ballots or a chairman decision.',
+      description: 'Submitted grants still waiting on reviewer ballots or a chair decision.',
       title: 'Pending grants',
     },
   },
@@ -224,11 +275,20 @@ const TREASURER_STEPS: TourStep[] = [
     },
   },
   {
+    element: '[data-tour="home-submit"]',
+    optional: true,
+    popover: {
+      description:
+        'When a window is open, you can submit a grant on behalf of a teacher from here.',
+      title: 'Submit a grant',
+    },
+  },
+  {
     element: '[data-tour="home-review"]',
     optional: true,
     popover: {
       description:
-        'You rank grants in the reviewer portal, the same as the principal and committee. Ranks stay private until the chairman decides.',
+        'You rank grants in the reviewer portal, the same as the principal and committee. Ranks stay private until the chair decides.',
       title: 'Review queue',
     },
   },
@@ -240,6 +300,15 @@ const TREASURER_STEPS: TourStep[] = [
       title: 'Fulfillment',
     },
   },
+  {
+    element: '[data-tour="process-guide"]',
+    optional: true,
+    popover: {
+      description:
+        'Full-cycle playbook for running a grant window, with evaluation criteria, priority guidelines, and copyable email templates.',
+      title: 'Process guide',
+    },
+  },
 ];
 
 const FULFILL_STEPS: TourStep[] = [
@@ -247,15 +316,24 @@ const FULFILL_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Approved, purchased, and delivered grants live here. Filter by school year and semester the way Barton Hills files reimbursements.',
+        'Approved, purchased, and delivered grants live here — the queue for buying and tracking orders.',
       title: 'Fulfillment',
+    },
+  },
+  {
+    element: '[data-tour="year-filter"]',
+    optional: true,
+    popover: {
+      description:
+        'Filter by school year and semester the way Barton Hills files reimbursements.',
+      title: 'Year and semester',
     },
   },
   {
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a grant to record what you actually paid, attach a receipt, and add a tracking number. Teachers confirm delivery from their own portal.',
+        'Open a grant to record what you actually paid, attach a receipt, and add a tracking number. Teachers confirm delivery from My grants.',
       title: 'Record the purchase',
     },
   },

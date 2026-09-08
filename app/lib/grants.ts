@@ -9,11 +9,12 @@ import {
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
+import {grantFileKeys} from '~/lib/grant-files';
 import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
-import {BALLOT_LABELS, type Ballot, tallyVotes, validateChairDecision} from '~/lib/votes';
+import {BALLOT_LABELS, type Ballot, isBallot, isChairActor, tallyVotes, validateChairDecision} from '~/lib/votes';
 import {normalizeWishlistUrl} from '~/lib/wishlist';
 
 const GRANT_SELECT = `
@@ -53,16 +54,22 @@ export const listCycles = async (db: D1Database) => {
   return rows.results;
 };
 
-export const listChairCycles = async (db: D1Database, userId: string) => {
+export const listChairCycles = async (db: D1Database, user: {id: string; role: string}) => {
+  if (user.role === 'chair') {
+    const active = await getActiveCycle(db);
+    return active ? [active] : [];
+  }
+
   const rows = await db
     .prepare(
       `SELECT c.*, y.label AS school_year
        FROM grant_cycles c
        JOIN school_years y ON y.id = c.school_year_id
        JOIN cycle_reviewers r ON r.cycle_id = c.id AND r.user_id = ? AND r.seat = 'chairman'
+       WHERE c.is_active = 1
        ORDER BY y.sort_order DESC, c.semester ASC`,
     )
-    .bind(userId)
+    .bind(user.id)
     .all<CycleRow>();
   return rows.results ?? [];
 };
@@ -485,7 +492,7 @@ export const decideGrant = async (
   const tally = await grantTally(db, grant);
   const error = validateChairDecision({
     complete: tally.complete,
-    isChairman: chairman?.userId === input.chairman.id,
+    isChairman: isChairActor(input.chairman, chairman?.userId),
     reviewStarted: hasReviewStarted(cycle),
   });
   if (error) return {error};
@@ -523,7 +530,7 @@ export const setApprovedAmount = async (
   input: {actor: User; amount: number; grantId: string},
 ): Promise<Result<{ok: true}>> => {
   if (input.actor.role !== 'admin') {
-    return {error: 'Only the treasurer can change the approved cap.'};
+    return {error: 'Only an admin can change the approved cap.'};
   }
   const grant = await getGrant(db, input.grantId);
   if (!grant) return {error: 'Grant not found.'};
@@ -562,7 +569,7 @@ export const fulfillGrant = async (
   },
 ): Promise<Result<{actualAmount: number; variance: number}>> => {
   if (input.actor.role !== 'admin') {
-    return {error: 'Only the treasurer can record a purchase.'};
+    return {error: 'Only an admin can record a purchase.'};
   }
   const grant = await getGrant(db, input.grantId);
   if (!grant) return {error: 'Grant not found.'};
@@ -716,56 +723,113 @@ export const listUserSeats = async (db: D1Database, userId: string) => {
   return (rows.results ?? []).map((row) => row.seat);
 };
 
-export const listReviewQueue = async (db: D1Database, userId: string, now = new Date()) => {
+export type ReviewQueueGrant = GrantRow & {my_vote: Ballot | null};
+
+export const listReviewQueue = async (
+  db: D1Database,
+  userId: string,
+  now = new Date(),
+): Promise<ReviewQueueGrant[]> => {
   const rows = await db
     .prepare(
-      `${GRANT_SELECT}
+      `SELECT g.*, u.name AS teacher_name, u.email AS teacher_email,
+              c.semester, c.school_year_id, y.label AS school_year,
+              v.vote AS my_vote
+       FROM grants g
+       JOIN users u ON u.id = g.teacher_id
+       JOIN grant_cycles c ON c.id = g.cycle_id
+       JOIN school_years y ON y.id = c.school_year_id
        JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ?
        LEFT JOIN grant_votes v ON v.grant_id = g.id AND v.voter_id = ?
        WHERE g.status = 'PENDING'
          AND g.teacher_id != ?
          AND r.seat != 'chairman'
-         AND v.grant_id IS NULL
        ORDER BY g.created_at ASC`,
     )
     .bind(userId, userId, userId)
-    .all<GrantRow>();
+    .all<GrantRow & {my_vote: string | null}>();
   const cycles = await db
     .prepare('SELECT id, review_starts_at, review_ends_at FROM grant_cycles')
     .all<Pick<CycleRow, 'id' | 'review_ends_at' | 'review_starts_at'>>();
   const openIds = new Set(
     (cycles.results ?? []).filter((cycle) => isReviewOpen(cycle, now)).map((cycle) => cycle.id),
   );
-  return attachPreviewImages(
-    db,
-    (rows.results ?? []).filter((grant) => openIds.has(grant.cycle_id)),
-  );
+  const open = (rows.results ?? [])
+    .filter((grant) => openIds.has(grant.cycle_id))
+    .map((grant) => ({
+      ...grant,
+      my_vote: grant.my_vote && isBallot(grant.my_vote) ? grant.my_vote : null,
+    }));
+  const withImages = await attachPreviewImages(db, open);
+  return withImages.map((grant, index) => ({
+    ...grant,
+    my_vote: open[index].my_vote,
+  }));
 };
 
-export const listChairQueue = async (db: D1Database, userId: string, now = new Date()) => {
-  const rows = await db
-    .prepare(
-      `${GRANT_SELECT}
-       JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ? AND r.seat = 'chairman'
-       WHERE g.status = 'PENDING'
-       ORDER BY g.created_at ASC`,
-    )
-    .bind(userId)
-    .all<GrantRow>();
-  const ready: GrantRow[] = [];
-  for (const grant of rows.results ?? []) {
-    const cycle = await db
-      .prepare('SELECT review_starts_at FROM grant_cycles WHERE id = ?')
-      .bind(grant.cycle_id)
-      .first<Pick<CycleRow, 'review_starts_at'>>();
-    if (!cycle || !hasReviewStarted(cycle, now)) continue;
-    const tally = await grantTally(db, grant);
-    if (tally.complete) ready.push(grant);
-  }
-  return attachPreviewImages(db, ready);
+export const listChairQueue = async (db: D1Database, user: {id: string; role: string}) => {
+  const rows =
+    user.role === 'chair'
+      ? await db
+          .prepare(
+            `${GRANT_SELECT}
+             WHERE g.status = 'PENDING' AND c.is_active = 1
+             ORDER BY g.created_at ASC`,
+          )
+          .all<GrantRow>()
+      : await db
+          .prepare(
+            `${GRANT_SELECT}
+             JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ? AND r.seat = 'chairman'
+             WHERE g.status = 'PENDING' AND c.is_active = 1
+             ORDER BY g.created_at ASC`,
+          )
+          .bind(user.id)
+          .all<GrantRow>();
+  return attachPreviewImages(db, rows.results ?? []);
 };
 
 export const chairmanForGrant = async (db: D1Database, cycleId: string) => {
   const rows = await listReviewerRows(db, cycleId);
   return rows.find((row) => row.seat === 'chairman') ?? null;
+};
+
+export const deleteGrant = async (
+  db: D1Database,
+  grantId: string,
+): Promise<Result<{fileKeys: string[]}>> => {
+  const grant = await db
+    .prepare('SELECT id, receipt_r2_key, proof_of_delivery_r2_key FROM grants WHERE id = ?')
+    .bind(grantId)
+    .first<{
+      id: string;
+      proof_of_delivery_r2_key: string | null;
+      receipt_r2_key: string | null;
+    }>();
+  if (!grant) return {error: 'Grant not found.'};
+
+  const items = await db
+    .prepare('SELECT quote_r2_key FROM grant_items WHERE grant_id = ?')
+    .bind(grantId)
+    .all<{quote_r2_key: string | null}>();
+  const fileKeys = grantFileKeys(grant, items.results ?? []);
+
+  await db.prepare('DELETE FROM grants WHERE id = ?').bind(grantId).run();
+  return {fileKeys};
+};
+
+export const deleteGrantsForTeacher = async (
+  db: D1Database,
+  teacherId: string,
+): Promise<string[]> => {
+  const grants = await db
+    .prepare('SELECT id FROM grants WHERE teacher_id = ?')
+    .bind(teacherId)
+    .all<{id: string}>();
+  const fileKeys: string[] = [];
+  for (const grant of grants.results ?? []) {
+    const result = await deleteGrant(db, grant.id);
+    if (!('error' in result)) fileKeys.push(...result.fileKeys);
+  }
+  return fileKeys;
 };

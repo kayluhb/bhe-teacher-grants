@@ -14,6 +14,23 @@ export type CycleInput = {
   treasurerUserId: string;
 };
 
+/** Shared by Admin and Chair grant-window forms. */
+export const cycleInputFromFormData = (formData: FormData): CycleInput => ({
+  budgetLimit: Number(formData.get('budget_limit') || 0),
+  chairmanUserId: String(formData.get('chairman_user_id') || ''),
+  committeeUserIds: formData.getAll('committee_user_ids').map(String),
+  endsAt: String(formData.get('ends_at') || ''),
+  isActive: formData.get('is_active') === '1',
+  name: String(formData.get('name') || ''),
+  principalUserId: String(formData.get('principal_user_id') || ''),
+  reviewEndsAt: String(formData.get('review_ends_at') || ''),
+  reviewStartsAt: String(formData.get('review_starts_at') || ''),
+  schoolYearId: String(formData.get('school_year_id') || ''),
+  semester: String(formData.get('semester') || ''),
+  startsAt: String(formData.get('starts_at') || ''),
+  treasurerUserId: String(formData.get('treasurer_user_id') || ''),
+});
+
 export const parseCycleSemester = (value: string): 'FALL' | 'SPRING' | null =>
   value === 'FALL' || value === 'SPRING' ? value : null;
 
@@ -124,8 +141,8 @@ export const reviewQueueMessaging = (state: ReviewWindowState, now = new Date())
       paragraphs: [
         datedOpen(state.cycle),
         submitting
-          ? 'Teachers can still submit until then. After review opens, those grants will appear here for you to rank. After you submit a rank, the next grant opens.'
-          : 'When they do, submitted grants will appear here for you to rank. After you submit a rank, the next grant opens.',
+          ? 'Teachers can still submit until then. After review opens, those grants will appear here for you to rank.'
+          : 'When they do, submitted grants will appear here for you to rank.',
       ],
       subtitle: "Reviews aren't open yet.",
     };
@@ -146,12 +163,12 @@ export const reviewQueueMessaging = (state: ReviewWindowState, now = new Date())
   if (state.kind === 'open') {
     return {
       paragraphs: ["You're caught up. There are no grants waiting for your rank."],
-      subtitle: 'Grants you still need to rank. After you submit a rank, the next grant opens.',
+      subtitle: 'Rank each grant. Unranked requests appear first; your ranks stay listed below.',
     };
   }
   return {
     paragraphs: ['Nothing here yet.'],
-    subtitle: 'Grants you still need to rank. After you submit a rank, the next grant opens.',
+    subtitle: 'Rank each grant. Unranked requests appear first; your ranks stay listed below.',
   };
 };
 
@@ -203,9 +220,6 @@ export const validateCycleInput = (input: CycleInput): string | null => {
   if (!input.reviewStartsAt || !input.reviewEndsAt) return 'Review dates are required.';
   if (parsedTime(input.endsAt) <= parsedTime(input.startsAt)) {
     return 'Submission close must be after it opens.';
-  }
-  if (parsedTime(input.reviewStartsAt) < parsedTime(input.endsAt)) {
-    return 'Review must start when submissions close or later.';
   }
   if (parsedTime(input.reviewEndsAt) <= parsedTime(input.reviewStartsAt)) {
     return 'Review close must be after review opens.';

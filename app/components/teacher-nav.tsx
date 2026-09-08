@@ -5,32 +5,34 @@ import {usePathname} from 'next/navigation';
 import {useState} from 'react';
 import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
+import {ViewAsForm} from '~/components/view-as-form';
 import type {Portal} from '~/lib/reviewers';
 import {displayRoleLabel, type User} from '~/lib/roles';
+import {isViewingAs} from '~/lib/view-as';
 
-export const TeacherNav = ({
-  canSubmit,
-  portals,
-  user,
-}: {
-  canSubmit: boolean;
-  portals?: Portal[];
-  user: User;
-}) => {
+export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = [
+    {href: '/', label: 'Home'},
     {href: '/portal', label: 'My grants'},
-    ...(canSubmit ? [{href: '/portal/new', label: 'Submit grant'}] : []),
     ...(portals?.includes('reviewer') ? [{href: '/review', label: 'Review'}] : []),
-    ...(portals?.includes('chairman') ? [{href: '/chair', label: 'Chair'}] : []),
-  ];
+    ...(portals?.includes('chairman')
+      ? [
+          {href: '/chair', label: user.role === 'chair' ? 'Home' : 'Chair'},
+          {href: '/chair/windows', label: 'Grant windows'},
+        ]
+      : []),
+  ].filter((link, index, list) => list.findIndex((item) => item.href === link.href) === index);
 
   const nav = (
     <nav className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
       {links.map((link) => {
         const active =
-          pathname === link.href || (link.href !== '/portal' && pathname?.startsWith(link.href));
+          link.href === '/chair'
+            ? pathname === '/chair' || Boolean(pathname?.match(/^\/chair\/[^/]+$/))
+            : pathname === link.href ||
+              (link.href !== '/' && Boolean(pathname?.startsWith(link.href)));
         return (
           <Link
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
@@ -38,7 +40,13 @@ export const TeacherNav = ({
                 ? 'bg-white text-eagle-blue'
                 : 'text-white/85 hover:bg-white/10 hover:text-white'
             }`}
-            data-tour={link.href === '/review' ? 'nav-review' : undefined}
+            data-tour={
+              link.href === '/review'
+                ? 'nav-review'
+                : link.href === '/chair/windows'
+                  ? 'nav-windows'
+                  : undefined
+            }
             href={link.href}
             key={link.href}
             onClick={() => setOpen(false)}
@@ -53,7 +61,7 @@ export const TeacherNav = ({
   return (
     <header className="shrink-0 bg-eagle-blue text-white shadow-lg">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
-        <Link aria-label="Barton Hills Elementary PTA home" className="shrink-0" href="/portal">
+        <Link aria-label="Barton Hills Elementary PTA home" className="shrink-0" href="/">
           <HeaderLogo />
         </Link>
         <div className="ml-auto hidden items-center gap-4 md:flex">
@@ -61,7 +69,11 @@ export const TeacherNav = ({
           <TourHelpButton />
           <div className="text-right">
             <p className="text-sm font-medium">{user.name}</p>
-            <p className="text-xs text-white/85">{displayRoleLabel(user, portals)}</p>
+            <p className="text-xs text-white/85">
+              {isViewingAs(user)
+                ? `Preview: ${displayRoleLabel(user, portals)}`
+                : displayRoleLabel(user, portals)}
+            </p>
           </div>
           <form action="/api/auth/logout" method="post">
             <button className="text-xs text-white/85 underline hover:text-white" type="submit">
@@ -97,6 +109,7 @@ export const TeacherNav = ({
           {nav}
           <div className="border-t border-white/10 pt-3">
             <p className="text-sm font-medium">{user.name}</p>
+            <ViewAsForm compact user={user} />
             <div className="mt-3">
               <TourHelpButton />
             </div>

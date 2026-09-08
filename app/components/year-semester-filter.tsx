@@ -31,7 +31,7 @@ export const YearSemesterFilter = ({
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-wrap items-end gap-3" data-tour="year-filter">
       <label className="font-body text-sm text-charcoal" htmlFor="school-year-filter">
         School year
         <Select

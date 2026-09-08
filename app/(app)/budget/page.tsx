@@ -16,7 +16,7 @@ export default async function BudgetPage({
 }: {
   searchParams: Promise<{semester?: string | string[]; year?: string | string[]}>;
 }) {
-  await requireRole('committee', 'principal');
+  await requireRole('principal', 'chair');
   const params = await searchParams;
   const db = getDb();
   const filters = await resolveListFilters(db, params);

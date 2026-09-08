@@ -5,6 +5,7 @@ import {
   parseCycleSemester,
   validateCycleInput,
 } from '~/lib/grant-cycle';
+import {deleteGrantsForTeacher} from '~/lib/grants';
 import {
   deleteUserError,
   displayRole,
@@ -16,7 +17,6 @@ import {
 import {money} from '~/lib/money';
 import {
   committeeAddError,
-  committeeRemoveError,
   draftUserFromEmail,
   parseRosterUserInput,
   parseUserName,
@@ -78,13 +78,14 @@ export type UserRow = {
   created_at: string;
   email: string;
   id: string;
+  last_login_at: string | null;
   name: string;
   role: Role;
 };
 
 export const listUsers = async (db: D1Database) => {
   const rows = await db
-    .prepare('SELECT id, email, name, role, created_at FROM users ORDER BY name')
+    .prepare('SELECT id, email, name, role, created_at, last_login_at FROM users ORDER BY name')
     .all<UserRow>();
   return (rows.results ?? []).map((row) => ({
     ...row,
@@ -204,8 +205,6 @@ export const removeCommitteeMember = async (
   if (!committee.some((row) => row.user_id === input.userId)) {
     return {error: 'That person is not on this committee.'};
   }
-  const error = committeeRemoveError(committee.length - 1);
-  if (error) return {error};
 
   await db
     .prepare(
@@ -257,44 +256,28 @@ export const updateUserName = async (
 export const deleteUser = async (
   db: D1Database,
   input: {actorId: string; userId: string},
-): Promise<Result<{ok: true}>> => {
+): Promise<Result<{fileKeys: string[]; ok: true}>> => {
   const existing = await db
     .prepare('SELECT email FROM users WHERE id = ?')
     .bind(input.userId)
     .first<{email: string}>();
   if (!existing) return {error: 'User not found.'};
 
-  const grant = await db
-    .prepare('SELECT id FROM grants WHERE teacher_id = ?')
-    .bind(input.userId)
-    .first();
   const error = deleteUserError({
     actorId: input.actorId,
     email: existing.email,
-    hasGrants: Boolean(grant),
     userId: input.userId,
   });
   if (error) return {error};
 
-  const seat = await db
-    .prepare('SELECT seat FROM cycle_reviewers WHERE user_id = ?')
-    .bind(input.userId)
-    .first();
-  if (seat) {
-    return {error: 'Remove this person from grant windows before deleting them.'};
-  }
-  const vote = await db
-    .prepare('SELECT 1 FROM grant_votes WHERE voter_id = ?')
-    .bind(input.userId)
-    .first();
-  if (vote) return {error: 'This person has votes on file and cannot be removed.'};
+  const fileKeys = await deleteGrantsForTeacher(db, input.userId);
 
   await db.batch([
     db.prepare('DELETE FROM grant_audit_logs WHERE actor_id = ?').bind(input.userId),
     db.prepare('DELETE FROM login_otps WHERE email = ?').bind(normalizeEmail(existing.email)),
     db.prepare('DELETE FROM users WHERE id = ?').bind(input.userId),
   ]);
-  return {ok: true};
+  return {fileKeys, ok: true};
 };
 
 export const createSchoolYear = async (

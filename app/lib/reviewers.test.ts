@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {requiredVoterIds, validateReviewerRoster} from '~/lib/reviewers';
+import {requiredVoterIds, rosterAssignments, validateReviewerRoster} from '~/lib/reviewers';
 
 describe('validateReviewerRoster', () => {
   const roster = {
@@ -13,16 +13,19 @@ describe('validateReviewerRoster', () => {
     expect(validateReviewerRoster(roster)).toBeNull();
   });
 
-  it('requires all three officers', () => {
-    expect(validateReviewerRoster({...roster, chairmanUserId: ''})).toBe(
-      'Pick a treasurer, principal, and chairman.',
-    );
+  it('accepts an empty roster', () => {
+    expect(
+      validateReviewerRoster({
+        chairmanUserId: '',
+        committeeUserIds: [],
+        principalUserId: '',
+        treasurerUserId: '',
+      }),
+    ).toBeNull();
   });
 
-  it('requires at least one committee reviewer', () => {
-    expect(validateReviewerRoster({...roster, committeeUserIds: []})).toBe(
-      'Add at least one committee reviewer.',
-    );
+  it('accepts a partial roster', () => {
+    expect(validateReviewerRoster({...roster, chairmanUserId: '', committeeUserIds: []})).toBeNull();
   });
 
   it('rejects overlapping officer seats', () => {
@@ -31,10 +34,49 @@ describe('validateReviewerRoster', () => {
     );
   });
 
+  it('rejects overlapping seats when only some officers are set', () => {
+    expect(
+      validateReviewerRoster({
+        ...roster,
+        chairmanUserId: 'treasurer',
+        principalUserId: '',
+        committeeUserIds: [],
+      }),
+    ).toBe('Treasurer, principal, and chairman must be different people.');
+  });
+
   it('rejects officers listed on the committee', () => {
     expect(validateReviewerRoster({...roster, committeeUserIds: ['treasurer']})).toBe(
       'Committee reviewers cannot also hold an officer seat.',
     );
+  });
+});
+
+describe('rosterAssignments', () => {
+  it('omits empty officer seats', () => {
+    expect(
+      rosterAssignments({
+        chairmanUserId: 'chair',
+        committeeUserIds: ['committee-a', ''],
+        principalUserId: '',
+        treasurerUserId: 'treasurer',
+      }),
+    ).toEqual([
+      {seat: 'treasurer', userId: 'treasurer'},
+      {seat: 'chairman', userId: 'chair'},
+      {seat: 'committee', userId: 'committee-a'},
+    ]);
+  });
+
+  it('returns no rows for an empty roster', () => {
+    expect(
+      rosterAssignments({
+        chairmanUserId: '',
+        committeeUserIds: [],
+        principalUserId: '',
+        treasurerUserId: '',
+      }),
+    ).toEqual([]);
   });
 });
 

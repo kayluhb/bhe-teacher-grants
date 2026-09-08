@@ -4,18 +4,21 @@ import type {ReactNode} from 'react';
 import {GrantTable} from '~/components/grant-table';
 import {useTour} from '~/components/tour-provider';
 import type {GrantRow} from '~/lib/types';
+import type {Ballot} from '~/lib/votes';
 import {fixturesFor, overlayTourGrants} from '~/tour/tour';
 
 export const TourGrantTable = ({
   empty,
   grants,
   hrefBase,
+  myVote,
   queue,
   showTeacher,
 }: {
   empty?: ReactNode;
   grants: GrantRow[];
   hrefBase: string;
+  myVote?: (grant: GrantRow) => Ballot | null;
   queue: 'chairman' | 'fulfill' | 'reviewer' | 'teacher';
   showTeacher?: boolean;
 }) => {
@@ -37,6 +40,7 @@ export const TourGrantTable = ({
         empty={empty}
         grants={overlay.grants}
         hrefFor={(grant) => (overlay.usingFixtures ? '#' : `${hrefBase}/${grant.id}`)}
+        myVote={myVote}
         showTeacher={showTeacher}
       />
     </div>

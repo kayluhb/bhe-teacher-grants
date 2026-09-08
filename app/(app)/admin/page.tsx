@@ -14,18 +14,19 @@ import {AddPersonForm} from '~/components/add-person-form';
 import {AutosaveForm} from '~/components/autosave-form';
 import {DeletePersonForm} from '~/components/delete-person-form';
 import {FormDialog} from '~/components/form-dialog';
-import {GrantWindowForm} from '~/components/grant-window-form';
+import {GrantWindowsPanel} from '~/components/grant-windows-panel';
+import {LoginActivityDialog} from '~/components/login-activity-dialog';
 import {SchoolYearForm} from '~/components/school-year-form';
 import {Select} from '~/components/select';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {ASSIGNABLE_ROLES, ROLE_LABELS, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
-import {formatSchoolCompactDateTime, formatSchoolDateRange} from '~/lib/grant-cycle';
+import {formatSchoolCompactDateTime} from '~/lib/grant-cycle';
 import {listCycles, listSchoolYears} from '~/lib/grants';
 import {isLockedRosterEmail} from '~/lib/login-email';
-import {formatUsd} from '~/lib/money';
+import {listLoginEventsForEmail} from '~/lib/login-events';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
-import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
+import {formatSchoolYearLong} from '~/lib/school-year';
 
 const ADMIN_TABS = [
   {id: 'roster', label: 'Roster'},
@@ -40,16 +41,6 @@ const parseAdminTab = (value: string | undefined): AdminTab =>
 
 const TabField = ({tab}: {tab: AdminTab}) => <input name="tab" type="hidden" value={tab} />;
 
-const DateRangeCell = ({end, start}: {end: string | null; start: string | null}) => {
-  if (!start || !end) return <span className="text-gray-400">—</span>;
-  return (
-    <div className="whitespace-nowrap leading-5" title={formatSchoolDateRange(start, end)}>
-      <div>{formatSchoolCompactDateTime(start)}</div>
-      <div className="text-gray-500">– {formatSchoolCompactDateTime(end)}</div>
-    </div>
-  );
-};
-
 export const metadata = {title: DOCUMENT_TITLES.admin};
 
 export default async function AdminPage({
@@ -60,12 +51,20 @@ export default async function AdminPage({
   await requireRole('admin');
   const {error, tab: tabParam} = await searchParams;
   const tab = parseAdminTab(tabParam);
+  const visibleTabs = ADMIN_TABS;
   const db = getDb();
   const [years, cycles, users] = await Promise.all([
     listSchoolYears(db),
     listCycles(db),
     listUsers(db),
   ]);
+  const loginEventsByEmail = Object.fromEntries(
+    await Promise.all(
+      users.map(
+        async (user) => [user.email, await listLoginEventsForEmail(db, user.email)] as const,
+      ),
+    ),
+  );
   const reviewers = await Promise.all(
     cycles.map(async (cycle) => ({
       cycleId: cycle.id,
@@ -81,7 +80,7 @@ export default async function AdminPage({
         aria-label="Admin sections"
         className="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-1"
       >
-        {ADMIN_TABS.map((item) => {
+        {visibleTabs.map((item) => {
           const active = tab === item.id;
           return (
             <Link
@@ -109,7 +108,7 @@ export default async function AdminPage({
             <p className="max-w-2xl text-sm text-gray-600">
               Add people so they can sign in. AISD emails are teachers except
               kathryn.achtermann@austinisd.org (principal). Other emails are committee except
-              treasurer@bheeagles.com.
+              treasurer@bheeagles.com (admin).
             </p>
             <FormDialog
               description="They can sign in with this email after you add them. Change their role in the table if needed."
@@ -126,6 +125,7 @@ export default async function AdminPage({
                 <tr>
                   <th className="px-4 py-2">Name</th>
                   <th className="px-4 py-2">Email</th>
+                  <th className="px-4 py-2">Last login</th>
                   <th className="px-4 py-2">Role</th>
                 </tr>
               </thead>
@@ -145,6 +145,20 @@ export default async function AdminPage({
                       </AutosaveForm>
                     </td>
                     <td className="px-4 py-2">{user.email}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="whitespace-nowrap text-gray-700">
+                          {user.last_login_at
+                            ? formatSchoolCompactDateTime(user.last_login_at)
+                            : 'Never'}
+                        </span>
+                        <LoginActivityDialog
+                          email={user.email}
+                          events={loginEventsByEmail[user.email] ?? []}
+                          name={user.name}
+                        />
+                      </div>
+                    </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {isLockedRosterEmail(user.email) ? (
@@ -240,91 +254,16 @@ export default async function AdminPage({
       ) : null}
 
       {tab === 'windows' ? (
-        <section className="space-y-4">
-          <div className="flex items-center justify-end">
-            <FormDialog
-              description="Create a Fall or Spring window with a budget."
-              padded={false}
-              title="Add grant window"
-              triggerLabel="Add window"
-            >
-              <GrantWindowForm
-                action={createCycleAction}
-                submitLabel="Add window"
-                tab={tab}
-                users={users}
-                years={years}
-              />
-            </FormDialog>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="bg-warm-white text-left text-xs text-gray-500 uppercase">
-                <tr>
-                  <th className="px-4 py-2">Window</th>
-                  <th className="px-4 py-2">Submissions</th>
-                  <th className="px-4 py-2">Review</th>
-                  <th className="px-4 py-2">Budget</th>
-                  <th className="px-4 py-2">Open</th>
-                  <th className="px-4 py-2">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {cycles.map((cycle) => (
-                  <tr className="border-t border-gray-100" key={cycle.id}>
-                    <td className="px-4 py-2">
-                      {semesterLabel(cycle.semester)} {cycle.school_year}
-                    </td>
-                    <td className="px-4 py-2">
-                      <DateRangeCell end={cycle.ends_at} start={cycle.starts_at} />
-                    </td>
-                    <td className="px-4 py-2">
-                      <DateRangeCell end={cycle.review_ends_at} start={cycle.review_starts_at} />
-                    </td>
-                    <td className="px-4 py-2 tabular-nums">{formatUsd(cycle.budget_limit)}</td>
-                    <td className="px-4 py-2">
-                      {cycle.is_active ? (
-                        'Active'
-                      ) : (
-                        <form action={setActiveCycleAction}>
-                          <TabField tab={tab} />
-                          <input name="cycle_id" type="hidden" value={cycle.id} />
-                          <button
-                            className="whitespace-nowrap text-eagle-blue underline"
-                            type="submit"
-                          >
-                            Make active
-                          </button>
-                        </form>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <FormDialog
-                        description="Update this window's budget and dates."
-                        padded={false}
-                        title="Edit grant window"
-                        triggerClassName="whitespace-nowrap text-eagle-blue underline"
-                        triggerLabel="Edit"
-                      >
-                        <GrantWindowForm
-                          action={updateCycleAction}
-                          cycle={cycle}
-                          reviewers={reviewersByCycle[cycle.id]}
-                          submitLabel="Save window"
-                          tab={tab}
-                          users={users}
-                          years={years}
-                        />
-                      </FormDialog>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <GrantWindowsPanel
+          createAction={createCycleAction}
+          cycles={cycles}
+          reviewersByCycle={reviewersByCycle}
+          setActiveAction={setActiveCycleAction}
+          tab={tab}
+          updateAction={updateCycleAction}
+          users={users}
+          years={years}
+        />
       ) : null}
     </div>
   );

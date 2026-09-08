@@ -4,6 +4,7 @@ export const DOCUMENT_TITLES = {
   admin: 'Admin',
   budget: 'Budget ledger',
   chair: 'Chair',
+  chairWindows: 'Grant windows',
   fulfill: 'Fulfillment',
   grants: 'Grants',
   grantsNew: 'Create grant',
@@ -12,7 +13,6 @@ export const DOCUMENT_TITLES = {
   notFound: 'Not found',
   portal: 'My grants',
   portalNew: 'New grant',
-  process: 'Process guide',
   review: 'Review',
 } as const;
 

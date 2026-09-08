@@ -34,7 +34,7 @@ describe('gradesImpactedRequired', () => {
     expect(gradesImpactedRequired('MULTIPLE_GRADES')).toBe(true);
   });
 
-  it('is optional for my class and whole school', () => {
+  it('is not required for my class and whole school', () => {
     expect(gradesImpactedRequired('CLASS')).toBe(false);
     expect(gradesImpactedRequired('WHOLE_SCHOOL')).toBe(false);
   });
@@ -103,7 +103,7 @@ describe('validateGrantNarrative', () => {
     });
   });
 
-  it('keeps optional grades for whole school', () => {
+  it('clears grades for whole school', () => {
     const result = validateGrantNarrative({
       benefitScope: 'WHOLE_SCHOOL',
       description: 'Dyslexia trainings on the latest and greatest research and innovations',
@@ -111,7 +111,7 @@ describe('validateGrantNarrative', () => {
     });
     expect(result).toMatchObject({
       benefitScope: 'WHOLE_SCHOOL',
-      gradesImpacted: 'K-5',
+      gradesImpacted: '',
     });
   });
 });

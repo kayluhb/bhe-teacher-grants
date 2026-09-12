@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/cloudflare/nodejs_compat';
 import handler from 'vinext/server/fetch-handler';
 import {notifyQuietly} from '~/lib/email';
 import {runReviewNotifications} from '~/lib/review-notifications';
+import {ensureSchoolYearRollover} from '~/lib/school-year-rollover';
 
 type FetchHandler = {
   fetch?: (
@@ -44,15 +45,21 @@ export default Sentry.withSentry(
   {
     fetch: handleFetch,
     scheduled(_controller: ScheduledController, env: Cloudflare.Env, ctx: ExecutionContext) {
+      const now = new Date();
       ctx.waitUntil(
-        Sentry.startSpan({forceTransaction: true, name: 'review-notifications', op: 'task'}, () =>
-          runReviewNotifications({
-            db: env.DB,
-            now: new Date(),
-            origin: env.APP_PUBLIC_URL ?? 'http://localhost:3000',
-            send: notifyQuietly,
-          }),
-        ),
+        Promise.all([
+          Sentry.startSpan({forceTransaction: true, name: 'review-notifications', op: 'task'}, () =>
+            runReviewNotifications({
+              db: env.DB,
+              now,
+              origin: env.APP_PUBLIC_URL ?? 'http://localhost:3000',
+              send: notifyQuietly,
+            }),
+          ),
+          Sentry.startSpan({forceTransaction: true, name: 'school-year-rollover', op: 'task'}, () =>
+            ensureSchoolYearRollover({db: env.DB, now}),
+          ),
+        ]),
       );
     },
   } satisfies ExportedHandler<Cloudflare.Env>,

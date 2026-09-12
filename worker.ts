@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/cloudflare/nodejs_compat';
 import handler from 'vinext/server/fetch-handler';
+import {runChairDigest} from '~/lib/chair-digest';
 import {notifyQuietly} from '~/lib/email';
 import {runReviewNotifications} from '~/lib/review-notifications';
 import {ensureSchoolYearRollover} from '~/lib/school-year-rollover';
@@ -50,6 +51,14 @@ export default Sentry.withSentry(
         Promise.all([
           Sentry.startSpan({forceTransaction: true, name: 'review-notifications', op: 'task'}, () =>
             runReviewNotifications({
+              db: env.DB,
+              now,
+              origin: env.APP_PUBLIC_URL ?? 'http://localhost:3000',
+              send: notifyQuietly,
+            }),
+          ),
+          Sentry.startSpan({forceTransaction: true, name: 'chair-digest', op: 'task'}, () =>
+            runChairDigest({
               db: env.DB,
               now,
               origin: env.APP_PUBLIC_URL ?? 'http://localhost:3000',

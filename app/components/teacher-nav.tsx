@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
 import {ViewAsForm} from '~/components/view-as-form';
@@ -13,6 +13,19 @@ import {isViewingAs} from '~/lib/view-as';
 export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
   const links = [
     {href: '/', label: 'Home'},
     {href: '/portal', label: 'My grants'},
@@ -83,9 +96,10 @@ export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) =>
         </div>
         <button
           aria-expanded={open}
-          aria-label="Open menu"
+          aria-label={open ? 'Close menu' : 'Open menu'}
           className="rounded p-1 hover:bg-white/10 md:hidden"
           onClick={() => setOpen((value) => !value)}
+          ref={toggleRef}
           type="button"
         >
           <svg

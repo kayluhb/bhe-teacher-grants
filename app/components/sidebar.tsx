@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {HeaderLogo} from '~/components/header-logo';
 import {TourHelpButton} from '~/components/tour-help-button';
 import {ViewAsForm} from '~/components/view-as-form';
@@ -20,9 +20,13 @@ const LINKS: {href: string; label: string; roles: Role[]}[] = [
   {href: '/admin', label: 'Admin', roles: ['admin']},
 ];
 
+const MOBILE_MQ = '(max-width: 767px)';
+
 export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const homeHref = homePath(user.role);
   const links = [
     ...(portals?.includes('chairman')
@@ -40,6 +44,30 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
       : []),
     ...(portals?.includes('teacher') ? [{href: '/portal', label: 'My grants'}] : []),
   ].filter((link, index, list) => list.findIndex((item) => item.href === link.href) === index);
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ);
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  const closeMenu = () => {
+    setOpen(false);
+    toggleRef.current?.focus();
+  };
 
   const nav = (
     <nav className="flex flex-col gap-1 px-3">
@@ -74,9 +102,10 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         </Link>
         <button
           aria-expanded={open}
-          aria-label="Open menu"
+          aria-label={open ? 'Close menu' : 'Open menu'}
           className="rounded p-1 hover:bg-white/10"
           onClick={() => setOpen((value) => !value)}
+          ref={toggleRef}
           type="button"
         >
           <svg
@@ -100,7 +129,7 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         <button
           aria-label="Close menu"
           className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
           type="button"
         />
       ) : null}
@@ -109,6 +138,7 @@ export const Sidebar = ({portals, user}: {portals?: Portal[]; user: User}) => {
         className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-eagle-blue text-white transition-transform md:static md:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
+        inert={isMobile && !open}
       >
         <div className="px-4 py-5">
           <Link

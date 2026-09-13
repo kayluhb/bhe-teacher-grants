@@ -15,28 +15,23 @@ export type ProcessStep = {
   href?: string;
   /** Short link label */
   linkLabel?: string;
+  /** Email templates shown inline on this step */
+  templateIds?: string[];
 };
 
 export const PROCESS_STEPS: ProcessStep[] = [
   {
-    id: 'publish',
-    label: 'Publish the grant cycle',
-    description:
-      'Update the grant cycle dates (submission and review windows) in Admin or on Chair, then set this cycle as active so teachers can submit.',
-    href: '/admin',
-    linkLabel: 'Open Admin',
-  },
-  {
     id: 'notify-kati',
     label: 'Notify Kati & send teacher email',
     description:
-      'Email Kati Achtermann to let her know the program is live. Include the teacher launch email below so she can distribute it directly to staff. Follow up with a reminder before the deadline if applications are light.',
+      'Email Kati Achtermann to let her know the program is live. Include the teacher launch email so she can distribute it directly to staff. Use the spring launch template when opening the Spring cycle. Follow up with a reminder before the deadline if applications are light.',
+    templateIds: ['launch-kati', 'launch-teachers', 'spring-launch'],
   },
   {
     id: 'committee',
     label: 'Recruit & confirm the Grant Committee',
     description:
-      'Confirm your five-member committee through PTA. Officers are set in Admin when you publish the cycle; add remaining members in Chair. See the committee composition rules and alternate guidelines below.',
+      'Confirm your five-member committee through PTA. Officers are set in Admin; add remaining members in Chair. See the committee composition rules and alternate guidelines below.',
     href: '#committee-composition',
     linkLabel: 'View composition rules',
   },
@@ -44,25 +39,28 @@ export const PROCESS_STEPS: ProcessStep[] = [
     id: 'monitor',
     label: 'Monitor submissions',
     description:
-      'Keep an eye on incoming applications. Send a reminder to Kati before the deadline if needed — use the reminder email template below.',
+      'Keep an eye on incoming applications. Send a reminder to Kati before the deadline if needed.',
     href: '/grants',
     linkLabel: 'View all grants',
+    templateIds: ['reminder-kati'],
   },
   {
     id: 'vote',
     label: 'Request committee ranks',
     description:
-      'When the review window opens, committee members receive an automated email. Send evaluation instructions from Chair (or copy the template below) so reviewers understand the scoring criteria.',
+      'When the review window opens, committee members receive an automated email. Send evaluation instructions from Chair (or copy the template here) so reviewers understand the scoring criteria.',
     href: '/chair',
     linkLabel: 'Open Chair',
+    templateIds: ['evaluation-instructions'],
   },
   {
     id: 'decide',
     label: 'Record decisions & email applicants',
     description:
-      'After all required ranks are in, record the official outcome for each grant. The app automatically emails approved teachers with next steps. Send the rejection email (below) for any grants not selected.',
+      'After all required ranks are in, record the official outcome for each grant. The app automatically emails approved and rejected teachers; the templates here are for reference.',
     href: '/chair',
     linkLabel: 'Open Chair',
+    templateIds: ['approval', 'rejection'],
   },
   {
     id: 'fulfill',
@@ -77,6 +75,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
     label: 'Request outcome stories',
     description:
       'At cycle end, reach out to funded teachers for impact stories and photos to share with the PTA community.',
+    templateIds: ['outcome-request'],
   },
 ];
 
@@ -246,18 +245,11 @@ export const COMMITTEE_PROCESS_STEPS: ProcessStep[] = [
 
 export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
   {
-    id: 'publish',
-    label: 'Publish the grant cycle',
-    description:
-      'Create or edit the grant window on Grant windows — set submission and review dates, budget, and officers, then mark it open for submissions so teachers can apply. School years are managed in Admin.',
-    href: '/chair/windows',
-    linkLabel: 'Open grant windows',
-  },
-  {
     id: 'notify-kati',
     label: 'Notify Kati & launch to teachers',
     description:
-      'Email Kati Achtermann that the program is live. Include the teacher launch template so she can send it to staff. Follow up with a reminder before the deadline if applications are light.',
+      'Email Kati Achtermann that the program is live. Include the teacher launch template so she can send it to staff. Use the spring launch template when opening the Spring cycle.',
+    templateIds: ['launch-kati', 'launch-teachers', 'spring-launch'],
   },
   {
     id: 'committee',
@@ -274,6 +266,7 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
       'Watch incoming applications in the Chair queue while the submission window is open. If volume is low, ask Kati to send the reminder template to staff.',
     href: '#chair-queue',
     linkLabel: 'Open Chair queue',
+    templateIds: ['reminder-kati'],
   },
   {
     id: 'review',
@@ -282,6 +275,7 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
       'When the review window opens, committee members get an automated email. Also send evaluation instructions from the button under the committee list, then follow up so ranks arrive on time. A grant is ready to decide only after every required reviewer has ranked or abstained.',
     href: '#chair-queue',
     linkLabel: 'Open Chair queue',
+    templateIds: ['evaluation-instructions'],
   },
   {
     id: 'decide',
@@ -290,6 +284,7 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
       'Open each ready grant in the Chair queue and approve or reject. The app emails the teacher either way — approvals include purchase next steps; rejections can include your note. You do not need to send those emails by hand.',
     href: '#chair-queue',
     linkLabel: 'Open Chair queue',
+    templateIds: ['approval', 'rejection'],
   },
   {
     id: 'fulfill',
@@ -301,7 +296,8 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     id: 'stories',
     label: 'Request outcome stories',
     description:
-      'At cycle end, email funded teachers for short impact stories and photos to share with the PTA community. Use the outcome-stories template below.',
+      'At cycle end, email funded teachers for short impact stories and photos to share with the PTA community.',
+    templateIds: ['outcome-request'],
   },
 ];
 
@@ -312,7 +308,7 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
 export type EmailTemplate = {
   id: string;
   label: string;
-  /** Short tab label in the templates UI */
+  /** Short tab label when a step has multiple templates */
   tab: string;
   /** Short description of when to send */
   when: string;
@@ -548,7 +544,7 @@ The BHE PTA Grant Committee`,
     id: 'outcome-request',
     label: 'Outcome stories request — email to funded teachers',
     tab: 'Outcome stories',
-    when: 'Send at cycle end to collect impact stories and photos. Copy from templates below.',
+    when: 'Send at cycle end to collect impact stories and photos.',
     subject: 'Share Your Grant Story! – [SEMESTER] [YEAR]',
     body: `Hi [NAME],
 

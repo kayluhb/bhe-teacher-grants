@@ -26,30 +26,6 @@ describe('CHAIR_MANUAL_STEP_IDS', () => {
 });
 
 describe('resolveChairProcessStepStatus', () => {
-  it('marks publish done when an active cycle has all window dates', () => {
-    const status = resolveChairProcessStepStatus({
-      approvedOpenCount: 0,
-      cycle: baseCycle,
-      decidedCount: 0,
-      manualDoneStepIds: [],
-      pendingCount: 0,
-      seats: [],
-    });
-    expect(status.publish).toEqual({done: true, source: 'auto'});
-  });
-
-  it('marks publish not done without an active cycle', () => {
-    const status = resolveChairProcessStepStatus({
-      approvedOpenCount: 0,
-      cycle: null,
-      decidedCount: 0,
-      manualDoneStepIds: [],
-      pendingCount: 0,
-      seats: [],
-    });
-    expect(status.publish.done).toBe(false);
-  });
-
   it('marks committee done when officers plus three committee seats are filled', () => {
     const status = resolveChairProcessStepStatus({
       approvedOpenCount: 0,

@@ -1,3 +1,4 @@
+import {fillTemplate} from '~/lib/email-template-fill';
 import {formatSchoolDateTime} from '~/lib/grant-cycle';
 import {EMAIL_TEMPLATES} from '~/lib/grant-process';
 import {escapeHtml} from '~/lib/html';
@@ -30,14 +31,6 @@ export const evaluationVoterEmails = (
 
 const evaluationTemplate = () =>
   EMAIL_TEMPLATES.find((item) => item.id === 'evaluation-instructions');
-
-const fill = (template: string, values: Record<string, string>) => {
-  let next = template;
-  for (const [token, value] of Object.entries(values)) {
-    next = next.replaceAll(token, value);
-  }
-  return next;
-};
 
 const toHtml = (body: string): string =>
   body
@@ -86,8 +79,8 @@ export const buildEvaluationInstructionsEmail = (input: {
     '$10,000': formatUsd(input.budgetLimit),
   };
 
-  const subject = fill(template.subject, values);
-  const body = fill(template.body, values).replace(/\s+or contact me at\s*\./g, '.');
+  const subject = fillTemplate(template.subject, values);
+  const body = fillTemplate(template.body, values).replace(/\s+or contact me at\s*\./g, '.');
 
   return {
     html: toHtml(body),

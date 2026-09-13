@@ -7,6 +7,7 @@ import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {requireChairman} from '~/lib/auth';
 import {loadChairProcessSnapshot, resolveChairProcessStepStatus} from '~/lib/chair-process-status';
 import {getDb} from '~/lib/db';
+import {cycleEmailPlaceholders} from '~/lib/email-template-fill';
 import {evaluationVoterEmails} from '~/lib/evaluation-email';
 import {listChairCycles, listChairQueue} from '~/lib/grants';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
@@ -103,7 +104,13 @@ export default async function ChairPage() {
         </section>
       </div>
 
-      <ChairProcessGuide cycleId={primary?.cycle.id} statuses={processStatuses} />
+      <ChairProcessGuide
+        cycleId={primary?.cycle.id}
+        statuses={processStatuses}
+        templateValues={
+          primary ? cycleEmailPlaceholders(primary.cycle) : undefined
+        }
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {StatCard} from '~/components/stat-card';
 import {requireAuth} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
+import {cycleEmailPlaceholders} from '~/lib/email-template-fill';
 import {getActiveCycle, listGrants} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
@@ -33,13 +34,14 @@ export default async function HomePage() {
   const showPurchase = user.role === 'admin';
   const showStats = showPending || showPurchase || Boolean(budget);
 
+  const templateValues = cycle ? cycleEmailPlaceholders(cycle) : undefined;
   const guide =
     user.role === 'teacher' ? (
       <TeacherProcessGuide />
     ) : user.role === 'committee' || user.role === 'principal' ? (
       <CommitteeProcessGuide />
     ) : (
-      <ProcessGuide />
+      <ProcessGuide templateValues={templateValues} />
     );
 
   return (

@@ -1,4 +1,3 @@
-import {EmailTemplates} from '~/components/email-templates';
 import {ProcessStepList} from '~/components/process-step-list';
 import type {ChairProcessStepId, StepStatus} from '~/lib/chair-process-status';
 import {
@@ -122,47 +121,56 @@ export const CommitteeProcessGuide = () => (
 export const ChairProcessGuide = ({
   cycleId,
   statuses,
+  templateValues,
 }: {
   cycleId?: string;
   statuses?: Partial<Record<ChairProcessStepId, StepStatus>>;
+  templateValues?: Record<string, string>;
 } = {}) => (
   <div className="space-y-10" data-tour="chair-playbook">
     <div>
       <h2 className="font-heading text-2xl font-bold text-charcoal">Chair playbook</h2>
       <p className="font-body mt-1 text-gray-600">
-        Full-cycle checklist from publishing windows through outcome stories — what you do here,
-        what to coordinate with Admin (school years) or the Treasurer, and copyable email templates.
-        Status reflects the active grant window; mark the email/outreach steps when you finish them.
+        Full-cycle checklist from teacher launch through outcome stories — what you do here,
+        what to coordinate with Admin (school years) or the Treasurer, and copyable email templates
+        on each outreach step. Status reflects the active grant window; mark the email/outreach
+        steps when you finish them.
       </p>
     </div>
     <section>
       <h3 className="font-heading mb-4 text-xl font-bold text-charcoal">Your steps</h3>
-      <ProcessStepList cycleId={cycleId} statuses={statuses} steps={CHAIR_PROCESS_STEPS} />
+      <ProcessStepList
+        cycleId={cycleId}
+        statuses={statuses}
+        steps={CHAIR_PROCESS_STEPS}
+        templateValues={templateValues}
+      />
     </section>
-    <EmailTemplates />
   </div>
 );
 
-export const ProcessGuide = () => (
+export const ProcessGuide = ({
+  templateValues,
+}: {
+  templateValues?: Record<string, string>;
+} = {}) => (
   <div className="space-y-10" data-tour="process-guide">
     <div>
       <h2 className="font-heading text-2xl font-bold text-charcoal">Process guide</h2>
       <p className="font-body mt-1 text-gray-600">
         Step-by-step playbook for running a BHE PTA Teacher Grant cycle, with copyable email
-        templates.
+        templates on each outreach step.
       </p>
     </div>
 
     <section>
       <h3 className="font-heading mb-4 text-xl font-bold text-charcoal">Cycle steps</h3>
-      <ProcessStepList steps={PROCESS_STEPS} />
+      <ProcessStepList steps={PROCESS_STEPS} templateValues={templateValues} />
     </section>
 
     <CommitteeComposition />
 
     <RankingCriteria />
     <PriorityGuidelines />
-
-    <EmailTemplates />
   </div>
 );

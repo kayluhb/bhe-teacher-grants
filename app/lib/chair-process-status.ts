@@ -3,7 +3,6 @@ export const CHAIR_MANUAL_STEP_IDS = ['notify-kati', 'monitor', 'stories'] as co
 export type ChairManualStepId = (typeof CHAIR_MANUAL_STEP_IDS)[number];
 
 export const CHAIR_PROCESS_STEP_IDS = [
-  'publish',
   'notify-kati',
   'committee',
   'monitor',
@@ -38,16 +37,6 @@ export type ChairProcessSnapshot = {
 export const isChairManualStepId = (value: string): value is ChairManualStepId =>
   (CHAIR_MANUAL_STEP_IDS as readonly string[]).includes(value);
 
-const hasPublishWindow = (cycle: ChairProcessSnapshot['cycle']): boolean =>
-  Boolean(
-    cycle &&
-      cycle.is_active === 1 &&
-      cycle.starts_at &&
-      cycle.ends_at &&
-      cycle.review_starts_at &&
-      cycle.review_ends_at,
-  );
-
 const hasFullCommittee = (seats: {seat: string}[]): boolean => {
   const hasTreasurer = seats.some((row) => row.seat === 'treasurer');
   const hasPrincipal = seats.some((row) => row.seat === 'principal');
@@ -61,7 +50,6 @@ export const resolveChairProcessStepStatus = (
 ): ChairProcessStepStatusMap => {
   const manual = new Set(input.manualDoneStepIds);
   return {
-    publish: {done: hasPublishWindow(input.cycle), source: 'auto'},
     'notify-kati': {done: manual.has('notify-kati'), source: 'manual'},
     committee: {done: hasFullCommittee(input.seats), source: 'auto'},
     monitor: {done: manual.has('monitor'), source: 'manual'},

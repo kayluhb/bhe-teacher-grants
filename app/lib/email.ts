@@ -31,13 +31,17 @@ export const sendEmail = async (input: {
   return true;
 };
 
-export const notifyQuietly = (input: {
+/** Fire-and-forget friendly: callers may ignore the promise. Cron runners should await it. */
+export const notifyQuietly = async (input: {
   html: string;
   replyTo?: string | string[];
   subject: string;
   to: string | string[];
-}) => {
-  void sendEmail(input).catch((error) => {
+}): Promise<boolean> => {
+  try {
+    return await sendEmail(input);
+  } catch (error) {
     console.error('Email send failed', error);
-  });
+    return false;
+  }
 };

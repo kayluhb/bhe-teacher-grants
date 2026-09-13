@@ -113,6 +113,11 @@ describe('itemImageUrl', () => {
     ).toBe('https://cdn.example.com/stored.jpg');
   });
 
+  it('ignores stored private or non-https image URLs', () => {
+    expect(itemImageUrl({asin: null, image_url: 'https://127.0.0.1/secret.jpg'})).toBeNull();
+    expect(itemImageUrl({asin: null, image_url: 'http://cdn.example.com/stored.jpg'})).toBeNull();
+  });
+
   it('falls back to the Amazon CDN when only an ASIN is stored', () => {
     expect(itemImageUrl({asin: 'B000MARKERS', image_url: null})).toBe(
       'https://images-na.ssl-images-amazon.com/images/P/B000MARKERS.01._SCLZZZZZZZ_.jpg',
@@ -198,6 +203,41 @@ describe('fetchProductImage', () => {
       fetchProductImage({asin: null, vendorUrl: 'https://127.0.0.1/p/1'}, fetchFn),
     ).resolves.toBeNull();
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('does not follow redirects to private hosts', async () => {
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        headers: {location: 'https://169.254.169.254/latest/meta-data'},
+        status: 302,
+      });
+    });
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/kit'}, fetchFn),
+    ).resolves.toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(fetchFn.mock.calls[0]?.[1]).toMatchObject({redirect: 'manual'});
+  });
+
+  it('follows safe redirects before parsing the final page', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          headers: {location: 'https://cdn.example.com/p/kit'},
+          status: 302,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response('<meta property="og:image" content="https://cdn.example.com/kit.jpg">', {
+          headers: {'content-type': 'text/html'},
+          status: 200,
+        }),
+      );
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/kit'}, fetchFn),
+    ).resolves.toBe('https://cdn.example.com/kit.jpg');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
   it('parses og:image from a fetched public product page', async () => {

@@ -22,11 +22,6 @@ const vinext = handler as
     ) => Response | Promise<Response>);
 
 const handleFetch = (request: Request, env: Cloudflare.Env, ctx: ExecutionContext) => {
-  const {pathname} = new URL(request.url);
-  if (pathname === '/debug-sentry') {
-    throw new Error('Sentry test error 2026-08-23T19:03Z — delete me');
-  }
-
   const fetchFn = typeof vinext === 'function' ? vinext : vinext.fetch;
   if (!fetchFn) throw new Error('Vinext fetch handler is missing.');
   return fetchFn(request, env, ctx);
@@ -35,12 +30,12 @@ const handleFetch = (request: Request, env: Cloudflare.Env, ctx: ExecutionContex
 export default Sentry.withSentry(
   (env: Cloudflare.Env) => ({
     dsn: env.SENTRY_DSN,
-    tracesSampleRate: 1.0,
+    tracesSampleRate: 0.1,
     dataCollection: {
-      // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
+      // Keep OTP bodies and session cookies out of Sentry.
       // https://docs.sentry.io/platforms/javascript/guides/cloudflare/configuration/options/#dataCollection
-      // userInfo: false,
-      // httpBodies: [],
+      userInfo: false,
+      httpBodies: [],
     },
   }),
   {

@@ -122,7 +122,7 @@ export const itemImageUrl = (item: {
   image_url?: string | null;
 }): string | null => {
   const stored = item.image_url?.trim();
-  if (stored?.startsWith('https://')) return stored;
+  if (stored && isSafePreviewUrl(stored)) return stored;
   const asin = item.asin?.trim();
   if (asin) return amazonImageUrl(asin);
   return null;
@@ -183,6 +183,43 @@ const readLimitedText = async (response: Response, max: number): Promise<string 
   return new TextDecoder().decode(bytes);
 };
 
+const MAX_PREVIEW_REDIRECTS = 5;
+
+const fetchPreviewPage = async (
+  startUrl: string,
+  fetchFn: typeof fetch,
+): Promise<{html: string; url: string} | null> => {
+  let current = startUrl;
+  for (let hop = 0; hop < MAX_PREVIEW_REDIRECTS; hop += 1) {
+    if (!isSafePreviewUrl(current)) return null;
+    const response = await fetchFn(current, {
+      headers: {
+        Accept: 'text/html',
+        'User-Agent': 'BHETeacherGrants/1.0 (product image preview)',
+      },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(8000),
+    });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) return null;
+      try {
+        current = new URL(location, current).toString();
+      } catch {
+        return null;
+      }
+      continue;
+    }
+    if (!response.ok) return null;
+    const finalUrl = response.url || current;
+    if (!isSafePreviewUrl(finalUrl)) return null;
+    const html = await readLimitedText(response, MAX_HTML_BYTES);
+    if (!html) return null;
+    return {html, url: finalUrl};
+  }
+  return null;
+};
+
 export const fetchProductImage = async (
   input: {asin?: string | null; vendorUrl?: string | null},
   fetchFn: typeof fetch = fetch,
@@ -193,19 +230,9 @@ export const fetchProductImage = async (
   if (!isSafePreviewUrl(vendorUrl)) return null;
 
   try {
-    const response = await fetchFn(vendorUrl, {
-      headers: {
-        Accept: 'text/html',
-        'User-Agent': 'BHETeacherGrants/1.0 (product image preview)',
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!response.ok) return null;
-    if (response.url && !isSafePreviewUrl(response.url)) return null;
-    const html = await readLimitedText(response, MAX_HTML_BYTES);
-    if (!html) return null;
-    return parseProductImage(html, response.url || vendorUrl);
+    const page = await fetchPreviewPage(vendorUrl, fetchFn);
+    if (!page) return null;
+    return parseProductImage(page.html, page.url);
   } catch {
     return null;
   }

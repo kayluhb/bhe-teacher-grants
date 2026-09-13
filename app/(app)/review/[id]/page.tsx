@@ -3,7 +3,7 @@ import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {VoteForm} from '~/components/vote-form';
-import {requireReviewer} from '~/lib/auth';
+import {getSession, requireReviewer} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
 import {getGrant, listGrantItems, listVotes, userCanAccessGrant} from '~/lib/grants';
@@ -14,8 +14,16 @@ import {semesterLabel} from '~/lib/school-year';
 import {BALLOT_LABELS, isBallot} from '~/lib/votes';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
-  const grant = await getGrant(getDb(), (await params).id);
-  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.review, grant?.title)};
+  const section = GRANT_TITLE_SECTIONS.review;
+  const user = await getSession();
+  if (!user) return {title: grantDocumentTitle(section)};
+  const db = getDb();
+  const grant = await getGrant(db, (await params).id);
+  if (!grant || grant.status === 'DRAFT') return {title: grantDocumentTitle(section)};
+  if (!(await userCanAccessGrant(db, user, grant))) {
+    return {title: grantDocumentTitle(section)};
+  }
+  return {title: grantDocumentTitle(section, grant.title)};
 };
 
 export default async function ReviewDetailPage({params}: {params: Promise<{id: string}>}) {

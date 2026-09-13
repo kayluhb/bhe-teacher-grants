@@ -6,11 +6,18 @@ const newCycleId = (): string => crypto.randomUUID().replaceAll('-', '');
 export type SourceCycle = {
   budget_limit: number;
   ends_at: string;
+  id: string;
   name: string;
   review_ends_at: string | null;
   review_starts_at: string | null;
   semester: 'FALL' | 'SPRING';
   starts_at: string;
+};
+
+export type SourceReviewer = {
+  cycle_id: string;
+  seat: string;
+  user_id: string;
 };
 
 export type RolloverWindow = {
@@ -20,7 +27,14 @@ export type RolloverWindow = {
   reviewEndsAt: string | null;
   reviewStartsAt: string | null;
   semester: 'FALL' | 'SPRING';
+  sourceCycleId: string;
   startsAt: string;
+};
+
+export type RolloverReviewer = {
+  cycleId: string;
+  seat: string;
+  userId: string;
 };
 
 export type UpcomingSchoolYear = {
@@ -45,6 +59,12 @@ const chicagoParts = (now: Date) => {
 export const isJuly1InChicago = (now: Date): boolean => {
   const {day, month} = chicagoParts(now);
   return month === 7 && day === 1;
+};
+
+/** True when Chicago local date is July 1 or later in the calendar year. */
+export const isOnOrAfterJuly1InChicago = (now: Date): boolean => {
+  const {day, month} = chicagoParts(now);
+  return month > 7 || (month === 7 && day >= 1);
 };
 
 const labelForStartYear = (startYear: number): string =>
@@ -88,23 +108,48 @@ export const buildRolloverWindows = (
       reviewEndsAt: shiftTimestampByYears(source.review_ends_at, 1),
       reviewStartsAt: shiftTimestampByYears(source.review_starts_at, 1),
       semester,
+      sourceCycleId: source.id,
       startsAt,
     });
   }
   return windows;
 };
 
+export const buildRolloverReviewers = (
+  windows: Array<{cycleId: string; sourceCycleId: string}>,
+  reviewers: SourceReviewer[],
+): RolloverReviewer[] => {
+  const cycleIdBySource = new Map(windows.map((window) => [window.sourceCycleId, window.cycleId]));
+  const seats: RolloverReviewer[] = [];
+  for (const reviewer of reviewers) {
+    const cycleId = cycleIdBySource.get(reviewer.cycle_id);
+    if (!cycleId) continue;
+    seats.push({
+      cycleId,
+      seat: reviewer.seat,
+      userId: reviewer.user_id,
+    });
+  }
+  return seats;
+};
+
 export const ensureSchoolYearRollover = async (input: {
   db: D1Database;
   now: Date;
 }): Promise<{createdWindows: number; label: string | null}> => {
-  if (!isJuly1InChicago(input.now)) return {createdWindows: 0, label: null};
-
   const year = schoolYearForJuly1(input.now);
   const existingYear = await input.db
     .prepare('SELECT id FROM school_years WHERE id = ?')
     .bind(year.label)
     .first<{id: string}>();
+
+  // July 1 always runs. After July 1, catch up only if the new year was never created
+  // (missed cron). Before July 1 is a no-op.
+  if (!isJuly1InChicago(input.now)) {
+    if (!isOnOrAfterJuly1InChicago(input.now) || existingYear) {
+      return {createdWindows: 0, label: null};
+    }
+  }
 
   const statements: D1PreparedStatement[] = [
     input.db.prepare('UPDATE school_years SET is_default = 0'),
@@ -139,14 +184,19 @@ export const ensureSchoolYearRollover = async (input: {
 
   const previousCycles = await input.db
     .prepare(
-      `SELECT semester, name, budget_limit, starts_at, ends_at, review_starts_at, review_ends_at
+      `SELECT id, semester, name, budget_limit, starts_at, ends_at, review_starts_at, review_ends_at
        FROM grant_cycles WHERE school_year_id = ?`,
     )
     .bind(year.previousLabel)
     .all<SourceCycle>();
 
   const windows = buildRolloverWindows(previousCycles.results ?? [], year.label, semesterSet);
-  for (const window of windows) {
+  const createdWindows = windows.map((window) => ({
+    ...window,
+    cycleId: newCycleId(),
+  }));
+
+  for (const window of createdWindows) {
     statements.push(
       input.db
         .prepare(
@@ -156,7 +206,7 @@ export const ensureSchoolYearRollover = async (input: {
            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
         )
         .bind(
-          newCycleId(),
+          window.cycleId,
           year.label,
           window.semester,
           window.name,
@@ -169,6 +219,25 @@ export const ensureSchoolYearRollover = async (input: {
     );
   }
 
+  if (createdWindows.length) {
+    const sourceIds = createdWindows.map((window) => window.sourceCycleId);
+    const placeholders = sourceIds.map(() => '?').join(', ');
+    const previousReviewers = await input.db
+      .prepare(
+        `SELECT cycle_id, user_id, seat FROM cycle_reviewers WHERE cycle_id IN (${placeholders})`,
+      )
+      .bind(...sourceIds)
+      .all<SourceReviewer>();
+
+    for (const seat of buildRolloverReviewers(createdWindows, previousReviewers.results ?? [])) {
+      statements.push(
+        input.db
+          .prepare('INSERT INTO cycle_reviewers (id, cycle_id, user_id, seat) VALUES (?, ?, ?, ?)')
+          .bind(newCycleId(), seat.cycleId, seat.userId, seat.seat),
+      );
+    }
+  }
+
   await input.db.batch(statements);
-  return {createdWindows: windows.length, label: year.label};
+  return {createdWindows: createdWindows.length, label: year.label};
 };

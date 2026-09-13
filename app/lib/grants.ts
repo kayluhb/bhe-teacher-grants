@@ -14,7 +14,14 @@ import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
-import {BALLOT_LABELS, type Ballot, isBallot, isChairActor, tallyVotes, validateChairDecision} from '~/lib/votes';
+import {
+  BALLOT_LABELS,
+  type Ballot,
+  isBallot,
+  isChairActor,
+  tallyVotes,
+  validateChairDecision,
+} from '~/lib/votes';
 import {normalizeWishlistUrl} from '~/lib/wishlist';
 
 const GRANT_SELECT = `
@@ -498,30 +505,33 @@ export const decideGrant = async (
   if (error) return {error};
 
   const approvedAmount = input.outcome === 'APPROVED' ? grant.requested_amount : null;
-  await db.batch([
-    db
-      .prepare(
-        `UPDATE grants
-         SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-      )
-      .bind(
-        input.outcome,
-        approvedAmount,
-        input.outcome === 'REJECTED' ? input.comment : null,
-        input.grantId,
-      ),
-    writeAudit(
-      db,
-      input.grantId,
-      input.chairman,
-      'PENDING',
+  const updated = await db
+    .prepare(
+      `UPDATE grants
+       SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
+       WHERE id = ? AND status = 'PENDING'`,
+    )
+    .bind(
       input.outcome,
-      input.outcome === 'APPROVED'
-        ? `Chairman approved. Cap ${Number(approvedAmount).toFixed(2)}`
-        : `Chairman rejected${input.comment ? `: ${input.comment}` : ''}`,
-    ),
-  ]);
+      approvedAmount,
+      input.outcome === 'REJECTED' ? input.comment : null,
+      input.grantId,
+    )
+    .run();
+  if (!updated.meta.changes) {
+    return {error: 'This grant is no longer awaiting a decision.'};
+  }
+
+  await writeAudit(
+    db,
+    input.grantId,
+    input.chairman,
+    'PENDING',
+    input.outcome,
+    input.outcome === 'APPROVED'
+      ? `Chairman approved. Cap ${Number(approvedAmount).toFixed(2)}`
+      : `Chairman rejected${input.comment ? `: ${input.comment}` : ''}`,
+  ).run();
   return {status: input.outcome};
 };
 
@@ -644,23 +654,28 @@ export const fulfillGrant = async (
     );
   }
 
+  const updated = await db
+    .prepare(
+      `UPDATE grants
+       SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = ?,
+           tracking_number = ?, receipt_r2_key = ?, purchased_at = datetime('now'),
+           updated_at = datetime('now')
+       WHERE id = ? AND status = 'APPROVED'`,
+    )
+    .bind(
+      actualAmount,
+      input.varianceNote,
+      input.vendorName.trim(),
+      input.trackingNumber,
+      input.receiptR2Key,
+      input.grantId,
+    )
+    .run();
+  if (!updated.meta.changes) {
+    return {error: 'Grant is not awaiting purchase.'};
+  }
+
   statements.push(
-    db
-      .prepare(
-        `UPDATE grants
-         SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = ?,
-             tracking_number = ?, receipt_r2_key = ?, purchased_at = datetime('now'),
-             updated_at = datetime('now')
-         WHERE id = ?`,
-      )
-      .bind(
-        actualAmount,
-        input.varianceNote,
-        input.vendorName.trim(),
-        input.trackingNumber,
-        input.receiptR2Key,
-        input.grantId,
-      ),
     writeAudit(
       db,
       input.grantId,

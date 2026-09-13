@@ -1,21 +1,30 @@
 import Link from 'next/link';
+import {StepEmailTemplates} from '~/components/step-email-templates';
 import {setManualProcessStepAction} from '~/chair/actions';
 import type {ChairProcessStepId, StepStatus} from '~/lib/chair-process-status';
-import type {ProcessStep} from '~/lib/grant-process';
+import {EMAIL_TEMPLATES, type ProcessStep} from '~/lib/grant-process';
+
+const templatesForStep = (step: ProcessStep) =>
+  (step.templateIds ?? [])
+    .map((id) => EMAIL_TEMPLATES.find((item) => item.id === id))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
 export const ProcessStepList = ({
   cycleId,
   statuses,
   steps,
+  templateValues,
 }: {
   cycleId?: string;
   statuses?: Partial<Record<ChairProcessStepId, StepStatus>>;
   steps: ProcessStep[];
+  templateValues?: Record<string, string>;
 }) => (
   <ol className="space-y-4">
     {steps.map((step, index) => {
       const status = statuses?.[step.id as ChairProcessStepId];
       const done = status?.done === true;
+      const templates = templatesForStep(step);
       return (
         <li
           className={`flex gap-4 rounded-xl border p-4 shadow-sm ${
@@ -65,6 +74,9 @@ export const ProcessStepList = ({
                 </form>
               ) : null}
             </div>
+            {templates.length > 0 ? (
+              <StepEmailTemplates templates={templates} values={templateValues} />
+            ) : null}
           </div>
         </li>
       );

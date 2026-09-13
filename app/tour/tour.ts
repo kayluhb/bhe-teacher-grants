@@ -224,17 +224,8 @@ const CHAIRMAN_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Status-aware checklist for the cycle — some steps auto-complete; mark outreach steps when you finish them.',
+        'Status-aware checklist for the cycle — some steps auto-complete; mark outreach steps when you finish them. Email templates live on the matching steps.',
       title: 'Chair playbook',
-    },
-  },
-  {
-    element: '[data-tour="email-templates"]',
-    optional: true,
-    popover: {
-      description:
-        'Copy launch, reminder, evaluation, approval, rejection, and outcome-story emails. Replace placeholders with this cycle\'s details.',
-      title: 'Email templates',
     },
   },
 ];

@@ -127,7 +127,6 @@ describe('fixtures and steps', () => {
       '[data-tour="eval-email"]',
       '[data-tour="grant-table"]',
       '[data-tour="chair-playbook"]',
-      '[data-tour="email-templates"]',
     ]);
   });
 

@@ -1,13 +1,17 @@
 import {notFound} from 'next/navigation';
 import {GrantDetail} from '~/components/grant-detail';
-import {requireTeacher} from '~/lib/auth';
+import {getSession, requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
+  const section = GRANT_TITLE_SECTIONS.portal;
+  const user = await getSession();
+  if (!user) return {title: grantDocumentTitle(section)};
   const grant = await getGrant(getDb(), (await params).id);
-  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.portal, grant?.title)};
+  if (!grant || grant.teacher_id !== user.id) return {title: grantDocumentTitle(section)};
+  return {title: grantDocumentTitle(section, grant.title)};
 };
 
 export default async function TeacherGrantDetailPage({params}: {params: Promise<{id: string}>}) {

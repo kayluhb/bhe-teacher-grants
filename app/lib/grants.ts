@@ -1,5 +1,6 @@
 import type {User} from '~/lib/auth';
 import {newId} from '~/lib/db';
+import {ownedDeliveryR2Key, ownedQuoteR2Key, ownedReceiptR2Key} from '~/lib/files';
 import {type ListSearch, pickListFilters} from '~/lib/filters';
 import {
   type AdHocItemInput,
@@ -215,7 +216,7 @@ const writeAudit = (
     )
     .bind(newId(), grantId, actor.id, actor.role, previous, next, notes);
 
-const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =>
+const insertItems = (db: D1Database, grantId: string, actorId: string, items: GrantItemInput[]) =>
   items.map((item) => {
     const asin = item.asin?.trim() || asinFromUrl(item.vendor_url ?? '') || null;
     const imageUrl = item.image_url?.trim() || itemImageUrl({asin, image_url: null});
@@ -235,7 +236,7 @@ const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =
         item.vendor_url || null,
         asin,
         item.source === 'WISHLIST' ? 'WISHLIST' : 'MANUAL',
-        item.quote_r2_key || null,
+        ownedQuoteR2Key(item.quote_r2_key, {actorId, grantId}),
         imageUrl,
       );
   });
@@ -351,7 +352,7 @@ export const saveGrant = async (
     );
   }
 
-  statements.push(...insertItems(db, grantId, input.items));
+  statements.push(...insertItems(db, grantId, input.actor.id, input.items));
   statements.push(
     writeAudit(
       db,
@@ -680,7 +681,7 @@ export const fulfillGrant = async (
       input.varianceNote,
       input.vendorName.trim(),
       input.trackingNumber,
-      input.receiptR2Key,
+      ownedReceiptR2Key(input.receiptR2Key, input.grantId),
       input.grantId,
     )
     .run();
@@ -736,7 +737,7 @@ export const confirmDelivery = async (
              updated_at = datetime('now')
          WHERE id = ?`,
       )
-      .bind(input.proofKey, input.grantId),
+      .bind(ownedDeliveryR2Key(input.proofKey, input.grantId), input.grantId),
     writeAudit(
       db,
       input.grantId,

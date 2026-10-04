@@ -1,7 +1,7 @@
 'use client';
 
 import {usePathname} from 'next/navigation';
-import type {ReactNode} from 'react';
+import {type ReactNode, useState} from 'react';
 import {Sidebar} from '~/components/sidebar';
 import {TeacherNav} from '~/components/teacher-nav';
 import {TourProvider} from '~/components/tour-provider';
@@ -19,6 +19,7 @@ export const AppShell = ({
   user: User;
 }) => {
   const pathname = usePathname() ?? '/';
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const teacherChrome =
     pathname.startsWith('/portal') ||
     (user.role === 'teacher' && !pathname.startsWith('/review') && !pathname.startsWith('/chair'));
@@ -33,8 +34,8 @@ export const AppShell = ({
     </div>
   ) : (
     <div className="flex h-full flex-col md:flex-row">
-      <Sidebar portals={portals} user={user} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <Sidebar onOpenChange={setSidebarOpen} portals={portals} user={user} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col" inert={sidebarOpen}>
         <ViewAsBanner user={user} />
         <main className="min-h-0 flex-1 overflow-y-auto bg-warm-white" id="main">
           <div className="mx-auto max-w-7xl px-4 py-6">{children}</div>

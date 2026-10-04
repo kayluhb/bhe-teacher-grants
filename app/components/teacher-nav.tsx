@@ -10,6 +10,8 @@ import type {Portal} from '~/lib/reviewers';
 import {displayRoleLabel, type User} from '~/lib/roles';
 import {isViewingAs} from '~/lib/view-as';
 
+const KEY_ESCAPE = 'Escape';
+
 export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -18,7 +20,7 @@ export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) =>
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== KEY_ESCAPE) return;
       setOpen(false);
       toggleRef.current?.focus();
     };

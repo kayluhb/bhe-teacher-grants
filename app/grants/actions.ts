@@ -71,10 +71,14 @@ export const saveGrantDraftAction = async (formData: FormData) => {
 };
 
 export const deleteGrantAction = async (formData: FormData): Promise<void> => {
-  await requireRole('admin');
+  const user = await requireAuth();
   const grantId = String(formData.get('grant_id') || '');
-  const result = await deleteGrant(getDb(), grantId);
-  if ('error' in result) redirect(`/grants/${grantId}?error=${encodeURIComponent(result.error)}`);
+  const home = user.role === 'teacher' ? '/portal' : '/grants';
+
+  const result = await deleteGrant(getDb(), {actor: user, grantId});
+  if ('error' in result) {
+    redirect(`${grantPath(user.role, grantId)}?error=${encodeURIComponent(result.error)}`);
+  }
 
   await deleteGrantFiles(env.FILES_BUCKET, result.fileKeys);
   revalidatePath('/grants');
@@ -83,7 +87,7 @@ export const deleteGrantAction = async (formData: FormData): Promise<void> => {
   revalidatePath('/chair');
   revalidatePath('/fulfill');
   revalidatePath('/budget');
-  redirect('/grants');
+  redirect(home);
 };
 
 export const confirmDeliveryAction = async (formData: FormData) => {

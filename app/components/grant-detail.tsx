@@ -36,7 +36,12 @@ export const GrantDetail = ({
       <div className="flex flex-col items-end gap-2">
         <StatusPill status={grant.status} />
         {canDelete ? (
-          <DeleteGrantForm action={deleteGrantAction} grantId={grant.id} title={grant.title} />
+          <DeleteGrantForm
+            action={deleteGrantAction}
+            draft={grant.status === 'DRAFT'}
+            grantId={grant.id}
+            title={grant.title || 'Untitled draft'}
+          />
         ) : null}
       </div>
     </div>

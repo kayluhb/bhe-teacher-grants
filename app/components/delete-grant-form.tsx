@@ -5,18 +5,20 @@ import {FormDialog} from '~/components/form-dialog';
 
 export const DeleteGrantForm = ({
   action,
+  draft = false,
   title,
   grantId,
 }: {
   action: (formData: FormData) => Promise<void>;
+  draft?: boolean;
   grantId: string;
   title: string;
 }) => (
   <FormDialog
-    description={`This permanently deletes "${title}" and its items, votes, and files. This cannot be undone.`}
-    title="Delete this grant?"
+    description={`This permanently deletes "${title}" and its items${draft ? '' : ', votes,'} and files. This cannot be undone.`}
+    title={draft ? 'Delete this draft?' : 'Delete this grant?'}
     triggerClassName="whitespace-nowrap text-sm text-red-700 underline"
-    triggerLabel="Delete grant"
+    triggerLabel={draft ? 'Delete draft' : 'Delete grant'}
   >
     <form action={action} className="flex justify-end gap-2">
       <input name="grant_id" type="hidden" value={grantId} />

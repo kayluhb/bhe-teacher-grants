@@ -3,7 +3,7 @@ import {ChairDecisionForm} from '~/components/chair-decision-form';
 import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
-import {requireChairman} from '~/lib/auth';
+import {getSession, requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {
   getGrant,
@@ -20,9 +20,22 @@ import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
 import {BALLOT_LABELS, isBallot, isChairActor} from '~/lib/votes';
 
+const STATUS_DRAFT = 'DRAFT';
+const SEAT_CHAIRMAN = 'chairman';
+
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
-  const grant = await getGrant(getDb(), (await params).id);
-  return {title: grantDocumentTitle(GRANT_TITLE_SECTIONS.chair, grant?.title)};
+  const section = GRANT_TITLE_SECTIONS.chair;
+  const user = await getSession();
+  if (!user) return {title: grantDocumentTitle(section)};
+  const db = getDb();
+  const grant = await getGrant(db, (await params).id);
+  if (!grant || grant.status === STATUS_DRAFT) return {title: grantDocumentTitle(section)};
+  const chairs = await listReviewerRows(db, grant.cycle_id);
+  const seatedChairman = chairs.find((row) => row.seat === SEAT_CHAIRMAN);
+  if (!isChairActor(user, seatedChairman?.userId)) {
+    return {title: grantDocumentTitle(section)};
+  }
+  return {title: grantDocumentTitle(section, grant.title)};
 };
 
 export default async function ChairDetailPage({params}: {params: Promise<{id: string}>}) {

@@ -1,5 +1,6 @@
 import type {User} from '~/lib/auth';
 import {newId} from '~/lib/db';
+import {ownedDeliveryR2Key, ownedQuoteR2Key, ownedReceiptR2Key} from '~/lib/files';
 import {type ListSearch, pickListFilters} from '~/lib/filters';
 import {
   type AdHocItemInput,
@@ -215,7 +216,7 @@ const writeAudit = (
     )
     .bind(newId(), grantId, actor.id, actor.role, previous, next, notes);
 
-const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =>
+const insertItems = (db: D1Database, grantId: string, actorId: string, items: GrantItemInput[]) =>
   items.map((item) => {
     const asin = item.asin?.trim() || asinFromUrl(item.vendor_url ?? '') || null;
     const imageUrl = item.image_url?.trim() || itemImageUrl({asin, image_url: null});
@@ -235,7 +236,7 @@ const insertItems = (db: D1Database, grantId: string, items: GrantItemInput[]) =
         item.vendor_url || null,
         asin,
         item.source === 'WISHLIST' ? 'WISHLIST' : 'MANUAL',
-        item.quote_r2_key || null,
+        ownedQuoteR2Key(item.quote_r2_key, {actorId, grantId}),
         imageUrl,
       );
   });
@@ -354,7 +355,7 @@ export const saveGrant = async (
     );
   }
 
-  statements.push(...insertItems(db, grantId, items));
+  statements.push(...insertItems(db, grantId, input.actor.id, items));
   statements.push(
     writeAudit(
       db,
@@ -508,20 +509,25 @@ export const decideGrant = async (
   if (error) return {error};
 
   const approvedAmount = input.outcome === 'APPROVED' ? grant.requested_amount : null;
-  await db.batch([
-    db
-      .prepare(
-        `UPDATE grants
-         SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-      )
-      .bind(
-        input.outcome,
-        approvedAmount,
-        input.outcome === 'REJECTED' ? input.comment : null,
-        input.grantId,
-      ),
-    writeAudit(
+  const updated = await db
+    .prepare(
+      `UPDATE grants
+       SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
+       WHERE id = ? AND status = 'PENDING'`,
+    )
+    .bind(
+      input.outcome,
+      approvedAmount,
+      input.outcome === 'REJECTED' ? input.comment : null,
+      input.grantId,
+    )
+    .run();
+  if (!updated.meta.changes) {
+    return {error: 'This grant is no longer awaiting a decision.'};
+  }
+
+  try {
+    await writeAudit(
       db,
       input.grantId,
       input.chairman,
@@ -530,8 +536,19 @@ export const decideGrant = async (
       input.outcome === 'APPROVED'
         ? `Chairman approved. Cap ${Number(approvedAmount).toFixed(2)}`
         : `Chairman rejected${input.comment ? `: ${input.comment}` : ''}`,
-    ),
-  ]);
+    ).run();
+  } catch (error) {
+    await db
+      .prepare(
+        `UPDATE grants
+         SET status = 'PENDING', approved_amount = NULL, rejection_reason = NULL,
+             updated_at = datetime('now')
+         WHERE id = ? AND status = ?`,
+      )
+      .bind(input.grantId, input.outcome)
+      .run();
+    throw error;
+  }
   return {status: input.outcome};
 };
 
@@ -654,23 +671,28 @@ export const fulfillGrant = async (
     );
   }
 
+  const updated = await db
+    .prepare(
+      `UPDATE grants
+       SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = ?,
+           tracking_number = ?, receipt_r2_key = ?, purchased_at = datetime('now'),
+           updated_at = datetime('now')
+       WHERE id = ? AND status = 'APPROVED'`,
+    )
+    .bind(
+      actualAmount,
+      input.varianceNote,
+      input.vendorName.trim(),
+      input.trackingNumber,
+      ownedReceiptR2Key(input.receiptR2Key, input.grantId),
+      input.grantId,
+    )
+    .run();
+  if (!updated.meta.changes) {
+    return {error: 'Grant is not awaiting purchase.'};
+  }
+
   statements.push(
-    db
-      .prepare(
-        `UPDATE grants
-         SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = ?,
-             tracking_number = ?, receipt_r2_key = ?, purchased_at = datetime('now'),
-             updated_at = datetime('now')
-         WHERE id = ?`,
-      )
-      .bind(
-        actualAmount,
-        input.varianceNote,
-        input.vendorName.trim(),
-        input.trackingNumber,
-        input.receiptR2Key,
-        input.grantId,
-      ),
     writeAudit(
       db,
       input.grantId,
@@ -681,7 +703,21 @@ export const fulfillGrant = async (
     ),
   );
 
-  await db.batch(statements);
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    await db
+      .prepare(
+        `UPDATE grants
+         SET status = 'APPROVED', actual_amount = NULL, variance_note = NULL, vendor_name = NULL,
+             tracking_number = NULL, receipt_r2_key = NULL, purchased_at = NULL,
+             updated_at = datetime('now')
+         WHERE id = ? AND status = 'PURCHASED'`,
+      )
+      .bind(input.grantId)
+      .run();
+    throw error;
+  }
   return {actualAmount, variance: delta};
 };
 
@@ -704,7 +740,7 @@ export const confirmDelivery = async (
              updated_at = datetime('now')
          WHERE id = ?`,
       )
-      .bind(input.proofKey, input.grantId),
+      .bind(ownedDeliveryR2Key(input.proofKey, input.grantId), input.grantId),
     writeAudit(
       db,
       input.grantId,

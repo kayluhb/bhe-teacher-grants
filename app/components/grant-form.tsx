@@ -161,6 +161,12 @@ export const GrantForm = ({
   const filledCount = items.filter(isFilledItem).length;
   const progressIndex = progressIndexForScreen(screen);
 
+  // itemDetails with no draft item renders nothing — recover into the items loop.
+  useEffect(() => {
+    if (screen !== 'itemDetails' || draftItem) return;
+    setScreen(filledCount > 0 ? 'addAnother' : 'itemSource');
+  }, [screen, draftItem, filledCount]);
+
   const go = (next: WizardScreen, options?: {fromReview?: boolean}) => {
     if (options?.fromReview) setReturnToReview(true);
     setScreen(next);
@@ -278,11 +284,6 @@ export const GrantForm = ({
         ? {...current, image_url: json.image_url ?? null}
         : current,
     );
-  };
-
-  const startNextProductItem = () => {
-    setDraftItem(emptyItem());
-    setScreen('itemDetails');
   };
 
   const applyImported = (importedItems: WishlistItem[], nextUrl?: string | null) => {
@@ -481,6 +482,11 @@ export const GrantForm = ({
               go('review');
               return;
             }
+            // Stay in the items loop once anything is saved.
+            if (filledCount > 0) {
+              go('addAnother');
+              return;
+            }
             if (benefitScope && gradesImpactedRequired(benefitScope)) {
               go('grades');
               return;
@@ -533,14 +539,13 @@ export const GrantForm = ({
         <AddAnotherStep
           itemCount={filledCount}
           lastItemLabel={lastItemLabel}
-          onAddMore={startNextProductItem}
+          onAddMore={() => go('itemSource')}
           onDone={() => {
             setReturnToReview(false);
             setLastItemLabel(null);
             void autosaveDraft();
             go('review');
           }}
-          onSwitchMethod={() => go('itemSource')}
           requestedTotal={summary.total}
         />
       ) : null}

@@ -6,14 +6,12 @@ export const AddAnotherStep = ({
   lastItemLabel,
   onAddMore,
   onDone,
-  onSwitchMethod,
   requestedTotal,
 }: {
   itemCount: number;
   lastItemLabel?: string | null;
   onAddMore: () => void;
   onDone: () => void;
-  onSwitchMethod?: () => void;
   requestedTotal: number;
 }) => (
   <StepShell
@@ -22,7 +20,7 @@ export const AddAnotherStep = ({
         ? `Saved “${lastItemLabel}”. ${itemCount} ${itemCount === 1 ? 'item' : 'items'} · ${formatUsd(requestedTotal)}.`
         : `${itemCount} ${itemCount === 1 ? 'item' : 'items'} · ${formatUsd(requestedTotal)}.`
     }
-    title="Do you have another item?"
+    title="Do you want to add another item?"
   >
     <div className="grid gap-3 sm:grid-cols-2">
       <button
@@ -31,7 +29,9 @@ export const AddAnotherStep = ({
         type="button"
       >
         <p className="font-heading text-lg font-semibold text-charcoal">Yes</p>
-        <p className="font-body mt-1 text-sm text-gray-600">Add the next item now.</p>
+        <p className="font-body mt-1 text-sm text-gray-600">
+          Choose a wishlist or product URL next.
+        </p>
       </button>
       <button
         className="rounded-xl border-2 border-gray-200 bg-white p-5 text-left transition-colors hover:border-eagle-blue hover:bg-eagle-blue/5"
@@ -42,15 +42,5 @@ export const AddAnotherStep = ({
         <p className="font-body mt-1 text-sm text-gray-600">Continue to review.</p>
       </button>
     </div>
-
-    {onSwitchMethod ? (
-      <button
-        className="font-body text-sm font-medium text-eagle-blue underline"
-        onClick={onSwitchMethod}
-        type="button"
-      >
-        Or add with a wishlist / different method
-      </button>
-    ) : null}
   </StepShell>
 );

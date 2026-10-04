@@ -35,6 +35,7 @@ export default async function GrantDetailPage({params}: {params: Promise<{id: st
     <GrantDetail
       backHref="/grants"
       canDelete={user.role === 'admin'}
+      canEdit={grant.status === 'DRAFT'}
       cycle={cycle}
       grant={grant}
       items={items}

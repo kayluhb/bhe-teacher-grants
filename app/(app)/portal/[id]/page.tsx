@@ -2,6 +2,7 @@ import {notFound} from 'next/navigation';
 import {GrantDetail} from '~/components/grant-detail';
 import {getSession, requireTeacher} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
 import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 
@@ -22,11 +23,13 @@ export default async function TeacherGrantDetailPage({params}: {params: Promise<
   if (!grant || grant.teacher_id !== user.id) notFound();
 
   const [items, cycle] = await Promise.all([listGrantItems(db, id), getCycle(db, grant.cycle_id)]);
+  const canMutate = canTeacherMutateGrant(user, grant, cycle);
 
   return (
     <GrantDetail
       backHref="/portal"
-      canDelete={grant.status === 'DRAFT'}
+      canDelete={canDeleteGrant(user, grant, cycle)}
+      canEdit={canMutate}
       cycle={cycle}
       grant={grant}
       items={items}

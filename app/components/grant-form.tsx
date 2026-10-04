@@ -141,6 +141,7 @@ export const GrantForm = ({
   const [pending, setPending] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const alreadySubmitted = grant?.status === 'PENDING';
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
   const autosaveSeq = useRef(0);
   const grantIdRef = useRef(grant?.id ?? '');
@@ -434,7 +435,13 @@ export const GrantForm = ({
 
       {draftSavedAt || autosaving ? (
         <p aria-live="polite" className="font-body mb-4 text-center text-xs text-gray-500">
-          {autosaving ? 'Saving draft…' : `Draft saved at ${draftSavedAt}`}
+          {autosaving
+            ? alreadySubmitted
+              ? 'Saving changes…'
+              : 'Saving draft…'
+            : alreadySubmitted
+              ? `Changes saved at ${draftSavedAt}`
+              : `Draft saved at ${draftSavedAt}`}
         </p>
       ) : null}
 
@@ -568,6 +575,7 @@ export const GrantForm = ({
           onSubmit={() => submit(true)}
           pending={pending}
           retailer={retailer}
+          submitted={alreadySubmitted}
           summaryTotal={summary.total}
         />
       ) : null}

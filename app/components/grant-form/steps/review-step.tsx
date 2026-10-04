@@ -52,6 +52,7 @@ export const ReviewStep = ({
   onSubmit,
   pending,
   retailer,
+  submitted = false,
   summaryTotal,
 }: {
   applicantName: string;
@@ -70,6 +71,8 @@ export const ReviewStep = ({
   onSubmit: () => void;
   pending: boolean;
   retailer: string | null;
+  /** Already PENDING — save keeps it submitted. */
+  submitted?: boolean;
   summaryTotal: number;
 }) => {
   const filledItems = items.filter(isFilledItem);
@@ -203,16 +206,18 @@ export const ReviewStep = ({
       ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <button
-          className="btn btn-secondary"
-          disabled={pending}
-          onClick={onSaveDraft}
-          type="button"
-        >
-          Save draft
-        </button>
+        {submitted ? null : (
+          <button
+            className="btn btn-secondary"
+            disabled={pending}
+            onClick={onSaveDraft}
+            type="button"
+          >
+            Save draft
+          </button>
+        )}
         <button className="btn btn-primary" disabled={pending} onClick={onSubmit} type="button">
-          Submit grant
+          {submitted ? 'Save changes' : 'Submit grant'}
         </button>
       </div>
     </StepShell>

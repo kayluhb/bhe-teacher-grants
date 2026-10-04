@@ -10,7 +10,7 @@ import {
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
-import {canDeleteGrant} from '~/lib/grant-delete';
+import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
 import {grantFileKeys} from '~/lib/grant-files';
 import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
@@ -256,16 +256,44 @@ export const saveGrant = async (
     wishlistUrl?: string | null;
   },
 ): Promise<Result<{grantId: string; status: string}>> => {
+  const grantId = input.grantId ?? newId();
+  const existing = input.grantId ? await getGrant(db, grantId) : null;
+  if (existing && existing.teacher_id !== input.actor.id && input.actor.role !== 'admin') {
+    return {error: 'Not your grant.'};
+  }
+
+  const cycle = await db
+    .prepare('SELECT * FROM grant_cycles WHERE id = ?')
+    .bind(input.cycleId)
+    .first<CycleRow>();
+  if (!cycle) return {error: 'Grant window not found.'};
+
+  if (
+    existing &&
+    existing.status !== 'DRAFT' &&
+    !canTeacherMutateGrant(input.actor, existing, cycle)
+  ) {
+    return {
+      error:
+        existing.status === 'PENDING'
+          ? 'This grant can no longer be edited because review has started.'
+          : 'Only drafts or open submissions can be edited.',
+    };
+  }
+
+  const keepPending = existing?.status === 'PENDING';
   const narrative = validateGrantNarrative({
     benefitScope: input.benefitScope,
     description: input.description,
     gradesImpacted: input.gradesImpacted,
-    partial: !input.submit,
+    partial: !input.submit && !keepPending,
   });
   if ('error' in narrative) return narrative;
 
   const items = input.items.filter((item) => item.item_description.trim());
-  if (input.submit && items.length === 0) return {error: 'Add at least one line item.'};
+  if ((input.submit || keepPending) && items.length === 0) {
+    return {error: 'Add at least one line item.'};
+  }
   if (
     items.some((item) => {
       const quantity = Number(item.quantity);
@@ -282,30 +310,15 @@ export const saveGrant = async (
     return {error: 'Each item needs a description and quantity.'};
   }
 
-  const cycle = await db
-    .prepare('SELECT * FROM grant_cycles WHERE id = ?')
-    .bind(input.cycleId)
-    .first<CycleRow>();
-  if (!cycle) return {error: 'Grant window not found.'};
-
   const total = requestedTotal(items);
   const wishlistUrl = input.wishlistUrl ? normalizeWishlistUrl(input.wishlistUrl) : null;
   if (input.wishlistUrl && !wishlistUrl) {
     return {error: 'Wishlist URL must be a public Amazon, Walmart, or Target list.'};
   }
 
-  const status = input.submit ? 'PENDING' : 'DRAFT';
-  if (input.submit && !isSubmissionOpen(cycle)) {
+  const status = keepPending || input.submit ? 'PENDING' : 'DRAFT';
+  if (input.submit && !keepPending && !isSubmissionOpen(cycle)) {
     return {error: 'No grant window is open for submissions.'};
-  }
-
-  const grantId = input.grantId ?? newId();
-  const existing = input.grantId ? await getGrant(db, grantId) : null;
-  if (existing && existing.teacher_id !== input.actor.id && input.actor.role !== 'admin') {
-    return {error: 'Not your grant.'};
-  }
-  if (existing && existing.status !== 'DRAFT') {
-    return {error: 'Only drafts can be edited.'};
   }
 
   const statements: D1PreparedStatement[] = [];
@@ -356,16 +369,15 @@ export const saveGrant = async (
     );
   }
 
+  const auditNotes = keepPending
+    ? `Updated submitted grant. Requested ${total.toFixed(2)}`
+    : input.submit
+      ? `Submitted. Requested ${total.toFixed(2)}`
+      : 'Saved draft';
+
   statements.push(...insertItems(db, grantId, input.actor.id, items));
   statements.push(
-    writeAudit(
-      db,
-      grantId,
-      input.actor,
-      existing?.status ?? null,
-      status,
-      input.submit ? `Submitted. Requested ${total.toFixed(2)}` : 'Saved draft',
-    ),
+    writeAudit(db, grantId, input.actor, existing?.status ?? null, status, auditNotes),
   );
 
   await db.batch(statements);
@@ -871,22 +883,29 @@ export const deleteGrant = async (
 ): Promise<Result<{fileKeys: string[]}>> => {
   const grant = await db
     .prepare(
-      'SELECT id, teacher_id, status, receipt_r2_key, proof_of_delivery_r2_key FROM grants WHERE id = ?',
+      `SELECT g.id, g.teacher_id, g.status, g.receipt_r2_key, g.proof_of_delivery_r2_key,
+              c.review_starts_at
+       FROM grants g
+       JOIN grant_cycles c ON c.id = g.cycle_id
+       WHERE g.id = ?`,
     )
     .bind(input.grantId)
     .first<{
       id: string;
       proof_of_delivery_r2_key: string | null;
       receipt_r2_key: string | null;
+      review_starts_at: string | null;
       status: string;
       teacher_id: string;
     }>();
   if (!grant) return {error: 'Grant not found.'};
-  if (!canDeleteGrant(input.actor, grant)) {
+  if (!canDeleteGrant(input.actor, grant, {review_starts_at: grant.review_starts_at})) {
     return {
       error:
         input.actor.role === 'teacher' && grant.teacher_id === input.actor.id
-          ? 'Only draft requests can be deleted.'
+          ? grant.status === 'PENDING'
+            ? 'This grant can no longer be deleted because review has started.'
+            : 'Only draft or open submissions can be deleted.'
           : 'Not allowed.',
     };
   }

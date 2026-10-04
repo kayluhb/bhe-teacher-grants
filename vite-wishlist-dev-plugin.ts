@@ -69,6 +69,11 @@ export const wishlistDevPlugin = (): Plugin => ({
             items: unknown[];
             unreachable?: boolean;
           }>;
+          wishlistImportFailure: (fetched: {
+            blocked?: boolean;
+            items: unknown[];
+            unreachable?: boolean;
+          }) => {error: string; status: number} | null;
         };
 
         const url = wishlist.normalizeWishlistUrl(urlRaw);
@@ -87,25 +92,9 @@ export const wishlistDevPlugin = (): Plugin => ({
         }
 
         const fetched = await amazon.fetchAmazonWishlist(url);
-        if (fetched.unreachable) {
-          sendJson(res, 422, {
-            error:
-              'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
-          });
-          return;
-        }
-        if (fetched.blocked) {
-          sendJson(res, 422, {
-            error:
-              'Amazon blocked the automatic import from this environment. On Amazon choose More → Download list and upload the .xlsx.',
-          });
-          return;
-        }
-        if (fetched.items.length === 0) {
-          sendJson(res, 422, {
-            error:
-              'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
-          });
+        const failure = amazon.wishlistImportFailure(fetched);
+        if (failure) {
+          sendJson(res, failure.status, {error: failure.error});
           return;
         }
 

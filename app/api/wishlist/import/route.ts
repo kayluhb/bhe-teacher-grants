@@ -5,7 +5,7 @@ import {
   parseWishlistXlsx,
   type WishlistItem,
 } from '~/lib/wishlist';
-import {fetchAmazonWishlist} from '~/lib/wishlist-amazon';
+import {fetchAmazonWishlist, wishlistImportFailure} from '~/lib/wishlist-amazon';
 
 const MAX_XLSX_BYTES = 1_000_000;
 
@@ -92,34 +92,11 @@ const importWishlist = async (request: Request) => {
   }
 
   const fetched = await fetchAmazonWishlist(url);
-  if (fetched.unreachable) {
-    return Response.json(
-      {
-        error:
-          'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
-      },
-      {status: 422},
-    );
-  }
-  if (fetched.blocked) {
-    return Response.json(
-      {
-        error:
-          'Amazon blocked the automatic import from this environment. On Amazon choose More → Download list and upload the .xlsx, or try again from production.',
-      },
-      {status: 422},
-    );
-  }
-  const items: WishlistItem[] = fetched.items;
-  if (items.length === 0) {
-    return Response.json(
-      {
-        error:
-          'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
-      },
-      {status: 422},
-    );
+  const failure = wishlistImportFailure(fetched);
+  if (failure) {
+    return Response.json({error: failure.error}, {status: failure.status});
   }
 
+  const items: WishlistItem[] = fetched.items;
   return Response.json({items, url});
 };

@@ -64,9 +64,41 @@ const fetchAmazonPage = async (pageUrl: string, cookie: string): Promise<Respons
 const itemKey = (item: WishlistItem): string =>
   item.asin ?? item.vendor_url ?? item.item_description;
 
-export const fetchAmazonWishlist = async (
-  firstUrl: string,
-): Promise<{blocked?: boolean; items: WishlistItem[]; unreachable?: boolean}> => {
+export type AmazonWishlistFetch = {
+  blocked?: boolean;
+  items: WishlistItem[];
+  unreachable?: boolean;
+};
+
+/** Maps a wishlist fetch outcome to the import route’s JSON error, if any. */
+export const wishlistImportFailure = (
+  fetched: AmazonWishlistFetch,
+): {error: string; status: number} | null => {
+  if (fetched.unreachable) {
+    return {
+      error:
+        'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
+      status: 422,
+    };
+  }
+  if (fetched.blocked) {
+    return {
+      error:
+        'Amazon blocked the automatic import from this environment. On Amazon choose More → Download list and upload the .xlsx, or try again from production.',
+      status: 422,
+    };
+  }
+  if (fetched.items.length === 0) {
+    return {
+      error:
+        'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
+      status: 422,
+    };
+  }
+  return null;
+};
+
+export const fetchAmazonWishlist = async (firstUrl: string): Promise<AmazonWishlistFetch> => {
   const items: WishlistItem[] = [];
   const seen = new Set<string>();
   let pageUrl: string | null = firstUrl;

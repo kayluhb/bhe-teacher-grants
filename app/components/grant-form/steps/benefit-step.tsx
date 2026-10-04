@@ -28,15 +28,12 @@ export const BenefitStep = ({
       name="benefit_scope"
       onValueChange={(scope) => onChange(scope as BenefitScope)}
       options={BENEFIT_SCOPES.map((scope) => ({
+        description: BENEFIT_SCOPE_DESCRIPTIONS[scope],
         label: BENEFIT_SCOPE_LABELS[scope],
         value: scope,
       }))}
       value={benefitScope}
     />
-
-    {benefitScope ? (
-      <p className="font-body text-sm text-gray-600">{BENEFIT_SCOPE_DESCRIPTIONS[benefitScope]}</p>
-    ) : null}
 
     <StepNav continueDisabled={!benefitScope} onBack={onBack} onContinue={onContinue} />
   </StepShell>

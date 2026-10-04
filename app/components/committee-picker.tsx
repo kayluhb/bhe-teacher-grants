@@ -352,13 +352,17 @@ export const CommitteePicker = ({
                 }
                 if (suggestion.kind === 'invalid') {
                   return (
-                    <p
+                    <div
+                      aria-disabled="true"
+                      aria-selected={activeRow}
                       className="px-3 py-2 text-sm text-red-700"
+                      id={`${listId}-opt-${index}`}
                       key={`invalid-${suggestion.message}`}
-                      role="alert"
+                      role="option"
+                      tabIndex={-1}
                     >
                       {suggestion.message}
-                    </p>
+                    </div>
                   );
                 }
                 return (
@@ -390,8 +394,8 @@ export const CommitteePicker = ({
         </p>
       ) : (
         <p className="text-xs text-gray-500">
-          Search by name or enter an email to add someone. The Faculty Rep signs in with their
-          AISD email (they stay a teacher). The other two members use a non-AISD email and join as
+          Search by name or enter an email to add someone. The Faculty Rep signs in with their AISD
+          email (they stay a teacher). The other two members use a non-AISD email and join as
           committee.
         </p>
       )}

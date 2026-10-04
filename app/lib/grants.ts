@@ -522,16 +522,29 @@ export const decideGrant = async (
     return {error: 'This grant is no longer awaiting a decision.'};
   }
 
-  await writeAudit(
-    db,
-    input.grantId,
-    input.chairman,
-    'PENDING',
-    input.outcome,
-    input.outcome === 'APPROVED'
-      ? `Chairman approved. Cap ${Number(approvedAmount).toFixed(2)}`
-      : `Chairman rejected${input.comment ? `: ${input.comment}` : ''}`,
-  ).run();
+  try {
+    await writeAudit(
+      db,
+      input.grantId,
+      input.chairman,
+      'PENDING',
+      input.outcome,
+      input.outcome === 'APPROVED'
+        ? `Chairman approved. Cap ${Number(approvedAmount).toFixed(2)}`
+        : `Chairman rejected${input.comment ? `: ${input.comment}` : ''}`,
+    ).run();
+  } catch (error) {
+    await db
+      .prepare(
+        `UPDATE grants
+         SET status = 'PENDING', approved_amount = NULL, rejection_reason = NULL,
+             updated_at = datetime('now')
+         WHERE id = ? AND status = ?`,
+      )
+      .bind(input.grantId, input.outcome)
+      .run();
+    throw error;
+  }
   return {status: input.outcome};
 };
 
@@ -686,7 +699,21 @@ export const fulfillGrant = async (
     ),
   );
 
-  await db.batch(statements);
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    await db
+      .prepare(
+        `UPDATE grants
+         SET status = 'APPROVED', actual_amount = NULL, variance_note = NULL, vendor_name = NULL,
+             tracking_number = NULL, receipt_r2_key = NULL, purchased_at = NULL,
+             updated_at = datetime('now')
+         WHERE id = ? AND status = 'PURCHASED'`,
+      )
+      .bind(input.grantId)
+      .run();
+    throw error;
+  }
   return {actualAmount, variance: delta};
 };
 

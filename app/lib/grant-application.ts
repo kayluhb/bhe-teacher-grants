@@ -32,20 +32,33 @@ export const titleFromDescription = (description: string): string => {
   return `${firstLine.slice(0, TITLE_MAX - 1).trimEnd()}…`;
 };
 
+export type GrantNarrative = {
+  benefitScope: BenefitScope;
+  description: string;
+  gradesImpacted: string;
+  title: string;
+};
+
 export const validateGrantNarrative = (input: {
   benefitScope: string;
   description: string;
   gradesImpacted: string;
-}):
-  | {error: string}
-  | {
-      benefitScope: BenefitScope;
-      description: string;
-      gradesImpacted: string;
-      title: string;
-    } => {
+  /** When true, benefit/grades may be incomplete — used for in-progress draft autosaves. */
+  partial?: boolean;
+}): {error: string} | GrantNarrative => {
   const description = input.description.trim();
   if (!description) return {error: 'Please share a short description of your request.'};
+
+  if (input.partial) {
+    const benefitScope = isBenefitScope(input.benefitScope) ? input.benefitScope : 'CLASS';
+    return {
+      benefitScope,
+      description,
+      gradesImpacted: gradesImpactedRequired(benefitScope) ? input.gradesImpacted.trim() : '',
+      title: titleFromDescription(description),
+    };
+  }
+
   if (!isBenefitScope(input.benefitScope)) {
     return {error: 'Please choose who this grant will benefit.'};
   }

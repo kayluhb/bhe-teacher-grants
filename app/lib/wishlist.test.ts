@@ -145,6 +145,26 @@ describe('parseWishlistHtml', () => {
     });
   });
 
+  it('reads titles from image link markup when itemName attributes are sparse', () => {
+    const html = `
+      <div data-itemId="I19TU22GH5JPK6" data-price="19.99"
+        data-reposition-action-params="{&quot;itemExternalId&quot;:&quot;ASIN:B0DKMKCCHZ|ATVPDKIKX0DER&quot;}">
+        <a class="a-link-normal" title="Breathing Cards for Kids"
+          href="/dp/B0DKMKCCHZ/?coliid=I19TU22GH5JPK6&amp;colid=2ATK552QBK81M">
+          <img alt="Breathing Cards for Kids" src="https://m.media-amazon.com/images/I/51JuDPfro8L._SS135_.jpg" />
+        </a>
+      </div>
+    `;
+    const items = parseWishlistHtml(html);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      asin: 'B0DKMKCCHZ',
+      item_description: 'Breathing Cards for Kids',
+      source: 'WISHLIST',
+      unit_price: 19.99,
+    });
+  });
+
   it('captures a product image from the list HTML or the ASIN CDN', () => {
     const html = `
       <div data-itemid="1" data-item-name="The Best Story" data-price="13.30">

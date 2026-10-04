@@ -20,22 +20,29 @@ const parseJson = <T>(raw: string, fallback: T): T => {
   }
 };
 
-export const saveGrantAction = async (formData: FormData) => {
-  const user = await requireRole('teacher');
+const readGrantForm = (formData: FormData) => {
   const items = parseJson<GrantItemInput[]>(String(formData.get('items') || '[]'), []);
   const grantId = String(formData.get('grant_id') || '') || undefined;
-  const submit = String(formData.get('submit') || '') === '1';
-
-  const result = await saveGrant(getDb(), {
-    actor: user,
+  return {
     benefitScope: String(formData.get('benefit_scope') || ''),
     cycleId: String(formData.get('cycle_id') || ''),
     description: String(formData.get('description') || ''),
     gradesImpacted: String(formData.get('grades_impacted') || ''),
     grantId,
     items,
-    submit,
     wishlistUrl: String(formData.get('wishlist_url') || '') || null,
+  };
+};
+
+export const saveGrantAction = async (formData: FormData) => {
+  const user = await requireRole('teacher');
+  const fields = readGrantForm(formData);
+  const submit = String(formData.get('submit') || '') === '1';
+
+  const result = await saveGrant(getDb(), {
+    actor: user,
+    ...fields,
+    submit,
   });
 
   if ('error' in result) return result;
@@ -43,6 +50,24 @@ export const saveGrantAction = async (formData: FormData) => {
   revalidatePath('/grants');
   revalidatePath('/portal');
   redirect(grantPath(user.role, result.grantId));
+};
+
+/** Silent draft save for the guided form — no redirect. */
+export const saveGrantDraftAction = async (formData: FormData) => {
+  const user = await requireRole('teacher');
+  const fields = readGrantForm(formData);
+
+  const result = await saveGrant(getDb(), {
+    actor: user,
+    ...fields,
+    submit: false,
+  });
+
+  if ('error' in result) return result;
+
+  revalidatePath('/grants');
+  revalidatePath('/portal');
+  return {grantId: result.grantId};
 };
 
 export const deleteGrantAction = async (formData: FormData): Promise<void> => {

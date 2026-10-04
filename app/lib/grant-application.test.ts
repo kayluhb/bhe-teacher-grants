@@ -80,6 +80,21 @@ describe('validateGrantNarrative', () => {
     expect(result).toEqual({error: 'Please choose who this grant will benefit.'});
   });
 
+  it('allows incomplete benefit scope when saving a partial draft', () => {
+    const result = validateGrantNarrative({
+      benefitScope: '',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      partial: true,
+    });
+    expect(result).toEqual({
+      benefitScope: 'CLASS',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      title: 'Bean bags for reading',
+    });
+  });
+
   it('requires grades when the request is for a whole grade or multiple grades', () => {
     const result = validateGrantNarrative({
       ...valid,

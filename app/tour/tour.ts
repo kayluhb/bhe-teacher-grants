@@ -37,7 +37,7 @@ export const tourPageFromPath = (pathname: string, role?: Role): TourPage | null
   return TOUR_HOMES[pathname] ?? null;
 };
 
-export const tourStorageKey = (page: TourPage): string => `bhe-tour:${page}`;
+export const tourStorageKey = (page: TourPage): string => `bhe-tour:v2:${page}`;
 
 export const hasSeenTour = (storage: TourStorage, page: TourPage): boolean =>
   storage.getItem(tourStorageKey(page)) === '1';
@@ -124,7 +124,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Open the form, add line items (a public wishlist is optional), and send it in. Voting starts when the review window opens.',
+        'A short guided form walks you through the request, who it benefits, and each item — import a public Amazon wishlist or paste product links one at a time. Drafts save as you go. Voting starts when the review window opens.',
       title: 'Submit a grant',
     },
   },
@@ -270,7 +270,7 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'When a window is open, you can submit a grant on behalf of a teacher from here.',
+        'When a window is open, you can submit a grant on behalf of a teacher from here. The same guided steps ask for the request, who it benefits, and items (wishlist or product links).',
       title: 'Submit a grant',
     },
   },
@@ -315,8 +315,7 @@ const FULFILL_STEPS: TourStep[] = [
     element: '[data-tour="year-filter"]',
     optional: true,
     popover: {
-      description:
-        'Filter by school year and semester the way Barton Hills files reimbursements.',
+      description: 'Filter by school year and semester the way Barton Hills files reimbursements.',
       title: 'Year and semester',
     },
   },

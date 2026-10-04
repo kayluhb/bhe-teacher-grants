@@ -14,7 +14,14 @@ import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
-import {BALLOT_LABELS, type Ballot, isBallot, isChairActor, tallyVotes, validateChairDecision} from '~/lib/votes';
+import {
+  BALLOT_LABELS,
+  type Ballot,
+  isBallot,
+  isChairActor,
+  tallyVotes,
+  validateChairDecision,
+} from '~/lib/votes';
 import {normalizeWishlistUrl} from '~/lib/wishlist';
 
 const GRANT_SELECT = `
@@ -251,11 +258,14 @@ export const saveGrant = async (
     benefitScope: input.benefitScope,
     description: input.description,
     gradesImpacted: input.gradesImpacted,
+    partial: !input.submit,
   });
   if ('error' in narrative) return narrative;
-  if (input.items.length === 0) return {error: 'Add at least one line item.'};
+
+  const items = input.items.filter((item) => item.item_description.trim());
+  if (input.submit && items.length === 0) return {error: 'Add at least one line item.'};
   if (
-    input.items.some((item) => {
+    items.some((item) => {
       const quantity = Number(item.quantity);
       const price = finiteMoney(item.unit_price);
       return (
@@ -276,7 +286,7 @@ export const saveGrant = async (
     .first<CycleRow>();
   if (!cycle) return {error: 'Grant window not found.'};
 
-  const total = requestedTotal(input.items);
+  const total = requestedTotal(items);
   const wishlistUrl = input.wishlistUrl ? normalizeWishlistUrl(input.wishlistUrl) : null;
   if (input.wishlistUrl && !wishlistUrl) {
     return {error: 'Wishlist URL must be a public Amazon, Walmart, or Target list.'};
@@ -344,7 +354,7 @@ export const saveGrant = async (
     );
   }
 
-  statements.push(...insertItems(db, grantId, input.items));
+  statements.push(...insertItems(db, grantId, items));
   statements.push(
     writeAudit(
       db,

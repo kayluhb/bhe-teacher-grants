@@ -14,24 +14,51 @@ const AMAZON_HEADERS = {
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
 };
 
+const ITEM_MARKER_PATTERN = /data-itemid="/i;
+
+const hasItemMarkers = (html: string): boolean => ITEM_MARKER_PATTERN.test(html);
+
+const isAmazonHost = (url: string): boolean => {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === 'amazon.com' || host.endsWith('.amazon.com');
+  } catch {
+    return false;
+  }
+};
+
 const cookieJar = (response: Response, previous = ''): string => {
   const jar = new Map(
     previous
       .split('; ')
       .filter(Boolean)
       .map((part) => {
-        const i = part.indexOf('=');
-        return [part.slice(0, i), part.slice(i + 1)] as const;
+        const separatorIndex = part.indexOf('=');
+        return [part.slice(0, separatorIndex), part.slice(separatorIndex + 1)] as const;
       }),
   );
   const headers =
     typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [];
   for (const header of headers) {
     const pair = header.split(';', 1)[0] ?? '';
-    const i = pair.indexOf('=');
-    if (i > 0) jar.set(pair.slice(0, i), pair.slice(i + 1));
+    const separatorIndex = pair.indexOf('=');
+    if (separatorIndex > 0) {
+      jar.set(pair.slice(0, separatorIndex), pair.slice(separatorIndex + 1));
+    }
   }
   return [...jar.entries()].map(([key, value]) => `${key}=${value}`).join('; ');
+};
+
+const fetchAmazonPage = async (pageUrl: string, cookie: string): Promise<Response | null> => {
+  if (!isAmazonHost(pageUrl)) return null;
+  const response = await fetch(pageUrl, {
+    headers: cookie ? {...AMAZON_HEADERS, Cookie: cookie} : AMAZON_HEADERS,
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15_000),
+  });
+  // Reject open-redirect / hostile hops off Amazon before reading the body.
+  if (!isAmazonHost(response.url || pageUrl)) return null;
+  return response;
 };
 
 const itemKey = (item: WishlistItem): string =>
@@ -52,32 +79,24 @@ export const fetchAmazonWishlist = async (
     page < MAX_WISHLIST_PAGES && pageUrl && items.length < MAX_WISHLIST_ITEMS;
     page++
   ) {
-    let response: Response;
+    let response: Response | null;
     try {
-      response = await fetch(pageUrl, {
-        headers: cookie ? {...AMAZON_HEADERS, Cookie: cookie} : AMAZON_HEADERS,
-        redirect: 'follow',
-        signal: AbortSignal.timeout(15_000),
-      });
+      response = await fetchAmazonPage(pageUrl, cookie);
     } catch {
       if (page === 0) return {items: [], unreachable: true};
       break;
     }
-    if (!response.ok) {
+    if (!response?.ok) {
       if (page === 0) return {items: [], unreachable: true};
       break;
     }
     cookie = cookieJar(response, cookie);
     let html = await response.text();
     // Amazon sometimes serves a cookie/consent shell first; retry once with the jar.
-    if (page === 0 && cookie && !/data-itemid="/i.test(html)) {
+    if (page === 0 && cookie && !hasItemMarkers(html)) {
       try {
-        const retry = await fetch(pageUrl, {
-          headers: {...AMAZON_HEADERS, Cookie: cookie},
-          redirect: 'follow',
-          signal: AbortSignal.timeout(15_000),
-        });
-        if (retry.ok) {
+        const retry = await fetchAmazonPage(pageUrl, cookie);
+        if (retry?.ok) {
           cookie = cookieJar(retry, cookie);
           html = await retry.text();
         }
@@ -86,7 +105,7 @@ export const fetchAmazonWishlist = async (
       }
     }
     sawHtml = true;
-    if (/data-itemid="/i.test(html)) sawItemMarkers = true;
+    if (hasItemMarkers(html)) sawItemMarkers = true;
     for (const item of parseWishlistHtml(html)) {
       const key = itemKey(item);
       if (seen.has(key)) continue;

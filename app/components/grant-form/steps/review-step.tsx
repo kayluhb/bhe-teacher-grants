@@ -10,6 +10,31 @@ import {
 import {formatUsd} from '~/lib/money';
 import {itemImageUrl} from '~/lib/product-preview';
 
+const pluralizeItems = (count: number) => `${count} ${count === 1 ? 'item' : 'items'}`;
+
+const SectionHeader = ({
+  actionLabel,
+  onAction,
+  title,
+}: {
+  actionLabel: string;
+  onAction: () => void;
+  title: string;
+}) => (
+  <div className="flex items-center justify-between gap-3">
+    <h3 className="font-heading text-sm font-semibold tracking-wide text-gray-500 uppercase">
+      {title}
+    </h3>
+    <button
+      className="font-body text-sm font-medium text-eagle-blue underline"
+      onClick={onAction}
+      type="button"
+    >
+      {actionLabel}
+    </button>
+  </div>
+);
+
 export const ReviewStep = ({
   applicantName,
   benefitScope,
@@ -59,18 +84,16 @@ export const ReviewStep = ({
     >
       <div className="overflow-hidden rounded-xl border border-eagle-blue/15">
         <div className="bg-gradient-to-br from-eagle-blue to-night-blue px-4 py-4 text-white">
-          <p className="font-body text-[11px] font-semibold tracking-[0.18em] text-spirit-gold uppercase">
+          <p className="font-body text-[11px] font-semibold tracking-[0.18em] text-warm-white uppercase">
             Requested total
           </p>
           <p className="font-heading mt-1 text-3xl font-bold tabular-nums">
             {formatUsd(summaryTotal)}
           </p>
-          <p className="font-body mt-2 text-sm text-white/75">
-            {filledItems.length === 0
-              ? 'No items yet'
-              : `${filledItems.length} ${filledItems.length === 1 ? 'item' : 'items'}`}
+          <p className="font-body mt-2 text-sm text-white/90">
+            {filledItems.length === 0 ? 'No items yet' : pluralizeItems(filledItems.length)}
           </p>
-          {cycleName ? <p className="font-body mt-1 text-xs text-white/60">{cycleName}</p> : null}
+          {cycleName ? <p className="font-body mt-1 text-xs text-white/80">{cycleName}</p> : null}
         </div>
         <div className="space-y-1 bg-white px-4 py-3">
           <p className="font-body text-sm text-charcoal">
@@ -91,6 +114,7 @@ export const ReviewStep = ({
                 </span>
                 <span className={check.done ? 'text-gray-500 line-through' : 'text-charcoal'}>
                   {check.label}
+                  <span className="sr-only">{check.done ? ', complete' : ', incomplete'}</span>
                 </span>
               </li>
             ))}
@@ -98,42 +122,24 @@ export const ReviewStep = ({
           <p className="font-body text-xs text-gray-500">
             {remaining === 0
               ? 'Ready to submit.'
-              : `${remaining} ${remaining === 1 ? 'item' : 'items'} left before submit.`}
+              : `${pluralizeItems(remaining)} left before submit.`}
           </p>
         </div>
       </div>
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading text-sm font-semibold tracking-wide text-gray-500 uppercase">
-            Request
-          </h3>
-          <button
-            className="font-body text-sm font-medium text-eagle-blue underline"
-            onClick={onEditDescription}
-            type="button"
-          >
-            Edit
-          </button>
-        </div>
+        <SectionHeader actionLabel="Edit request" onAction={onEditDescription} title="Request" />
         <p className="font-body whitespace-pre-wrap text-sm text-charcoal">
           {description.trim() || 'No description yet.'}
         </p>
       </section>
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading text-sm font-semibold tracking-wide text-gray-500 uppercase">
-            Who it benefits
-          </h3>
-          <button
-            className="font-body text-sm font-medium text-eagle-blue underline"
-            onClick={onEditBenefit}
-            type="button"
-          >
-            Edit
-          </button>
-        </div>
+        <SectionHeader
+          actionLabel="Edit who it benefits"
+          onAction={onEditBenefit}
+          title="Who it benefits"
+        />
         <p className="font-body text-sm text-charcoal">{benefitLabel ?? 'Not selected yet'}</p>
         {showGrades && gradesImpacted.trim() ? (
           <p className="font-body text-sm text-gray-600">Grades: {gradesImpacted.trim()}</p>
@@ -141,18 +147,11 @@ export const ReviewStep = ({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-heading text-sm font-semibold tracking-wide text-gray-500 uppercase">
-            Items
-          </h3>
-          <button
-            className="font-body text-sm font-medium text-eagle-blue underline"
-            onClick={onAddItems}
-            type="button"
-          >
-            {filledItems.length ? 'Add or change items' : 'Add items'}
-          </button>
-        </div>
+        <SectionHeader
+          actionLabel={filledItems.length ? 'Add or change items' : 'Add items'}
+          onAction={onAddItems}
+          title="Items"
+        />
         {retailer ? (
           <p className="font-body text-xs text-gray-500">{retailer} wishlist attached</p>
         ) : null}

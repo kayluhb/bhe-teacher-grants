@@ -1,6 +1,6 @@
 'use client';
 
-import {useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {FormProgress} from '~/components/grant-form/form-progress';
 import {AddAnotherStep} from '~/components/grant-form/steps/add-another-step';
 import {BenefitStep} from '~/components/grant-form/steps/benefit-step';
@@ -24,6 +24,7 @@ import {
   type BenefitScope,
   gradesImpactedRequired,
   grantFormChecklist,
+  isBenefitScope,
   summarizeGrantItems,
 } from '~/lib/grant-application';
 import {amazonImageUrl, asinFromUrl} from '~/lib/product-preview';
@@ -34,6 +35,18 @@ import {
   type WishlistItem,
   wishlistRetailerLabel,
 } from '~/lib/wishlist';
+
+const SCREEN_ANNOUNCEMENTS: Record<WizardScreen, string> = {
+  addAnother: 'Add another item?',
+  benefit: 'Who will this grant benefit?',
+  description: 'What are you requesting?',
+  grades: 'Which grades are impacted?',
+  itemDetails: 'Tell us about this item',
+  itemSource: 'How do you want to add items?',
+  review: 'Review your grant request',
+  welcome: 'Let’s get your grant request started',
+  wishlistImport: 'Import your Amazon wishlist',
+};
 
 const fromRow = (row: GrantItemRow): DraftItem => ({
   asin: row.asin,
@@ -55,6 +68,7 @@ const initialScreen = (grant?: GrantRow, items?: GrantItemRow[]): WizardScreen =
   const draftItems = initialItemsFromGrant(items);
   const description = grant.impact_statement || grant.title || '';
   if (!description.trim()) return 'welcome';
+  if (!isBenefitScope(grant.benefit_scope)) return 'benefit';
   if (gradesImpactedRequired(grant.benefit_scope) && !grant.grade_level_subject?.trim()) {
     return 'grades';
   }
@@ -68,6 +82,32 @@ type DraftSnapshot = {
   gradesImpacted: string;
   items: DraftItem[];
   wishlistUrl: string;
+};
+
+const buildGrantFormData = ({
+  benefitScope,
+  cycleId,
+  description,
+  gradesImpacted,
+  grantId,
+  items,
+  wishlistUrl,
+}: DraftSnapshot & {cycleId: string; grantId: string}): FormData => {
+  const data = new FormData();
+  data.set('grant_id', grantId);
+  data.set('cycle_id', cycleId);
+  data.set('description', description);
+  data.set('benefit_scope', benefitScope);
+  data.set(
+    'grades_impacted',
+    benefitScope && gradesImpactedRequired(benefitScope) ? gradesImpacted : '',
+  );
+  data.set('wishlist_url', wishlistUrl);
+  data.set(
+    'items',
+    JSON.stringify(items.filter(isFilledItem).map(({clientId: _clientId, ...item}) => item)),
+  );
+  return data;
 };
 
 export const GrantForm = ({
@@ -85,7 +125,6 @@ export const GrantForm = ({
 }) => {
   const [screen, setScreen] = useState<WizardScreen>(() => initialScreen(grant, initialItems));
   const [returnToReview, setReturnToReview] = useState(false);
-  const [grantId, setGrantId] = useState(grant?.id ?? '');
   const [description, setDescription] = useState(grant?.impact_statement || grant?.title || '');
   const [benefitScope, setBenefitScope] = useState<BenefitScope | ''>(grant?.benefit_scope ?? '');
   const [gradesImpacted, setGradesImpacted] = useState(grant?.grade_level_subject ?? '');
@@ -104,6 +143,13 @@ export const GrantForm = ({
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
   const autosaveSeq = useRef(0);
+  const grantIdRef = useRef(grant?.id ?? '');
+  const autosaveChain = useRef(Promise.resolve());
+
+  useEffect(() => {
+    if (!screen) return;
+    document.querySelector<HTMLElement>('[data-wizard-step-title]')?.focus();
+  }, [screen]);
 
   const checks = useMemo(
     () => grantFormChecklist({benefitScope, description, gradesImpacted, items}),
@@ -131,6 +177,12 @@ export const GrantForm = ({
     }
   };
 
+  const recordSavedDraft = (savedGrantId: string) => {
+    grantIdRef.current = savedGrantId;
+    rememberDraftUrl(savedGrantId);
+    setDraftSavedAt(new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}));
+  };
+
   const autosaveDraft = async (snapshot?: Partial<DraftSnapshot>) => {
     const next: DraftSnapshot = {
       benefitScope: snapshot?.benefitScope ?? benefitScope,
@@ -141,45 +193,47 @@ export const GrantForm = ({
     };
     if (!next.description.trim()) return;
 
-    const seq = ++autosaveSeq.current;
-    setAutosaving(true);
-    const payloadItems = next.items.filter(isFilledItem);
-    const data = new FormData();
-    data.set('grant_id', grantId);
-    data.set('cycle_id', cycleId);
-    data.set('description', next.description);
-    data.set('benefit_scope', next.benefitScope);
-    data.set(
-      'grades_impacted',
-      next.benefitScope && gradesImpactedRequired(next.benefitScope) ? next.gradesImpacted : '',
+    const run = async () => {
+      const seq = ++autosaveSeq.current;
+      setAutosaving(true);
+      try {
+        const data = buildGrantFormData({...next, cycleId, grantId: grantIdRef.current});
+        const result = await saveGrantDraftAction(data);
+        if (seq !== autosaveSeq.current) return;
+
+        if (result && 'error' in result) {
+          setError(result.error);
+          return;
+        }
+        if (result?.grantId) {
+          recordSavedDraft(result.grantId);
+          setError(null);
+        }
+      } finally {
+        if (seq === autosaveSeq.current) setAutosaving(false);
+      }
+    };
+
+    const queued = autosaveChain.current.then(run, run);
+    autosaveChain.current = queued.then(
+      () => undefined,
+      () => undefined,
     );
-    data.set('wishlist_url', next.wishlistUrl);
-    data.set('items', JSON.stringify(payloadItems.map(({clientId: _clientId, ...item}) => item)));
-
-    const result = await saveGrantDraftAction(data);
-    if (seq !== autosaveSeq.current) return;
-
-    setAutosaving(false);
-    if (result && 'error' in result) {
-      setError(result.error);
-      return;
-    }
-    if (result?.grantId) {
-      setGrantId(result.grantId);
-      rememberDraftUrl(result.grantId);
-      setDraftSavedAt(new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}));
-      setError(null);
-    }
+    await queued;
   };
 
-  const afterNarrative = (snapshot?: Partial<DraftSnapshot>) => {
-    void autosaveDraft(snapshot);
+  const advanceOrReturnToReview = (next: WizardScreen) => {
     if (returnToReview) {
       setReturnToReview(false);
       setScreen('review');
       return;
     }
-    setScreen('itemSource');
+    setScreen(next);
+  };
+
+  const afterNarrative = (snapshot?: Partial<DraftSnapshot>) => {
+    void autosaveDraft(snapshot);
+    advanceOrReturnToReview('itemSource');
   };
 
   const continueFromBenefit = () => {
@@ -193,12 +247,7 @@ export const GrantForm = ({
 
   const continueFromDescription = () => {
     void autosaveDraft({description});
-    if (returnToReview) {
-      setReturnToReview(false);
-      setScreen('review');
-      return;
-    }
-    setScreen('benefit');
+    advanceOrReturnToReview('benefit');
   };
 
   const updateDraftItem = (patch: Partial<DraftItem>) => {
@@ -243,12 +292,15 @@ export const GrantForm = ({
       const manual = current.filter(
         (item) => item.source !== 'WISHLIST' && item.item_description.trim(),
       );
-      const nextItems = [...imported, ...manual];
-      void autosaveDraft({
-        items: nextItems,
-        wishlistUrl: nextUrl ?? wishlistUrl,
-      });
-      return nextItems;
+      return [...imported, ...manual];
+    });
+    const nextItems = [
+      ...imported,
+      ...items.filter((item) => item.source !== 'WISHLIST' && item.item_description.trim()),
+    ];
+    void autosaveDraft({
+      items: nextItems,
+      wishlistUrl: nextUrl ?? wishlistUrl,
     });
     setXlsxFile(null);
     setImportError(null);
@@ -339,35 +391,33 @@ export const GrantForm = ({
   const submit = async (submitNow: boolean) => {
     setPending(true);
     setError(null);
-    const payloadItems = items.filter(isFilledItem);
-    const data = new FormData();
-    data.set('grant_id', grantId);
-    data.set('cycle_id', cycleId);
-    data.set('description', description);
-    data.set('benefit_scope', benefitScope);
-    data.set('grades_impacted', showGrades ? gradesImpacted : '');
-    data.set('wishlist_url', wishlistUrl);
-    data.set('items', JSON.stringify(payloadItems.map(({clientId: _clientId, ...item}) => item)));
+    const data = buildGrantFormData({
+      benefitScope,
+      cycleId,
+      description,
+      gradesImpacted,
+      grantId: grantIdRef.current,
+      items,
+      wishlistUrl,
+    });
     data.set('submit', submitNow ? '1' : '0');
 
-    if (!submitNow) {
-      const result = await saveGrantDraftAction(data);
-      setPending(false);
-      if (result && 'error' in result) {
-        setError(result.error);
+    try {
+      if (!submitNow) {
+        const result = await saveGrantDraftAction(data);
+        if (result && 'error' in result) {
+          setError(result.error);
+          return;
+        }
+        if (result?.grantId) recordSavedDraft(result.grantId);
         return;
       }
-      if (result?.grantId) {
-        setGrantId(result.grantId);
-        rememberDraftUrl(result.grantId);
-        setDraftSavedAt(new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}));
-      }
-      return;
-    }
 
-    const result = await saveGrantAction(data);
-    if (result && 'error' in result) {
-      setError(result.error);
+      const result = await saveGrantAction(data);
+      if (result && 'error' in result) {
+        setError(result.error);
+      }
+    } finally {
       setPending(false);
     }
   };
@@ -377,7 +427,8 @@ export const GrantForm = ({
       <FormProgress currentStep={progressIndex} steps={PROGRESS_STEPS} />
 
       <div aria-live="polite" className="sr-only" role="status">
-        Step {progressIndex + 1} of {PROGRESS_STEPS.length}: {PROGRESS_STEPS[progressIndex]}
+        Step {progressIndex + 1} of {PROGRESS_STEPS.length}: {PROGRESS_STEPS[progressIndex]}.{' '}
+        {SCREEN_ANNOUNCEMENTS[screen]}
       </div>
 
       {draftSavedAt || autosaving ? (

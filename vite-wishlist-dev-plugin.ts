@@ -1,10 +1,20 @@
 import type {IncomingMessage, ServerResponse} from 'node:http';
 import type {Plugin, ViteDevServer} from 'vite';
 
-const readBody = async (req: IncomingMessage): Promise<Buffer> => {
+const HTTP_METHOD_POST = 'POST';
+const WISHLIST_IMPORT_PATH = '/api/wishlist/import';
+const CONTENT_TYPE_MULTIPART = 'multipart/form-data';
+const CONTENT_TYPE_JSON = 'application/json';
+const MAX_BODY_BYTES = 1_000_000;
+
+const readBody = async (req: IncomingMessage, maxBytes: number): Promise<Buffer | null> => {
   const chunks: Buffer[] = [];
+  let total = 0;
   for await (const chunk of req) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+    total += buf.length;
+    if (total > maxBytes) return null;
+    chunks.push(buf);
   }
   return Buffer.concat(chunks);
 };
@@ -23,7 +33,7 @@ export const wishlistDevPlugin = (): Plugin => ({
   name: 'wishlist-dev-import',
   configureServer(server: ViteDevServer) {
     server.middlewares.use(async (req, res, next) => {
-      if (req.method !== 'POST' || req.url?.split('?')[0] !== '/api/wishlist/import') {
+      if (req.method !== HTTP_METHOD_POST || req.url?.split('?')[0] !== WISHLIST_IMPORT_PATH) {
         next();
         return;
       }
@@ -31,15 +41,19 @@ export const wishlistDevPlugin = (): Plugin => ({
       try {
         const contentType = req.headers['content-type'] ?? '';
         // File uploads still go to the Worker route.
-        if (contentType.includes('multipart/form-data')) {
+        if (contentType.includes(CONTENT_TYPE_MULTIPART)) {
           next();
           return;
         }
 
-        const raw = await readBody(req);
+        const raw = await readBody(req, MAX_BODY_BYTES);
+        if (!raw) {
+          sendJson(res, 413, {error: 'Request body is too large.'});
+          return;
+        }
         const bodyText = new TextDecoder().decode(raw);
         let urlRaw = '';
-        if (contentType.includes('application/json')) {
+        if (contentType.includes(CONTENT_TYPE_JSON)) {
           urlRaw = String((JSON.parse(bodyText || '{}') as {url?: string}).url ?? '');
         } else {
           urlRaw = new URLSearchParams(bodyText).get('url') ?? '';

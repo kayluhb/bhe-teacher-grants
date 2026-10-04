@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       `"${grant.title.replaceAll('"', '""')}"`,
       `"${grant.impact_statement.replaceAll('"', '""')}"`,
       `"${grant.teacher_name.replaceAll('"', '""')}"`,
-      `"${BENEFIT_SCOPE_LABELS[grant.benefit_scope]}"`,
+      `"${grant.benefit_scope ? BENEFIT_SCOPE_LABELS[grant.benefit_scope] : ''}"`,
       `"${grant.grade_level_subject.replaceAll('"', '""')}"`,
       grant.status,
       formatUsd(grant.requested_amount),

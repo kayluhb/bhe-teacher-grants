@@ -88,7 +88,37 @@ describe('validateGrantNarrative', () => {
       partial: true,
     });
     expect(result).toEqual({
-      benefitScope: 'CLASS',
+      benefitScope: '',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      title: 'Bean bags for reading',
+    });
+  });
+
+  it('preserves a chosen benefit scope on partial draft save', () => {
+    const result = validateGrantNarrative({
+      benefitScope: 'WHOLE_SCHOOL',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      partial: true,
+    });
+    expect(result).toEqual({
+      benefitScope: 'WHOLE_SCHOOL',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      title: 'Bean bags for reading',
+    });
+  });
+
+  it('allows missing grades for whole-grade scopes on partial draft save', () => {
+    const result = validateGrantNarrative({
+      benefitScope: 'WHOLE_GRADE',
+      description: 'Bean bags for reading',
+      gradesImpacted: '',
+      partial: true,
+    });
+    expect(result).toEqual({
+      benefitScope: 'WHOLE_GRADE',
       description: 'Bean bags for reading',
       gradesImpacted: '',
       title: 'Bean bags for reading',

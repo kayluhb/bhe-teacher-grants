@@ -33,7 +33,8 @@ export const titleFromDescription = (description: string): string => {
 };
 
 export type GrantNarrative = {
-  benefitScope: BenefitScope;
+  /** Empty while a guided draft has not chosen a scope yet. */
+  benefitScope: BenefitScope | '';
   description: string;
   gradesImpacted: string;
   title: string;
@@ -50,11 +51,12 @@ export const validateGrantNarrative = (input: {
   if (!description) return {error: 'Please share a short description of your request.'};
 
   if (input.partial) {
-    const benefitScope = isBenefitScope(input.benefitScope) ? input.benefitScope : 'CLASS';
+    const benefitScope = isBenefitScope(input.benefitScope) ? input.benefitScope : '';
     return {
       benefitScope,
       description,
-      gradesImpacted: gradesImpactedRequired(benefitScope) ? input.gradesImpacted.trim() : '',
+      gradesImpacted:
+        benefitScope && gradesImpactedRequired(benefitScope) ? input.gradesImpacted.trim() : '',
       title: titleFromDescription(description),
     };
   }

@@ -189,16 +189,20 @@ describe('deliverChairDigestItems', () => {
     );
     expect(delivered).toHaveLength(1);
     expect(delivered[0]?.grantStamps).toEqual(['g1']);
+    expect(delivered[0]?.submissionClosedStamps).toEqual([]);
+    expect(delivered[0]?.reviewClosedStamps).toEqual([]);
+    expect(delivered[0]?.submissionReminderStamps).toEqual([]);
   });
 
   it('drops all stamps when send fails', async () => {
     const plan = planChairDigest({
       cycles: [cycle],
-      grants: [grant],
-      now: new Date('2026-10-10T12:00:00Z'),
+      grants: [],
+      now: new Date('2026-10-13T12:00:00Z'),
       origin: 'https://grants.bheeagles.com',
       sentSubmissionReminders: [],
     });
+    expect(plan.submissionReminderStamps).toEqual([{cycleId: 'fall', threshold: '3d'}]);
     const delivered = await deliverChairDigestItems(plan.items, async () => false);
     expect(delivered).toEqual([]);
   });

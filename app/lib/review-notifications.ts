@@ -80,19 +80,22 @@ const flattenReviewDeliveries = (input: {
   chairman: ReviewChairmanDelivery[];
   open: ReviewOpenDelivery[];
   reminders: ReviewReminderDelivery[];
-}): ReviewNotificationPlan => ({
-  chairman: input.chairman,
-  chairmanStamps: input.chairman.map((row) => row.grantId),
-  emails: [
-    ...input.open.flatMap((row) => row.emails),
-    ...input.reminders.map((row) => row.email),
-    ...input.chairman.map((row) => row.email),
-  ],
-  open: input.open,
-  openStamps: input.open.map((row) => row.cycleId),
-  reminders: input.reminders,
-  reminderStamps: input.reminders.map((row) => row.stamp),
-});
+}): ReviewNotificationPlan => {
+  const {chairman, open, reminders} = input;
+  return {
+    chairman,
+    chairmanStamps: chairman.map((row) => row.grantId),
+    emails: [
+      ...open.flatMap((row) => row.emails),
+      ...reminders.map((row) => row.email),
+      ...chairman.map((row) => row.email),
+    ],
+    open,
+    openStamps: open.map((row) => row.cycleId),
+    reminders,
+    reminderStamps: reminders.map((row) => row.stamp),
+  };
+};
 
 export const planReviewNotifications = (input: {
   cycles: CycleNotice[];
@@ -173,6 +176,17 @@ export const planReviewNotifications = (input: {
   return flattenReviewDeliveries({chairman, open, reminders});
 };
 
+const deliverRowsWithEmail = async <T extends {email: NotificationEmail}>(
+  rows: T[],
+  send: (email: NotificationEmail) => boolean | Promise<boolean>,
+): Promise<T[]> => {
+  const succeeded: T[] = [];
+  for (const row of rows) {
+    if (await send(row.email)) succeeded.push(row);
+  }
+  return succeeded;
+};
+
 /** Stamp only after the related email(s) succeed. Open notices require every recipient to succeed. */
 export const deliverReviewNotifications = async (
   plan: ReviewNotificationPlan,
@@ -188,15 +202,8 @@ export const deliverReviewNotifications = async (
     if (results.every(Boolean)) open.push(row);
   }
 
-  const reminders: ReviewReminderDelivery[] = [];
-  for (const row of plan.reminders) {
-    if (await send(row.email)) reminders.push(row);
-  }
-
-  const chairman: ReviewChairmanDelivery[] = [];
-  for (const row of plan.chairman) {
-    if (await send(row.email)) chairman.push(row);
-  }
+  const reminders = await deliverRowsWithEmail(plan.reminders, send);
+  const chairman = await deliverRowsWithEmail(plan.chairman, send);
 
   return flattenReviewDeliveries({chairman, open, reminders});
 };

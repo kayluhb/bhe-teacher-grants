@@ -3,23 +3,37 @@ import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {VoteForm} from '~/components/vote-form';
-import {getSession, requireReviewer} from '~/lib/auth';
+import {getSession, requireReviewer, type User} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {getGrant, listGrantItems, listVotes, userCanAccessGrant} from '~/lib/grants';
+import {getGrant, listGrantItems, listUserSeats, listVotes, userCanAccessGrant} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {withItemImages} from '~/lib/product-preview';
+import {VOTER_SEATS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
+import {isViewingAs} from '~/lib/view-as';
 import {BALLOT_LABELS, isBallot} from '~/lib/votes';
+
+const STATUS_DRAFT = 'DRAFT';
+
+const canAccessReviewPortal = async (user: User) => {
+  if (isViewingAs(user)) {
+    return user.role === 'committee' || user.role === 'principal' || user.role === 'admin';
+  }
+  const seats = await listUserSeats(getDb(), user.id);
+  return seats.some((seat) => VOTER_SEATS.includes(seat));
+};
 
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const section = GRANT_TITLE_SECTIONS.review;
   const user = await getSession();
-  if (!user) return {title: grantDocumentTitle(section)};
+  if (!user || !(await canAccessReviewPortal(user))) {
+    return {title: grantDocumentTitle(section)};
+  }
   const db = getDb();
   const grant = await getGrant(db, (await params).id);
-  if (!grant || grant.status === 'DRAFT') return {title: grantDocumentTitle(section)};
+  if (!grant || grant.status === STATUS_DRAFT) return {title: grantDocumentTitle(section)};
   if (!(await userCanAccessGrant(db, user, grant))) {
     return {title: grantDocumentTitle(section)};
   }

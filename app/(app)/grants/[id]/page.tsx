@@ -5,13 +5,15 @@ import {getDb} from '~/lib/db';
 import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 
+const ROLE_ADMIN = 'admin';
+
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const section = GRANT_TITLE_SECTIONS.grants;
   const user = await getSession();
   if (!user) return {title: grantDocumentTitle(section)};
   const grant = await getGrant(getDb(), (await params).id);
   if (!grant) return {title: grantDocumentTitle(section)};
-  if (user.role !== 'admin' && grant.teacher_id !== user.id) {
+  if (user.role !== ROLE_ADMIN && grant.teacher_id !== user.id) {
     return {title: grantDocumentTitle(section)};
   }
   return {title: grantDocumentTitle(section, grant.title)};

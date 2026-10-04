@@ -12,39 +12,34 @@ export const grantIdFromFileKey = (
   return null;
 };
 
+const QUOTES_DRAFT_PREFIX = 'quotes/draft/';
+const QUOTES_PREFIX = 'quotes/';
+const DELIVERY_PREFIX = 'delivery/';
+const RECEIPTS_PREFIX = 'receipts/';
+
+const ownedKeyWithPrefix = (key: string | null | undefined, prefix: string): string | null => {
+  const trimmed = key?.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith(prefix) ? trimmed : null;
+};
+
 /** Accept quote keys owned by this actor (draft) or this grant; otherwise null. */
 export const ownedQuoteR2Key = (
   key: string | null | undefined,
-  opts: {actorId: string; grantId: string},
-): string | null => {
-  const trimmed = key?.trim();
-  if (!trimmed) return null;
-  const draftPrefix = `quotes/draft/${opts.actorId}/`;
-  if (trimmed.startsWith(draftPrefix)) return trimmed;
-  const grantPrefix = `quotes/${opts.grantId}/`;
-  if (trimmed.startsWith(grantPrefix)) return trimmed;
-  return null;
-};
+  {actorId, grantId}: {actorId: string; grantId: string},
+): string | null =>
+  ownedKeyWithPrefix(key, `${QUOTES_DRAFT_PREFIX}${actorId}/`) ??
+  ownedKeyWithPrefix(key, `${QUOTES_PREFIX}${grantId}/`);
 
 /** Accept delivery proof keys for this grant; otherwise null. */
 export const ownedDeliveryR2Key = (
   key: string | null | undefined,
   grantId: string,
-): string | null => {
-  const trimmed = key?.trim();
-  if (!trimmed) return null;
-  return trimmed.startsWith(`delivery/${grantId}-`) ? trimmed : null;
-};
+): string | null => ownedKeyWithPrefix(key, `${DELIVERY_PREFIX}${grantId}-`);
 
 /** Accept receipt keys for this grant; otherwise null. */
-export const ownedReceiptR2Key = (
-  key: string | null | undefined,
-  grantId: string,
-): string | null => {
-  const trimmed = key?.trim();
-  if (!trimmed) return null;
-  return trimmed.startsWith(`receipts/${grantId}-`) ? trimmed : null;
-};
+export const ownedReceiptR2Key = (key: string | null | undefined, grantId: string): string | null =>
+  ownedKeyWithPrefix(key, `${RECEIPTS_PREFIX}${grantId}-`);
 
 export const userCanReadFile = async (
   db: D1Database,

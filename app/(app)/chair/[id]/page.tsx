@@ -20,15 +20,18 @@ import {SEAT_LABELS} from '~/lib/reviewers';
 import {semesterLabel} from '~/lib/school-year';
 import {BALLOT_LABELS, isBallot, isChairActor} from '~/lib/votes';
 
+const STATUS_DRAFT = 'DRAFT';
+const SEAT_CHAIRMAN = 'chairman';
+
 export const generateMetadata = async ({params}: {params: Promise<{id: string}>}) => {
   const section = GRANT_TITLE_SECTIONS.chair;
   const user = await getSession();
   if (!user) return {title: grantDocumentTitle(section)};
   const db = getDb();
   const grant = await getGrant(db, (await params).id);
-  if (!grant || grant.status === 'DRAFT') return {title: grantDocumentTitle(section)};
+  if (!grant || grant.status === STATUS_DRAFT) return {title: grantDocumentTitle(section)};
   const chairs = await listReviewerRows(db, grant.cycle_id);
-  const seatedChairman = chairs.find((row) => row.seat === 'chairman');
+  const seatedChairman = chairs.find((row) => row.seat === SEAT_CHAIRMAN);
   if (!isChairActor(user, seatedChairman?.userId)) {
     return {title: grantDocumentTitle(section)};
   }

@@ -238,6 +238,54 @@ describe('fetchProductImage', () => {
       fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/kit'}, fetchFn),
     ).resolves.toBe('https://cdn.example.com/kit.jpg');
     expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(fetchFn.mock.calls[1]?.[0]).toBe('https://cdn.example.com/p/kit');
+  });
+
+  it('resolves relative redirect locations against the current URL', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          headers: {location: '/p/kit'},
+          status: 302,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response('<meta property="og:image" content="https://shop.example.com/kit.jpg">', {
+          headers: {'content-type': 'text/html'},
+          status: 200,
+        }),
+      );
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/item'}, fetchFn),
+    ).resolves.toBe('https://shop.example.com/kit.jpg');
+    expect(fetchFn.mock.calls[1]?.[0]).toBe('https://shop.example.com/p/kit');
+  });
+
+  it('does not follow redirects to http URLs', async () => {
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        headers: {location: 'http://cdn.example.com/p/kit'},
+        status: 302,
+      });
+    });
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/p/kit'}, fetchFn),
+    ).resolves.toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops following redirects after the hop limit', async () => {
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        headers: {location: 'https://shop.example.com/next'},
+        status: 302,
+      });
+    });
+    await expect(
+      fetchProductImage({asin: null, vendorUrl: 'https://shop.example.com/start'}, fetchFn),
+    ).resolves.toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(5);
   });
 
   it('parses og:image from a fetched public product page', async () => {

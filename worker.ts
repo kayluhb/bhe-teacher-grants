@@ -34,6 +34,7 @@ export default Sentry.withSentry(
     dataCollection: {
       // Keep OTP bodies and session cookies out of Sentry.
       // https://docs.sentry.io/platforms/javascript/guides/cloudflare/configuration/options/#dataCollection
+      cookies: false,
       userInfo: false,
       httpBodies: [],
     },

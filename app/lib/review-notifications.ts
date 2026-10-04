@@ -32,6 +32,31 @@ type GrantNotice = {
   voter_ids: string[];
 };
 
+export type ReviewOpenDelivery = {
+  cycleId: string;
+  emails: NotificationEmail[];
+};
+
+export type ReviewReminderDelivery = {
+  email: NotificationEmail;
+  stamp: {cycleId: string; threshold: ReminderThreshold; userId: string};
+};
+
+export type ReviewChairmanDelivery = {
+  email: NotificationEmail;
+  grantId: string;
+};
+
+export type ReviewNotificationPlan = {
+  chairman: ReviewChairmanDelivery[];
+  chairmanStamps: string[];
+  emails: NotificationEmail[];
+  open: ReviewOpenDelivery[];
+  openStamps: string[];
+  reminders: ReviewReminderDelivery[];
+  reminderStamps: {cycleId: string; threshold: ReminderThreshold; userId: string}[];
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const voterReviewers = (reviewers: Reviewer[]) =>
@@ -51,27 +76,42 @@ export const reminderThreshold = (
   return null;
 };
 
+const flattenReviewDeliveries = (input: {
+  chairman: ReviewChairmanDelivery[];
+  open: ReviewOpenDelivery[];
+  reminders: ReviewReminderDelivery[];
+}): ReviewNotificationPlan => {
+  const {chairman, open, reminders} = input;
+  return {
+    chairman,
+    chairmanStamps: chairman.map((row) => row.grantId),
+    emails: [
+      ...open.flatMap((row) => row.emails),
+      ...reminders.map((row) => row.email),
+      ...chairman.map((row) => row.email),
+    ],
+    open,
+    openStamps: open.map((row) => row.cycleId),
+    reminders,
+    reminderStamps: reminders.map((row) => row.stamp),
+  };
+};
+
 export const planReviewNotifications = (input: {
   cycles: CycleNotice[];
   grants: GrantNotice[];
   now: Date;
   origin: string;
   sentReminders: {cycleId: string; threshold: ReminderThreshold; userId: string}[];
-}): {
-  chairmanStamps: string[];
-  emails: NotificationEmail[];
-  openStamps: string[];
-  reminderStamps: {cycleId: string; threshold: ReminderThreshold; userId: string}[];
-} => {
-  const emails: NotificationEmail[] = [];
-  const openStamps: string[] = [];
-  const reminderStamps: {cycleId: string; threshold: ReminderThreshold; userId: string}[] = [];
-  const chairmanStamps: string[] = [];
+}): ReviewNotificationPlan => {
+  const open: ReviewOpenDelivery[] = [];
+  const reminders: ReviewReminderDelivery[] = [];
+  const chairman: ReviewChairmanDelivery[] = [];
   const origin = input.origin.replace(/\/$/, '');
 
   for (const cycle of input.cycles) {
     if (!isReviewOpen(cycle, input.now) || cycle.review_opened_notified_at) continue;
-    openStamps.push(cycle.id);
+    const emails: NotificationEmail[] = [];
     for (const reviewer of voterReviewers(cycle.reviewers)) {
       emails.push({
         html: `<p>Review is open for ${escapeHtml(cycle.name)}. Please finish your ranks before the deadline.</p><p><a href="${origin}/review">Open the review queue</a></p>`,
@@ -79,6 +119,7 @@ export const planReviewNotifications = (input: {
         to: reviewer.email,
       });
     }
+    if (emails.length > 0) open.push({cycleId: cycle.id, emails});
   }
 
   for (const cycle of input.cycles) {
@@ -101,12 +142,14 @@ export const planReviewNotifications = (input: {
         )
         .map((grant) => grant.title);
       if (titles.length === 0) continue;
-      reminderStamps.push({cycleId: cycle.id, threshold, userId: reviewer.userId});
       const when = threshold === '1d' ? 'tomorrow' : 'in 3 days';
-      emails.push({
-        html: `<p>Review for ${escapeHtml(cycle.name)} closes ${when}. You still need to rank:</p><ul>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join('')}</ul><p><a href="${origin}/review">Open the review queue</a></p>`,
-        subject: `Reminder: ${titles.length} grant${titles.length === 1 ? '' : 's'} still need your rank`,
-        to: reviewer.email,
+      reminders.push({
+        email: {
+          html: `<p>Review for ${escapeHtml(cycle.name)} closes ${when}. You still need to rank:</p><ul>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join('')}</ul><p><a href="${origin}/review">Open the review queue</a></p>`,
+          subject: `Reminder: ${titles.length} grant${titles.length === 1 ? '' : 's'} still need your rank`,
+          to: reviewer.email,
+        },
+        stamp: {cycleId: cycle.id, threshold, userId: reviewer.userId},
       });
     }
   }
@@ -118,17 +161,48 @@ export const planReviewNotifications = (input: {
     const required = requiredVoterIds(cycle.reviewers, grant.teacher_id);
     const complete = required.length > 0 && required.every((id) => grant.voter_ids.includes(id));
     if (!complete) continue;
-    const chairman = cycle.reviewers.find((row) => row.seat === 'chairman');
-    if (!chairman) continue;
-    chairmanStamps.push(grant.id);
-    emails.push({
-      html: `<p>All required reviews are in for “${escapeHtml(grant.title)}”.</p><p><a href="${origin}/chair/${grant.id}">Record the official decision</a></p>`,
-      subject: `Ready for your decision: ${grant.title}`,
-      to: chairman.email,
+    const chair = cycle.reviewers.find((row) => row.seat === 'chairman');
+    if (!chair) continue;
+    chairman.push({
+      email: {
+        html: `<p>All required reviews are in for “${escapeHtml(grant.title)}”.</p><p><a href="${origin}/chair/${grant.id}">Record the official decision</a></p>`,
+        subject: `Ready for your decision: ${grant.title}`,
+        to: chair.email,
+      },
+      grantId: grant.id,
     });
   }
 
-  return {chairmanStamps, emails, openStamps, reminderStamps};
+  return flattenReviewDeliveries({chairman, open, reminders});
+};
+
+const deliverRowsWithEmail = async <T extends {email: NotificationEmail}>(
+  rows: T[],
+  send: (email: NotificationEmail) => boolean | Promise<boolean>,
+): Promise<T[]> => {
+  const succeeded: T[] = [];
+  for (const row of rows) {
+    if (await send(row.email)) succeeded.push(row);
+  }
+  return succeeded;
+};
+
+/** Stamp only after the related email(s) succeed. Open notices require every recipient to succeed. */
+export const deliverReviewNotifications = async (
+  plan: ReviewNotificationPlan,
+  send: (email: NotificationEmail) => boolean | Promise<boolean>,
+): Promise<ReviewNotificationPlan> => {
+  const open: ReviewOpenDelivery[] = [];
+  for (const row of plan.open) {
+    if (row.emails.length === 0) continue;
+    const results = await Promise.all(row.emails.map((email) => send(email)));
+    if (results.every(Boolean)) open.push(row);
+  }
+
+  const reminders = await deliverRowsWithEmail(plan.reminders, send);
+  const chairman = await deliverRowsWithEmail(plan.chairman, send);
+
+  return flattenReviewDeliveries({chairman, open, reminders});
 };
 
 const loadCycles = async (db: D1Database): Promise<CycleNotice[]> => {
@@ -189,7 +263,7 @@ export const runReviewNotifications = async (input: {
   db: D1Database;
   now: Date;
   origin: string;
-  send: (email: NotificationEmail) => void;
+  send: (email: NotificationEmail) => boolean | Promise<boolean>;
 }) => {
   const [cycles, grants, reminders] = await Promise.all([
     loadCycles(input.db),
@@ -210,20 +284,20 @@ export const runReviewNotifications = async (input: {
     })),
   });
 
-  for (const email of plan.emails) input.send(email);
+  const delivered = await deliverReviewNotifications(plan, input.send);
 
   const statements: D1PreparedStatement[] = [
-    ...plan.openStamps.map((id) =>
+    ...delivered.openStamps.map((id) =>
       input.db
         .prepare(`UPDATE grant_cycles SET review_opened_notified_at = datetime('now') WHERE id = ?`)
         .bind(id),
     ),
-    ...plan.chairmanStamps.map((id) =>
+    ...delivered.chairmanStamps.map((id) =>
       input.db
         .prepare(`UPDATE grants SET chairman_notified_at = datetime('now') WHERE id = ?`)
         .bind(id),
     ),
-    ...plan.reminderStamps.map((row) =>
+    ...delivered.reminderStamps.map((row) =>
       input.db
         .prepare(
           `INSERT OR IGNORE INTO cycle_review_reminders (cycle_id, user_id, threshold)
@@ -233,5 +307,5 @@ export const runReviewNotifications = async (input: {
     ),
   ];
   if (statements.length) await input.db.batch(statements);
-  return plan;
+  return delivered;
 };

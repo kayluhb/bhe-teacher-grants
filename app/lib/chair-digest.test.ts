@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {planChairDigest} from '~/lib/chair-digest';
+import {deliverChairDigestItems, planChairDigest} from '~/lib/chair-digest';
 
 const reviewers = [
   {email: 'treasurer@bheeagles.com', name: 'Treasurer', seat: 'treasurer' as const, userId: 't'},
@@ -51,10 +51,7 @@ describe('planChairDigest', () => {
   it('bundles multiple new grants into one digest', () => {
     const plan = planChairDigest({
       cycles: [cycle],
-      grants: [
-        grant,
-        {...grant, id: 'g2', title: 'Science kits'},
-      ],
+      grants: [grant, {...grant, id: 'g2', title: 'Science kits'}],
       now: new Date('2026-10-10T12:00:00Z'),
       origin: 'https://grants.bheeagles.com/',
       sentSubmissionReminders: [],
@@ -163,5 +160,50 @@ describe('planChairDigest', () => {
     });
     expect(plan.emails).toEqual([]);
     expect(plan.grantStamps).toEqual([]);
+  });
+});
+
+describe('deliverChairDigestItems', () => {
+  it('keeps stamps only for digests whose send returned true', async () => {
+    const plan = planChairDigest({
+      cycles: [
+        cycle,
+        {
+          ...cycle,
+          id: 'spring',
+          name: 'Spring 2026-27 Teacher Grants',
+          starts_at: '2027-01-01T00:00:00Z',
+          ends_at: '2027-03-15T23:59:00Z',
+          review_ends_at: '2027-03-20T23:59:00Z',
+        },
+      ],
+      grants: [grant, {...grant, id: 'g2', cycle_id: 'spring', title: 'Science kits'}],
+      now: new Date('2026-10-10T12:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentSubmissionReminders: [],
+    });
+    expect(plan.items).toHaveLength(2);
+
+    const delivered = await deliverChairDigestItems(plan.items, async (email) =>
+      email.subject.includes('Fall'),
+    );
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]?.grantStamps).toEqual(['g1']);
+    expect(delivered[0]?.submissionClosedStamps).toEqual([]);
+    expect(delivered[0]?.reviewClosedStamps).toEqual([]);
+    expect(delivered[0]?.submissionReminderStamps).toEqual([]);
+  });
+
+  it('drops all stamps when send fails', async () => {
+    const plan = planChairDigest({
+      cycles: [cycle],
+      grants: [],
+      now: new Date('2026-10-13T12:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentSubmissionReminders: [],
+    });
+    expect(plan.submissionReminderStamps).toEqual([{cycleId: 'fall', threshold: '3d'}]);
+    const delivered = await deliverChairDigestItems(plan.items, async () => false);
+    expect(delivered).toEqual([]);
   });
 });

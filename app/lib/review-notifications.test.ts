@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {planReviewNotifications, reminderThreshold} from '~/lib/review-notifications';
+import {
+  deliverReviewNotifications,
+  planReviewNotifications,
+  reminderThreshold,
+} from '~/lib/review-notifications';
 
 const reviewers = [
   {email: 'treasurer@bheeagles.com', name: 'Treasurer', seat: 'treasurer' as const, userId: 't'},
@@ -124,5 +128,114 @@ describe('planReviewNotifications', () => {
     expect(complete.emails.find((row) => row.to === 'chair@bheeagles.com')?.html).toContain(
       '/chair/g1',
     );
+  });
+});
+
+describe('deliverReviewNotifications', () => {
+  const grant = {
+    chairman_notified_at: null as string | null,
+    cycle_id: 'fall',
+    id: 'g1',
+    status: 'PENDING',
+    teacher_id: 'teacher',
+    title: 'Classroom library',
+    voter_ids: [] as string[],
+  };
+
+  it('does not stamp review-open when any recipient send fails', async () => {
+    const plan = planReviewNotifications({
+      cycles: [cycle],
+      grants: [grant],
+      now: new Date('2026-10-16T00:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    expect(plan.openStamps).toEqual(['fall']);
+    const delivered = await deliverReviewNotifications(
+      plan,
+      async (email) => email.to !== 'principal@austinisd.org',
+    );
+    expect(delivered.openStamps).toEqual([]);
+    expect(delivered.emails.filter((row) => row.subject.startsWith('Review is open'))).toEqual([]);
+  });
+
+  it('stamps review-open only after every recipient succeeds', async () => {
+    const plan = planReviewNotifications({
+      cycles: [cycle],
+      grants: [grant],
+      now: new Date('2026-10-16T00:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    const delivered = await deliverReviewNotifications(plan, async () => true);
+    expect(delivered.openStamps).toEqual(['fall']);
+    expect(delivered.emails).toHaveLength(plan.emails.length);
+  });
+
+  it('stamps chairman and reminders per successful email', async () => {
+    const plan = planReviewNotifications({
+      cycles: [{...cycle, review_opened_notified_at: '2026-10-16T00:00:00Z'}],
+      grants: [
+        {...grant, voter_ids: ['t', 'p', 'c']},
+        {...grant, id: 'g2', title: 'Science kits', voter_ids: []},
+      ],
+      now: new Date('2026-10-18T12:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    expect(plan.chairmanStamps).toEqual(['g1']);
+    expect(plan.reminderStamps.length).toBeGreaterThan(0);
+
+    const chairOnly = await deliverReviewNotifications(
+      plan,
+      async (email) => email.to === 'chair@bheeagles.com',
+    );
+    expect(chairOnly.chairmanStamps).toEqual(['g1']);
+    expect(chairOnly.reminderStamps).toEqual([]);
+
+    const allOk = await deliverReviewNotifications(plan, async () => true);
+    expect(allOk.chairmanStamps).toEqual(['g1']);
+    expect(allOk.reminderStamps).toEqual(plan.reminderStamps);
+  });
+
+  it('skips all stamps when every send fails', async () => {
+    const plan = planReviewNotifications({
+      cycles: [cycle],
+      grants: [
+        {...grant, voter_ids: ['t', 'p', 'c']},
+        {...grant, id: 'g2', title: 'Science kits', voter_ids: []},
+      ],
+      now: new Date('2026-10-18T12:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    expect(plan.openStamps).toEqual(['fall']);
+    expect(plan.chairmanStamps).toEqual(['g1']);
+    expect(plan.reminderStamps.length).toBeGreaterThan(0);
+    const delivered = await deliverReviewNotifications(plan, async () => false);
+    expect(delivered.emails).toEqual([]);
+    expect(delivered.openStamps).toEqual([]);
+    expect(delivered.chairmanStamps).toEqual([]);
+    expect(delivered.reminderStamps).toEqual([]);
+  });
+
+  it('does not stamp review-open when there are no voting reviewers', async () => {
+    const chairOnlyCycle = {
+      ...cycle,
+      reviewers: [
+        {email: 'chair@bheeagles.com', name: 'Chris', seat: 'chairman' as const, userId: 'chair'},
+      ],
+    };
+    const plan = planReviewNotifications({
+      cycles: [chairOnlyCycle],
+      grants: [grant],
+      now: new Date('2026-10-16T00:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    expect(plan.open).toEqual([]);
+    expect(plan.openStamps).toEqual([]);
+    const delivered = await deliverReviewNotifications(plan, async () => true);
+    expect(delivered.openStamps).toEqual([]);
   });
 });

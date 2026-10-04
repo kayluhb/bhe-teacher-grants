@@ -169,7 +169,7 @@ describe('ensureSchoolYearRollover', () => {
       statements.push({binds, sql});
       return stmt;
     };
-    const batch = vi.fn(async () => []);
+    const batch = vi.fn(async (_stmts: unknown[]) => []);
     return {
       batch,
       db: {batch, prepare} as unknown as D1Database,
@@ -178,7 +178,7 @@ describe('ensureSchoolYearRollover', () => {
   };
 
   it('copies committee seats when creating windows on July 1', async () => {
-    const {batch, db} = mockDb([
+    const {batch, db, statements} = mockDb([
       {first: null},
       {results: []},
       {
@@ -210,11 +210,68 @@ describe('ensureSchoolYearRollover', () => {
 
     expect(result).toEqual({createdWindows: 1, label: '2027-28'});
     expect(batch).toHaveBeenCalledOnce();
-    const batchStatements = batch.mock.calls[0]?.[0] as Array<{
-      bind: (...args: unknown[]) => unknown;
-    }>;
+    const batchArgs = batch.mock.calls[0]?.[0];
     // clear defaults + insert year + insert cycle + 2 reviewer seats
-    expect(batchStatements).toHaveLength(5);
+    expect(batchArgs).toHaveLength(5);
+
+    const reviewerInserts = statements.filter((statement) =>
+      statement.sql.includes('INSERT INTO cycle_reviewers'),
+    );
+    expect(reviewerInserts).toHaveLength(2);
+    const cycleInsert = statements.find((statement) =>
+      statement.sql.includes('INSERT INTO grant_cycles'),
+    );
+    const newCycleId = cycleInsert?.binds[0];
+    expect(newCycleId).toEqual(expect.any(String));
+    expect(reviewerInserts.map((statement) => statement.binds.slice(1))).toEqual([
+      [newCycleId, 'chair', 'chairman'],
+      [newCycleId, 'c1', 'committee'],
+    ]);
+  });
+
+  it('copies seats for a missing semester when the year already exists on July 1', async () => {
+    const {batch, db, statements} = mockDb([
+      {first: {id: '2027-28'}},
+      {results: [{semester: 'FALL'}]},
+      {
+        results: [
+          {
+            budget_limit: 5000,
+            ends_at: '2027-03-15T23:59:00.000Z',
+            id: 'old_spring',
+            name: 'Spring 2026-27 Teacher Grants',
+            review_ends_at: null,
+            review_starts_at: null,
+            semester: 'SPRING',
+            starts_at: '2027-01-10T06:00:00.000Z',
+          },
+        ],
+      },
+      {
+        results: [{cycle_id: 'old_spring', seat: 'treasurer', user_id: 'treas'}],
+      },
+    ]);
+
+    const result = await ensureSchoolYearRollover({
+      db,
+      now: new Date('2027-07-01T13:00:00Z'),
+    });
+
+    expect(result).toEqual({createdWindows: 1, label: '2027-28'});
+    expect(batch).toHaveBeenCalledOnce();
+    const reviewerInserts = statements.filter((statement) =>
+      statement.sql.includes('INSERT INTO cycle_reviewers'),
+    );
+    expect(reviewerInserts).toHaveLength(1);
+    const cycleInsert = statements.find((statement) =>
+      statement.sql.includes('INSERT INTO grant_cycles'),
+    );
+    expect(cycleInsert?.binds.slice(1, 3)).toEqual(['2027-28', 'SPRING']);
+    expect(reviewerInserts[0]?.binds.slice(1)).toEqual([
+      cycleInsert?.binds[0],
+      'treas',
+      'treasurer',
+    ]);
   });
 
   it('catches up after July 1 when the new year is still missing', async () => {

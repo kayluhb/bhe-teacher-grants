@@ -145,10 +145,8 @@ export const ensureSchoolYearRollover = async (input: {
 
   // July 1 always runs. After July 1, catch up only if the new year was never created
   // (missed cron). Before July 1 is a no-op.
-  if (!isJuly1InChicago(input.now)) {
-    if (!isOnOrAfterJuly1InChicago(input.now) || existingYear) {
-      return {createdWindows: 0, label: null};
-    }
+  if (!isJuly1InChicago(input.now) && (!isOnOrAfterJuly1InChicago(input.now) || existingYear)) {
+    return {createdWindows: 0, label: null};
   }
 
   const statements: D1PreparedStatement[] = [

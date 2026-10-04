@@ -218,4 +218,24 @@ describe('deliverReviewNotifications', () => {
     expect(delivered.chairmanStamps).toEqual([]);
     expect(delivered.reminderStamps).toEqual([]);
   });
+
+  it('does not stamp review-open when there are no voting reviewers', async () => {
+    const chairOnlyCycle = {
+      ...cycle,
+      reviewers: [
+        {email: 'chair@bheeagles.com', name: 'Chris', seat: 'chairman' as const, userId: 'chair'},
+      ],
+    };
+    const plan = planReviewNotifications({
+      cycles: [chairOnlyCycle],
+      grants: [grant],
+      now: new Date('2026-10-16T00:00:00Z'),
+      origin: 'https://grants.bheeagles.com',
+      sentReminders: [],
+    });
+    expect(plan.open).toEqual([]);
+    expect(plan.openStamps).toEqual([]);
+    const delivered = await deliverReviewNotifications(plan, async () => true);
+    expect(delivered.openStamps).toEqual([]);
+  });
 });

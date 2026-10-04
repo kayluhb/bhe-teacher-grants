@@ -119,7 +119,7 @@ export const planReviewNotifications = (input: {
         to: reviewer.email,
       });
     }
-    open.push({cycleId: cycle.id, emails});
+    if (emails.length > 0) open.push({cycleId: cycle.id, emails});
   }
 
   for (const cycle of input.cycles) {
@@ -194,10 +194,7 @@ export const deliverReviewNotifications = async (
 ): Promise<ReviewNotificationPlan> => {
   const open: ReviewOpenDelivery[] = [];
   for (const row of plan.open) {
-    if (row.emails.length === 0) {
-      open.push(row);
-      continue;
-    }
+    if (row.emails.length === 0) continue;
     const results = await Promise.all(row.emails.map((email) => send(email)));
     if (results.every(Boolean)) open.push(row);
   }

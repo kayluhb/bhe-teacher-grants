@@ -3,6 +3,7 @@
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
 
 export type RadioOption = {
+  description?: string;
   label: string;
   value: string;
 };
@@ -42,7 +43,12 @@ export const RadioGroup = ({
         <span aria-hidden="true" className="radio-button">
           <RadioGroupPrimitive.Indicator className="radio-indicator" />
         </span>
-        {option.label}
+        <span className="radio-copy">
+          <span className="radio-label">{option.label}</span>
+          {option.description ? (
+            <span className="radio-description">{option.description}</span>
+          ) : null}
+        </span>
       </RadioGroupPrimitive.Item>
     ))}
   </RadioGroupPrimitive.Root>

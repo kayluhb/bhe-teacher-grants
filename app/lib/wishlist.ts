@@ -148,7 +148,9 @@ export const parseWishlistHtml = (html: string): WishlistItem[] => {
       block.match(/data-item-name="([^"]+)"/i)?.[1] ||
       block.match(/id="itemName_[^"]+"[^>]*title="([^"]+)"/i)?.[1] ||
       stripTags(block.match(/id="itemName_[^"]+"[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? '') ||
-      stripTags(block.match(/<h[2-3][^>]*>([\s\S]*?)<\/h[2-3]>/i)?.[1] ?? '');
+      block.match(/<a\b[^>]*class="[^"]*a-link-normal[^"]*"[^>]*title="([^"]+)"/i)?.[1] ||
+      block.match(/<img\b[^>]*alt="([^"]+)"/i)?.[1] ||
+      stripTags(block.match(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/i)?.[1] ?? '');
     if (!title) continue;
 
     const priceRaw =
@@ -158,8 +160,8 @@ export const parseWishlistHtml = (html: string): WishlistItem[] => {
       block.match(/id="itemRequested_[^"]+"[^>]*>\s*(\d+)/i)?.[1];
     const href =
       amazonUrl(block.match(/id="itemName_[^"]+"[^>]*href="([^"]+)"/i)?.[1]) ??
-      amazonUrl(block.match(/href="(https:\/\/www\.amazon\.com\/[^"]+)"/i)?.[1]) ??
-      amazonUrl(block.match(/href="(\/(?:dp|gp\/product)\/[^"]+)"/i)?.[1]);
+      amazonUrl(block.match(/href="(\/(?:dp|gp\/product)\/[^"]+)"/i)?.[1]) ??
+      amazonUrl(block.match(/href="(https:\/\/www\.amazon\.com\/[^"]+)"/i)?.[1]);
     const asin =
       asinOf(href) ??
       block.match(/data-asin="([A-Z0-9]{10})"/i)?.[1] ??

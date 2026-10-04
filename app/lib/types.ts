@@ -16,7 +16,7 @@ export type GrantItemInput = {
 export type GrantRow = {
   actual_amount: number | null;
   approved_amount: number | null;
-  benefit_scope: BenefitScope;
+  benefit_scope: BenefitScope | '';
   cycle_id: string;
   delivered_at: string | null;
   grade_level_subject: string;

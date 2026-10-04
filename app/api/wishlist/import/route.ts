@@ -1,85 +1,13 @@
 import {requireAuth} from '~/lib/auth';
 import {
   canImportWishlist,
-  MAX_WISHLIST_ITEMS,
-  MAX_WISHLIST_PAGES,
-  nextWishlistPageUrl,
   normalizeWishlistUrl,
-  parseWishlistHtml,
   parseWishlistXlsx,
   type WishlistItem,
 } from '~/lib/wishlist';
+import {fetchAmazonWishlist, wishlistImportFailure} from '~/lib/wishlist-amazon';
 
 const MAX_XLSX_BYTES = 1_000_000;
-const AMAZON_HEADERS = {
-  Accept: 'text/html',
-  'User-Agent': 'BHETeacherGrants/1.0 (public wishlist import)',
-};
-
-const cookieJar = (response: Response, previous = ''): string => {
-  const jar = new Map(
-    previous
-      .split('; ')
-      .filter(Boolean)
-      .map((part) => {
-        const i = part.indexOf('=');
-        return [part.slice(0, i), part.slice(i + 1)] as const;
-      }),
-  );
-  const headers =
-    typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [];
-  for (const header of headers) {
-    const pair = header.split(';', 1)[0] ?? '';
-    const i = pair.indexOf('=');
-    if (i > 0) jar.set(pair.slice(0, i), pair.slice(i + 1));
-  }
-  return [...jar.entries()].map(([key, value]) => `${key}=${value}`).join('; ');
-};
-
-const itemKey = (item: WishlistItem): string =>
-  item.asin ?? item.vendor_url ?? item.item_description;
-
-const fetchAmazonPages = async (
-  firstUrl: string,
-): Promise<{items: WishlistItem[]; unreachable?: boolean}> => {
-  const items: WishlistItem[] = [];
-  const seen = new Set<string>();
-  let pageUrl: string | null = firstUrl;
-  let cookie = '';
-
-  for (
-    let page = 0;
-    page < MAX_WISHLIST_PAGES && pageUrl && items.length < MAX_WISHLIST_ITEMS;
-    page++
-  ) {
-    let response: Response;
-    try {
-      response = await fetch(pageUrl, {
-        headers: cookie ? {...AMAZON_HEADERS, Cookie: cookie} : AMAZON_HEADERS,
-        signal: AbortSignal.timeout(15_000),
-      });
-    } catch {
-      if (page === 0) return {items: [], unreachable: true};
-      break;
-    }
-    if (!response.ok) {
-      if (page === 0) return {items: [], unreachable: true};
-      break;
-    }
-    cookie = cookieJar(response, cookie);
-    const html = await response.text();
-    for (const item of parseWishlistHtml(html)) {
-      const key = itemKey(item);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      items.push(item);
-      if (items.length >= MAX_WISHLIST_ITEMS) break;
-    }
-    pageUrl = nextWishlistPageUrl(html);
-  }
-
-  return {items};
-};
 
 const readInput = async (request: Request) => {
   const contentType = request.headers.get('content-type') ?? '';
@@ -163,26 +91,12 @@ const importWishlist = async (request: Request) => {
     );
   }
 
-  const fetched = await fetchAmazonPages(url);
-  if (fetched.unreachable) {
-    return Response.json(
-      {
-        error:
-          'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
-      },
-      {status: 422},
-    );
-  }
-  const items = fetched.items;
-  if (items.length === 0) {
-    return Response.json(
-      {
-        error:
-          'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
-      },
-      {status: 422},
-    );
+  const fetched = await fetchAmazonWishlist(url);
+  const failure = wishlistImportFailure(fetched);
+  if (failure) {
+    return Response.json({error: failure.error}, {status: failure.status});
   }
 
+  const items: WishlistItem[] = fetched.items;
   return Response.json({items, url});
 };

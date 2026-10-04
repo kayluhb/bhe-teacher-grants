@@ -100,8 +100,20 @@
   }
 
   .radio-item {
-    @apply inline-flex cursor-pointer appearance-none items-center gap-2 rounded-sm border-0 bg-transparent p-0.5 text-left text-sm leading-normal font-normal text-charcoal shadow-none;
+    @apply inline-flex cursor-pointer appearance-none items-start gap-2 rounded-sm border-0 bg-transparent p-0.5 text-left text-sm leading-normal font-normal text-charcoal shadow-none;
     font-family: var(--font-family-body);
+  }
+
+  .radio-copy {
+    @apply flex min-w-0 flex-col gap-0.5;
+  }
+
+  .radio-label {
+    @apply leading-normal;
+  }
+
+  .radio-description {
+    @apply text-xs leading-snug text-gray-600;
   }
 
   .radio-item[data-disabled] {
@@ -109,7 +121,7 @@
   }
 
   .radio-button {
-    @apply pointer-events-none flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white;
+    @apply pointer-events-none mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white;
   }
 
   .radio-item:hover:not([data-disabled]) .radio-button {

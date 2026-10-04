@@ -47,7 +47,7 @@ const PriorityGuidelines = () => (
               p.value === 'HIGH'
                 ? 'bg-creek-green/15 text-creek-green'
                 : p.value === 'MEDIUM'
-                  ? 'bg-spirit-gold/15 text-spirit-gold'
+                  ? 'bg-spirit-gold/25 text-night-blue'
                   : 'bg-gray-100 text-gray-600'
             }`}
           >

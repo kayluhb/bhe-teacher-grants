@@ -112,7 +112,7 @@ export const requestOtp = async (rawEmail: string): Promise<OtpRequestResult> =>
   const code = generateOtp();
   const sent = await sendEmail({
     html: `<p>Your Barton Hills teacher grants sign-in code is <strong>${code}</strong>.</p><p>It expires in 10 minutes. If you did not request this, ignore the email.</p>`,
-    subject: `${code} is your grant portal code`,
+    subject: 'Your grant portal sign-in code',
     to: email,
   });
   if (!sent) {

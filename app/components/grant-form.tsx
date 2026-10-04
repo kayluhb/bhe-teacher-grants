@@ -418,8 +418,8 @@ export const GrantForm = ({
 
           {showGrades ? (
             <label className="font-body block text-sm font-medium text-charcoal">
-              If you answered &quot;Multiple grades&quot; or &quot;Whole grade&quot; above, what grades
-              are impacted?
+              If you answered &quot;Multiple grades&quot; or &quot;Whole grade&quot; above, what
+              grades are impacted?
               <input
                 className={inputClass}
                 onChange={(event) => setGradesImpacted(event.target.value)}
@@ -495,7 +495,11 @@ export const GrantForm = ({
                   On Amazon, open the list, choose More, then Download list. Use the .xlsx if the
                   URL import finds nothing.
                 </p>
-                {importError ? <p className="mt-2 text-sm text-red-700">{importError}</p> : null}
+                {importError ? (
+                  <p className="mt-2 text-sm text-red-700" role="alert">
+                    {importError}
+                  </p>
+                ) : null}
                 {importing ? (
                   <div aria-live="polite" className="mt-3" role="status">
                     <p className="font-body text-sm text-charcoal">{importStatus}</p>

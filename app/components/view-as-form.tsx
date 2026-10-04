@@ -11,7 +11,7 @@ export const ViewAsForm = ({compact = false, user}: {compact?: boolean; user: Us
 
   return (
     <div className={compact ? 'space-y-2' : 'mt-3 space-y-2'}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">View as</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/85">View as</p>
       <form action={setViewAsAction} className="flex flex-col gap-2">
         <select
           aria-label="Preview role"
@@ -49,7 +49,7 @@ export const ViewAsBanner = ({user}: {user: User}) => {
   if (!isViewingAs(user)) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-500 px-4 py-2 text-sm text-eagle-blue">
+    <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-500 px-4 py-2 text-sm text-night-blue">
       <p>
         Viewing as <span className="font-semibold">{ROLE_LABELS[user.role]}</span>
       </p>

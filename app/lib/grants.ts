@@ -10,6 +10,7 @@ import {
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
+import {canDeleteGrant} from '~/lib/grant-delete';
 import {grantFileKeys} from '~/lib/grant-files';
 import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
@@ -840,7 +841,7 @@ export const chairmanForGrant = async (db: D1Database, cycleId: string) => {
   return rows.find((row) => row.seat === 'chairman') ?? null;
 };
 
-export const deleteGrant = async (
+const purgeGrant = async (
   db: D1Database,
   grantId: string,
 ): Promise<Result<{fileKeys: string[]}>> => {
@@ -864,6 +865,35 @@ export const deleteGrant = async (
   return {fileKeys};
 };
 
+export const deleteGrant = async (
+  db: D1Database,
+  input: {actor: User; grantId: string},
+): Promise<Result<{fileKeys: string[]}>> => {
+  const grant = await db
+    .prepare(
+      'SELECT id, teacher_id, status, receipt_r2_key, proof_of_delivery_r2_key FROM grants WHERE id = ?',
+    )
+    .bind(input.grantId)
+    .first<{
+      id: string;
+      proof_of_delivery_r2_key: string | null;
+      receipt_r2_key: string | null;
+      status: string;
+      teacher_id: string;
+    }>();
+  if (!grant) return {error: 'Grant not found.'};
+  if (!canDeleteGrant(input.actor, grant)) {
+    return {
+      error:
+        input.actor.role === 'teacher' && grant.teacher_id === input.actor.id
+          ? 'Only draft requests can be deleted.'
+          : 'Not allowed.',
+    };
+  }
+
+  return purgeGrant(db, grant.id);
+};
+
 export const deleteGrantsForTeacher = async (
   db: D1Database,
   teacherId: string,
@@ -874,7 +904,7 @@ export const deleteGrantsForTeacher = async (
     .all<{id: string}>();
   const fileKeys: string[] = [];
   for (const grant of grants.results ?? []) {
-    const result = await deleteGrant(db, grant.id);
+    const result = await purgeGrant(db, grant.id);
     if (!('error' in result)) fileKeys.push(...result.fileKeys);
   }
   return fileKeys;

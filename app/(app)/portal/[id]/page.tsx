@@ -23,5 +23,13 @@ export default async function TeacherGrantDetailPage({params}: {params: Promise<
 
   const [items, cycle] = await Promise.all([listGrantItems(db, id), getCycle(db, grant.cycle_id)]);
 
-  return <GrantDetail backHref="/portal" cycle={cycle} grant={grant} items={items} />;
+  return (
+    <GrantDetail
+      backHref="/portal"
+      canDelete={grant.status === 'DRAFT'}
+      cycle={cycle}
+      grant={grant}
+      items={items}
+    />
+  );
 }

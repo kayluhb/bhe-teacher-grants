@@ -79,7 +79,8 @@ export const wishlistDevPlugin = (): Plugin => ({
         const url = wishlist.normalizeWishlistUrl(urlRaw);
         if (!url) {
           sendJson(res, 400, {
-            error: 'Paste a public Amazon list URL, or upload Amazon’s Download list .xlsx.',
+            error:
+              'Paste a public Amazon list URL from the address bar (amazon.com/hz/wishlist/ls/…), or upload Amazon’s More → Download list file.',
           });
           return;
         }
@@ -103,7 +104,7 @@ export const wishlistDevPlugin = (): Plugin => ({
         console.error('[wishlist-dev-import]', error);
         sendJson(res, 500, {
           error:
-            'Something went wrong while reading that list. Try Amazon’s Download list spreadsheet, or add items by hand.',
+            'Something went wrong while reading that list. Try Amazon’s More → Download list file (no Excel needed), or add items by hand.',
         });
       }
     });

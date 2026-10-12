@@ -331,7 +331,7 @@ export const GrantForm = ({
         setImportPercent(100);
         if (!parsed.length) {
           setImportError(
-            'That spreadsheet had no items we could read. Use Amazon’s More → Download list, or type the lines by hand.',
+            'That file had no items we could read. Use Amazon’s More → Download list (no Excel needed), or type the lines by hand.',
           );
           return;
         }
@@ -353,7 +353,7 @@ export const GrantForm = ({
       } catch {
         json = {
           error:
-            'Amazon took too long to respond. Download the list as a spreadsheet (More → Download list) and upload that instead.',
+            'Amazon took too long to respond. On Amazon choose More → Download list and upload that file here (no Excel needed).',
         };
       }
       if (!res.ok || !json.items) {
@@ -363,7 +363,7 @@ export const GrantForm = ({
       applyImported(json.items, json.url);
     } catch {
       setImportError(
-        'Could not import that list. Try the spreadsheet from Amazon’s More → Download list, or add items by hand.',
+        'Could not import that list. Try Amazon’s More → Download list file (no Excel needed), or add items by hand.',
       );
     } finally {
       setImporting(false);

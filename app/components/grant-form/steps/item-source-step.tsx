@@ -32,7 +32,7 @@ export const ItemSourceStep = ({
       >
         <p className="font-heading text-base font-semibold text-charcoal">Amazon wishlist</p>
         <p className="font-body mt-1 text-sm text-gray-600">
-          Import a public Amazon list by URL or spreadsheet.
+          Paste a public Amazon list link (from the address bar).
         </p>
       </button>
       <button

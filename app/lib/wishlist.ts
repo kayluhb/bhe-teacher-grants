@@ -87,6 +87,44 @@ export const wishlistRetailerLabel = (raw: string): string | null => {
 
 export const canImportWishlist = (url: string): boolean => wishlistRetailer(url) === 'amazon';
 
+/** Amazon Share / Invite links (`/dl/invite/…`) are not public list URLs. */
+export const isAmazonInviteUrl = (raw: string): boolean => {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  try {
+    const parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const host = hostOf(parsed);
+    if (host !== 'amazon.com' && host !== 'smile.amazon.com') return false;
+    return /\/hz\/wishlist\/dl\/invite\//i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Inline guidance when a pasted URL cannot be imported.
+ * Invite/share links are the usual failure mode teachers hit.
+ */
+export const wishlistUrlGuidance = (raw: string): string | null => {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (canImportWishlist(trimmed)) return null;
+  if (isAmazonInviteUrl(trimmed)) {
+    return 'That looks like an Amazon Share / Invite link — those do not work here. Open your list, set Privacy to Public, then copy the URL from the address bar (it should look like amazon.com/hz/wishlist/ls/…).';
+  }
+  try {
+    const parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const host = hostOf(parsed);
+    if (host === 'amazon.com' || host === 'smile.amazon.com') {
+      return 'Use the public list URL from your browser’s address bar (amazon.com/hz/wishlist/ls/…), not a product page or invite link.';
+    }
+  } catch {
+    // fall through
+  }
+  if (trimmed.length < 12) return null;
+  return 'Paste a public Amazon wishlist URL that looks like amazon.com/hz/wishlist/ls/…';
+};
+
 export const MAX_WISHLIST_ITEMS = 100;
 export const MAX_WISHLIST_PAGES = 10;
 

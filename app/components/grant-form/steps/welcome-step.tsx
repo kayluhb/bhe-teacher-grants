@@ -40,7 +40,7 @@ export const WelcomeStep = ({
     <ul className="font-body list-inside list-disc space-y-1 text-sm text-gray-600">
       <li>A short description of what you need</li>
       <li>Who the items will benefit</li>
-      <li>An Amazon wishlist or product links for each item</li>
+      <li>A public Amazon wishlist link (from the address bar) or product links</li>
     </ul>
 
     <StepNav continueLabel="Get started" onContinue={onContinue} />

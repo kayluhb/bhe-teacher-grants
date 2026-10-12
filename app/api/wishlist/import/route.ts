@@ -1,6 +1,7 @@
 import {requireAuth} from '~/lib/auth';
 import {
   canImportWishlist,
+  isAmazonInviteUrl,
   normalizeWishlistUrl,
   parseWishlistXlsx,
   type WishlistItem,
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          'Something went wrong while reading that list. Try Amazon’s Download list spreadsheet, or add items by hand.',
+          'Something went wrong while reading that list. Try Amazon’s More → Download list file (no Excel needed), or add items by hand.',
       },
       {status: 500},
     );
@@ -53,12 +54,12 @@ const importWishlist = async (request: Request) => {
 
   if (input.file) {
     if (input.file.size > MAX_XLSX_BYTES) {
-      return Response.json({error: 'That spreadsheet is too large. Maximum 1MB.'}, {status: 400});
+      return Response.json({error: 'That download file is too large. Maximum 1MB.'}, {status: 400});
     }
     const bytes = new Uint8Array(await input.file.arrayBuffer());
     if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
       return Response.json(
-        {error: 'Upload the .xlsx Amazon gives you under More → Download list.'},
+        {error: 'Upload the file Amazon gives you under More → Download list (no Excel needed).'},
         {status: 400},
       );
     }
@@ -67,7 +68,7 @@ const importWishlist = async (request: Request) => {
       return Response.json(
         {
           error:
-            'That spreadsheet had no items we could read. Use Amazon’s More → Download list, or type the lines by hand.',
+            'That file had no items we could read. Use Amazon’s More → Download list, or type the lines by hand.',
         },
         {status: 422},
       );
@@ -76,8 +77,20 @@ const importWishlist = async (request: Request) => {
   }
 
   if (!url) {
+    if (isAmazonInviteUrl(input.url)) {
+      return Response.json(
+        {
+          error:
+            'That looks like an Amazon Share / Invite link. Open your list, set Privacy to Public, then paste the URL from the address bar (amazon.com/hz/wishlist/ls/…).',
+        },
+        {status: 400},
+      );
+    }
     return Response.json(
-      {error: 'Paste a public Amazon list URL, or upload Amazon’s Download list .xlsx.'},
+      {
+        error:
+          'Paste a public Amazon list URL from the address bar (amazon.com/hz/wishlist/ls/…), or upload Amazon’s More → Download list file.',
+      },
       {status: 400},
     );
   }

@@ -123,23 +123,21 @@ describe('fixtures and steps', () => {
     expect(stepsFor('chairman').map((step) => step.element)).toEqual([
       '[data-tour="page-heading"]',
       '[data-tour="nav-windows"]',
-      '[data-tour="committee"]',
-      '[data-tour="eval-email"]',
-      '[data-tour="grant-table"]',
       '[data-tour="chair-playbook"]',
+      '[data-tour="chair-step"]',
     ]);
   });
 
   it('includes the ranked section and year filter as optional steps', () => {
-    expect(stepsFor('reviewer').some((step) => step.element === '[data-tour="ranked-section"]')).toBe(
-      true,
-    );
+    expect(
+      stepsFor('reviewer').some((step) => step.element === '[data-tour="ranked-section"]'),
+    ).toBe(true);
     expect(stepsFor('fulfill').some((step) => step.element === '[data-tour="year-filter"]')).toBe(
       true,
     );
-    expect(stepsFor('treasurer').some((step) => step.element === '[data-tour="process-guide"]')).toBe(
-      true,
-    );
+    expect(
+      stepsFor('treasurer').some((step) => step.element === '[data-tour="process-guide"]'),
+    ).toBe(true);
   });
 
   it('drops optional steps whose targets are missing', () => {

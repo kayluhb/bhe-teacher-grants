@@ -1,10 +1,12 @@
 import {redirect} from 'next/navigation';
 import {ChairDecisionForm} from '~/components/chair-decision-form';
 import {GrantNarrative} from '~/components/grant-narrative';
+import {GrantNotes} from '~/components/grant-notes';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {getSession, requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {canAuthorGrantNote, canMutateGrantNote, listGrantNotes} from '~/lib/grant-notes';
 import {
   getGrant,
   grantTally,
@@ -50,13 +52,18 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
     redirect('/chair');
   }
 
-  const [rawItems, votes, voters, tally] = await Promise.all([
+  const [rawItems, votes, voters, tally, notes] = await Promise.all([
     listGrantItems(db, id),
     listVotes(db, id),
     listEligibleVoters(db, grant),
     grantTally(db, grant),
+    listGrantNotes(db, id),
   ]);
   const items = withItemImages(rawItems.filter((item) => item.is_ad_hoc === 0));
+  const canAuthorNotes = canAuthorGrantNote(user, seatedChairman?.userId);
+  const mutableNoteIds = notes
+    .filter((note) => canMutateGrantNote(user, note.author_id, seatedChairman?.userId))
+    .map((note) => note.id);
 
   return (
     <div className="space-y-6">
@@ -97,6 +104,14 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
       <GrantNarrative grant={grant} />
 
       <GrantRequestedItems items={items} />
+
+      <GrantNotes
+        canAuthor={canAuthorNotes}
+        currentUserId={user.id}
+        grantId={grant.id}
+        mutableNoteIds={mutableNoteIds}
+        notes={notes}
+      />
 
       <div>
         <h2 className="font-heading mb-2 font-semibold">Ballots</h2>

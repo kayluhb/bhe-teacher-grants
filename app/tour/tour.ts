@@ -106,7 +106,7 @@ const TEACHER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Every request you have submitted lives here, across school years. Open a row for details or to confirm delivery.',
+        'Every request you have submitted lives here, across school years. Open a row for details or to confirm delivery once an order arrives.',
       title: 'My grants',
     },
   },
@@ -115,7 +115,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'A gold banner means a window is open for new requests. When it is closed, you can still read past grants.',
+        'A gold banner means a window is open for new requests. When no window is open, you can still read past grants.',
       title: 'When you can apply',
     },
   },
@@ -124,7 +124,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'A short guided form walks you through the request, who it benefits, and each item — import a public Amazon wishlist or paste product links one at a time. Drafts save as you go. Voting starts when the review window opens.',
+        'A short guided form walks you through the request, who it benefits, and each item — import a public Amazon wishlist or paste product links one at a time. Drafts save as you go. Reviewers rank once the review window opens.',
       title: 'Submit a grant',
     },
   },
@@ -141,7 +141,7 @@ const TEACHER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'If you sit on the committee, Review is a separate queue. Your own grant never appears there.',
+        "If you also sit on the committee, Review is where you rank other teachers' grants. Your own grant never appears there.",
       title: 'Review other grants',
     },
   },
@@ -152,7 +152,7 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Grants that still need your rank appear first. When the review window is closed, the empty state explains when ranking opens again.',
+        'Grants that still need your rank appear under Still need your rank. When the review window is closed, the empty state explains when ranking opens again.',
       title: 'Your review queue',
     },
   },
@@ -160,7 +160,7 @@ const REVIEWER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a request to rank High, Medium, or Low Priority — or Abstain. Ranks are private and help sequence funding; your own grant never appears here.',
+        'Open a request to rank High, Medium, or Low Priority — or Abstain. Other reviewers cannot see your rank. Your own grant never appears here.',
       title: 'Cast a private rank',
     },
   },
@@ -169,7 +169,7 @@ const REVIEWER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'After you submit a rank, the grant moves here so you can revisit what you voted without changing the pending queue.',
+        'After you submit a rank, the grant moves to Already ranked so you can revisit it without cluttering the pending queue.',
       title: 'Already ranked',
     },
   },
@@ -180,7 +180,7 @@ const CHAIRMAN_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Confirm the committee, track ranks as they come in, and record outcomes once every required ballot is in. The submitting teacher is recused, so their vote is not required.',
+        'Run the cycle here step by step: launch, seat the committee, monitor submissions, send evaluation instructions, record decisions, fulfill, then gather stories.',
       title: 'Chair home',
     },
   },
@@ -189,43 +189,25 @@ const CHAIRMAN_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Publish or edit grant windows — school year, dates, budget, and officers. School years themselves are managed in Admin.',
+        'Publish or edit grant windows — dates, budget, and officers. School years themselves are managed in Admin.',
       title: 'Grant windows',
     },
   },
   {
-    element: '[data-tour="committee"]',
-    optional: true,
-    popover: {
-      description:
-        'Principal and Treasurer come from the window officers. Add the Faculty Rep and board members here. Use the help icon next to Roll call for seat rules and alternates.',
-      title: 'Your committee',
-    },
-  },
-  {
-    element: '[data-tour="eval-email"]',
-    optional: true,
-    popover: {
-      description:
-        'Send evaluation instructions to the voters for this window. Replies go to your email. Seat the committee above before sending.',
-      title: 'Email the committee',
-    },
-  },
-  {
-    element: '[data-tour="grant-table"]',
-    popover: {
-      description:
-        'Open a grant to see rank tallies and what the committee is leaning. Record approve or reject when voting is complete — the teacher is emailed automatically.',
-      title: 'Chair queue',
-    },
-  },
-  {
     element: '[data-tour="chair-playbook"]',
+    popover: {
+      description:
+        'The progress rail shows where you are in the cycle. Checkmarks follow real status — some steps auto-complete; mark outreach steps when you finish them.',
+      title: 'Progress rail',
+    },
+  },
+  {
+    element: '[data-tour="chair-step"]',
     optional: true,
     popover: {
       description:
-        'Status-aware checklist for the cycle — some steps auto-complete; mark outreach steps when you finish them. Email templates live on the matching steps.',
-      title: 'Chair playbook',
+        'Each screen has the tools and email templates for that step. Use Continue and Back to move around; the page opens on your first incomplete step. A teacher on the committee is recused from ranking their own grant.',
+      title: 'Current step',
     },
   },
 ];
@@ -235,7 +217,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Admin home for the active window: what still needs a vote, what to buy, and what budget remains. Roster, school years, and windows live under Admin in the sidebar; Budget and Grants are there too.',
+        'Admin home for the active window: what still needs a vote, what to buy, and what budget remains. People, school years, and related settings live under Admin in the sidebar; Budget and Grants are there too.',
       title: 'Window at a glance',
     },
   },
@@ -243,7 +225,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="stat-pending"]',
     optional: true,
     popover: {
-      description: 'Submitted grants still waiting on reviewer ballots or a chair decision.',
+      description: 'Submitted grants still waiting on reviewer ranks or a chair decision.',
       title: 'Pending grants',
     },
   },
@@ -252,7 +234,7 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Approved grants that have not been purchased yet. Fulfillment happens on a separate page.',
+        'Approved grants that have not been purchased yet. Buying and tracking happen on Fulfillment.',
       title: 'To purchase',
     },
   },
@@ -260,8 +242,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="stat-budget"]',
     optional: true,
     popover: {
-      description:
-        'What is left after committed approvals and actual spend. Unused funds return to the window.',
+      description: 'What is left after committed approvals and actual spend for this window.',
       title: 'Remaining this window',
     },
   },
@@ -279,7 +260,7 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'You rank grants in the reviewer portal, the same as the principal and committee. Ranks stay private until the chair decides.',
+        'You rank grants in Review, the same as the principal and committee. Other reviewers cannot see your rank; the chair sees tallies when deciding.',
       title: 'Review queue',
     },
   },
@@ -315,7 +296,7 @@ const FULFILL_STEPS: TourStep[] = [
     element: '[data-tour="year-filter"]',
     optional: true,
     popover: {
-      description: 'Filter by school year and semester the way Barton Hills files reimbursements.',
+      description: "Filter by school year and semester when you need a past window's orders.",
       title: 'Year and semester',
     },
   },

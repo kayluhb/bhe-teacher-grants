@@ -9,12 +9,15 @@ import type {DirectoryPerson} from '~/lib/people';
 export const ChairCommittee = ({
   cycleId,
   cycleLabel,
+  embedded = false,
   officerIds,
   people,
   selected,
 }: {
   cycleId: string;
   cycleLabel: string;
+  /** Drop outer card chrome when nested inside the chair wizard step shell. */
+  embedded?: boolean;
   officerIds: string[];
   people: DirectoryPerson[];
   selected: DirectoryPerson[];
@@ -23,10 +26,12 @@ export const ChairCommittee = ({
 
   return (
     <section
-      className="rounded-2xl border border-eagle-blue/15 bg-white p-5 shadow-sm"
+      className={
+        embedded ? 'space-y-4' : 'rounded-2xl border border-eagle-blue/15 bg-white p-5 shadow-sm'
+      }
       data-tour="committee"
     >
-      <div className="mb-4">
+      <div className={embedded ? undefined : 'mb-4'}>
         <div className="flex items-center gap-2">
           <p className="font-heading text-xs font-semibold tracking-[0.18em] text-spirit-gold uppercase">
             Roll call
@@ -37,9 +42,9 @@ export const ChairCommittee = ({
         </div>
         <h2 className="font-heading text-xl font-bold text-charcoal">Committee · {cycleLabel}</h2>
         <p className="font-body mt-1 text-sm text-gray-600">
-          Principal and Treasurer are already assigned in Admin. Add the remaining three seats
-          here: one Faculty Rep and two board members or committee chairs. Alternates may serve
-          for absence or conflict of interest.
+          Principal and Treasurer are already assigned in Admin. Add the remaining three seats here:
+          one Faculty Rep and two board members or committee chairs. Alternates may serve for
+          absence or conflict of interest.
         </p>
       </div>
       <CommitteePicker

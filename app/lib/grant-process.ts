@@ -255,26 +255,22 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     id: 'committee',
     label: 'Recruit & confirm the Grant Committee',
     description:
-      'Confirm the five-member committee through PTA. Principal and Treasurer seats are set in Admin; add the Faculty Rep and two other members on this Chair page. Seat rules and alternates are behind the help icon next to Roll call.',
-    href: '#committee-composition',
-    linkLabel: 'View composition rules',
+      'Confirm the five-member committee through PTA. Principal and Treasurer seats are set in Admin; add the Faculty Rep and two other members on this step. Seat rules and alternates are behind the help icon next to Roll call.',
   },
   {
     id: 'monitor',
     label: 'Monitor submissions',
     description:
-      'Watch incoming applications in the Chair queue while the submission window is open. If volume is low, ask Kati to send the reminder template to staff.',
-    href: '#chair-queue',
-    linkLabel: 'Open Chair queue',
+      'Watch incoming applications while the submission window is open. If volume is low, ask Kati to send the reminder template to staff.',
+    href: '/grants',
+    linkLabel: 'View all grants',
     templateIds: ['reminder-kati'],
   },
   {
     id: 'review',
     label: 'Open review & send evaluation instructions',
     description:
-      'When the review window opens, committee members get an automated email. Also send evaluation instructions from the button under the committee list, then follow up so ranks arrive on time. A grant is ready to decide only after every required reviewer has ranked or abstained.',
-    href: '#chair-queue',
-    linkLabel: 'Open Chair queue',
+      'When the review window opens, committee members get an automated email. Also send evaluation instructions from this step, then follow up so ranks arrive on time. A grant is ready to decide only after every required reviewer has ranked or abstained.',
     templateIds: ['evaluation-instructions'],
   },
   {
@@ -282,8 +278,6 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     label: 'Record decisions',
     description:
       'Open each ready grant in the Chair queue and approve or reject. The app emails the teacher either way — approvals include purchase next steps; rejections can include your note. You do not need to send those emails by hand.',
-    href: '#chair-queue',
-    linkLabel: 'Open Chair queue',
     templateIds: ['approval', 'rejection'],
   },
   {
@@ -291,6 +285,8 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     label: 'Track reimbursements & spending',
     description:
       'Coordinate with the Treasurer on Fulfill: purchase submissions, reimbursements, and reminders so teachers finish within the 3–4 week window.',
+    href: '/fulfill',
+    linkLabel: 'Open Fulfill',
   },
   {
     id: 'stories',

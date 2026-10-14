@@ -1,12 +1,21 @@
 import {redirect} from 'next/navigation';
 import {GrantNarrative} from '~/components/grant-narrative';
+import {GrantNotes} from '~/components/grant-notes';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
 import {VoteForm} from '~/components/vote-form';
 import {getSession, requireReviewer, type User} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {getGrant, listGrantItems, listUserSeats, listVotes, userCanAccessGrant} from '~/lib/grants';
+import {canAuthorGrantNote, canMutateGrantNote, listGrantNotes} from '~/lib/grant-notes';
+import {
+  getGrant,
+  listGrantItems,
+  listReviewerRows,
+  listUserSeats,
+  listVotes,
+  userCanAccessGrant,
+} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
 import {withItemImages} from '~/lib/product-preview';
@@ -48,13 +57,20 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
   if (!grant || grant.status === 'DRAFT') redirect('/review');
   if (!(await userCanAccessGrant(db, user, grant))) redirect('/review');
 
-  const [rawItems, votes, budget] = await Promise.all([
+  const [rawItems, votes, budget, notes, reviewers] = await Promise.all([
     listGrantItems(db, id),
     listVotes(db, id),
     getCycleBudget(db, grant.cycle_id),
+    listGrantNotes(db, id),
+    listReviewerRows(db, grant.cycle_id),
   ]);
   const items = withItemImages(rawItems.filter((item) => item.is_ad_hoc === 0));
   const mine = votes.find((row) => row.voter_id === user.id);
+  const chairmanId = reviewers.find((row) => row.seat === 'chairman')?.userId;
+  const canAuthorNotes = canAuthorGrantNote(user, chairmanId);
+  const mutableNoteIds = notes
+    .filter((note) => canMutateGrantNote(user, note.author_id, chairmanId))
+    .map((note) => note.id);
 
   return (
     <div className="space-y-6">
@@ -96,6 +112,14 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
       <GrantNarrative grant={grant} />
 
       <GrantRequestedItems items={items} />
+
+      <GrantNotes
+        canAuthor={canAuthorNotes}
+        currentUserId={user.id}
+        grantId={grant.id}
+        mutableNoteIds={mutableNoteIds}
+        notes={notes}
+      />
 
       {grant.status === 'PENDING' && grant.teacher_id !== user.id ? (
         <VoteForm

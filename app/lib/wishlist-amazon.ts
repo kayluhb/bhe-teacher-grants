@@ -1,3 +1,4 @@
+import {readLimitedText} from '~/lib/read-limited-text';
 import {
   MAX_WISHLIST_ITEMS,
   MAX_WISHLIST_PAGES,
@@ -5,6 +6,9 @@ import {
   parseWishlistHtml,
   type WishlistItem,
 } from '~/lib/wishlist';
+
+/** Cap Amazon list HTML so one oversized page cannot exhaust the Worker isolate. */
+const MAX_WISHLIST_HTML_BYTES = 750_000;
 
 const AMAZON_HEADERS = {
   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -77,21 +81,21 @@ export const wishlistImportFailure = (
   if (fetched.unreachable) {
     return {
       error:
-        'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
+        'Amazon did not return that list. Confirm Privacy is Public, try More → Download list and upload that file (no Excel needed), or add items by hand.',
       status: 422,
     };
   }
   if (fetched.blocked) {
     return {
       error:
-        'Amazon blocked the automatic import from this environment. On Amazon choose More → Download list and upload the .xlsx, or try again from production.',
+        'Amazon blocked the automatic import. On Amazon choose More → Download list and upload that file here (no Excel needed), or try again later.',
       status: 422,
     };
   }
   if (fetched.items.length === 0) {
     return {
       error:
-        'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
+        'No items found on that page. Confirm the list is Public, or on Amazon choose More → Download list and upload that file (no Excel needed).',
       status: 422,
     };
   }
@@ -123,14 +127,18 @@ export const fetchAmazonWishlist = async (firstUrl: string): Promise<AmazonWishl
       break;
     }
     cookie = cookieJar(response, cookie);
-    let html = await response.text();
+    let html = await readLimitedText(response, MAX_WISHLIST_HTML_BYTES);
+    if (!html) {
+      if (page === 0) return {items: [], unreachable: true};
+      break;
+    }
     // Amazon sometimes serves a cookie/consent shell first; retry once with the jar.
     if (page === 0 && cookie && !hasItemMarkers(html)) {
       try {
         const retry = await fetchAmazonPage(pageUrl, cookie);
         if (retry?.ok) {
           cookie = cookieJar(retry, cookie);
-          html = await retry.text();
+          html = (await readLimitedText(retry, MAX_WISHLIST_HTML_BYTES)) ?? html;
         }
       } catch {
         // keep the first response

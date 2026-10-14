@@ -2,12 +2,14 @@ import {strToU8, unzipSync, zipSync} from 'fflate';
 import {describe, expect, it} from 'vitest';
 import {
   canImportWishlist,
+  isAmazonInviteUrl,
   nextWishlistPageUrl,
   normalizeWishlistUrl,
   parseWishlistHtml,
   parseWishlistRows,
   parseWishlistXlsx,
   wishlistRetailerLabel,
+  wishlistUrlGuidance,
 } from '~/lib/wishlist';
 
 describe('normalizeWishlistUrl', () => {
@@ -48,6 +50,37 @@ describe('normalizeWishlistUrl', () => {
     expect(normalizeWishlistUrl('https://www.walmart.com/ip/Crayola-Markers/12345')).toBeNull();
     expect(normalizeWishlistUrl('https://www.target.com/p/crayola-markers/-/A-123')).toBeNull();
     expect(normalizeWishlistUrl('https://example.com/hz/wishlist/ls/ABC')).toBeNull();
+  });
+
+  it('rejects Amazon Share / Invite links', () => {
+    expect(
+      normalizeWishlistUrl(
+        'https://www.amazon.com/hz/wishlist/dl/invite/AQICAHild4Vpadjqcz7bdgUf6Qu6-OaRt7P_FJRNNbyMlg-OQwGn246_mkpTDHGa-rrEfu9UAAAAkTCBjgYJKoZIhvcNAQcGoIGAMH4CAQAweQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyokkjH3lNXhm6ZyKwCARCATKPMSogEytScfmzQbaMdv36EpS7ftMt23XHM9EemXqB56D_MbqvUtDiQfgx8Kv6zH3t9ibeUVcxkF-fAZCu5c7FQWbP_TgvuVg5rboI?ref_=wl_share',
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('isAmazonInviteUrl', () => {
+  it('detects Share / Invite links teachers commonly paste', () => {
+    expect(
+      isAmazonInviteUrl(
+        'https://www.amazon.com/hz/wishlist/dl/invite/AQICAHild4Vpadjqcz7bdgUf6Qu6-OaRt7P_FJRNNbyMlg-OQwGn246_mkpTDHGa-rrEfu9UAAAAkTCBjgYJKoZIhvcNAQcGoIGAMH4CAQAweQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyokkjH3lNXhm6ZyKwCARCATKPMSogEytScfmzQbaMdv36EpS7ftMt23XHM9EemXqB56D_MbqvUtDiQfgx8Kv6zH3t9ibeUVcxkF-fAZCu5c7FQWbP_TgvuVg5rboI?ref_=wl_share',
+      ),
+    ).toBe(true);
+    expect(isAmazonInviteUrl('https://www.amazon.com/hz/wishlist/ls/1JMCNHNT959X2')).toBe(false);
+  });
+});
+
+describe('wishlistUrlGuidance', () => {
+  it('explains invite links and leaves valid public URLs alone', () => {
+    expect(wishlistUrlGuidance('https://www.amazon.com/hz/wishlist/ls/1JMCNHNT959X2')).toBeNull();
+    expect(
+      wishlistUrlGuidance(
+        'https://www.amazon.com/hz/wishlist/dl/invite/AQICAHild4Vpadjqcz7bdgUf6Qu6-OaRt7P_FJRNNbyMlg-OQwGn246_mkpTDHGa-rrEfu9U?ref_=wl_share',
+      ),
+    ).toMatch(/Share \/ Invite/);
+    expect(wishlistUrlGuidance('https://www.amazon.com/dp/B000MARKERS')).toMatch(/address bar/);
   });
 });
 

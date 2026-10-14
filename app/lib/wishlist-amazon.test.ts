@@ -101,13 +101,35 @@ describe('fetchAmazonWishlist', () => {
       unreachable: true,
     });
   });
+
+  it('parses items from an oversized page without buffering the entire body', async () => {
+    const encoder = new TextEncoder();
+    const padding = 'x'.repeat(900_000);
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(itemHtml));
+          controller.enqueue(encoder.encode(padding));
+          controller.close();
+        },
+      }),
+      {headers: {'content-type': 'text/html'}, status: 200},
+    );
+    Object.defineProperty(response, 'url', {value: LIST_URL});
+    const fetchFn = vi.fn(async () => response);
+    vi.stubGlobal('fetch', fetchFn);
+
+    await expect(fetchAmazonWishlist(LIST_URL)).resolves.toMatchObject({
+      items: [{asin: 'B000MARKER', item_description: 'Dry erase markers'}],
+    });
+  });
 });
 
 describe('wishlistImportFailure', () => {
   it('maps a blocked fetch to the import 422 payload', () => {
     expect(wishlistImportFailure({blocked: true, items: []})).toEqual({
       error:
-        'Amazon blocked the automatic import from this environment. On Amazon choose More → Download list and upload the .xlsx, or try again from production.',
+        'Amazon blocked the automatic import. On Amazon choose More → Download list and upload that file here (no Excel needed), or try again later.',
       status: 422,
     });
   });
@@ -115,7 +137,7 @@ describe('wishlistImportFailure', () => {
   it('maps an unreachable fetch to the import 422 payload', () => {
     expect(wishlistImportFailure({items: [], unreachable: true})).toEqual({
       error:
-        'Amazon did not return that list. Confirm it is Public, upload the Download list .xlsx, or type the items by hand.',
+        'Amazon did not return that list. Confirm Privacy is Public, try More → Download list and upload that file (no Excel needed), or add items by hand.',
       status: 422,
     });
   });
@@ -123,7 +145,7 @@ describe('wishlistImportFailure', () => {
   it('maps an empty successful fetch to the no-items 422 payload', () => {
     expect(wishlistImportFailure({items: []})).toEqual({
       error:
-        'No items found on that page. On Amazon choose More → Download list and upload the .xlsx, or type the lines instead.',
+        'No items found on that page. Confirm the list is Public, or on Amazon choose More → Download list and upload that file (no Excel needed).',
       status: 422,
     });
   });

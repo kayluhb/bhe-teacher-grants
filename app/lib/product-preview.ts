@@ -1,3 +1,5 @@
+import {readLimitedText} from '~/lib/read-limited-text';
+
 const MAX_HTML_BYTES = 512_000;
 const AMAZON_ASIN = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i;
 const PRIVATE_HOSTS = new Set(['localhost', '0.0.0.0', '::1']);
@@ -156,33 +158,6 @@ export const stackPreviewImages = (
   return byGrant;
 };
 
-const readLimitedText = async (response: Response, max: number): Promise<string | null> => {
-  const reader = response.body?.getReader();
-  if (!reader) return null;
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const {done, value} = await reader.read();
-    if (done) break;
-    const next = total + value.byteLength;
-    if (next > max) {
-      chunks.push(value.subarray(0, max - total));
-      total = max;
-      await reader.cancel();
-      break;
-    }
-    chunks.push(value);
-    total = next;
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
-};
-
 const MAX_PREVIEW_REDIRECTS = 5;
 
 const fetchPreviewPage = async (
@@ -247,6 +222,7 @@ export const withItemImages = <
   items: T[],
 ): T[] => items.map((item) => ({...item, image_url: itemImageUrl(item)}));
 
+/** Fetch missing images one item at a time — never fan out vendor scrapes on the request path. */
 export const fillMissingItemImages = async <
   T extends {
     asin?: string | null;
@@ -258,16 +234,23 @@ export const fillMissingItemImages = async <
   items: T[],
   persist: (id: string, imageUrl: string) => Promise<void>,
   fetchFn: typeof fetch = fetch,
-): Promise<T[]> =>
-  Promise.all(
-    items.map(async (item) => {
-      if (itemImageUrl(item)) return item;
-      const imageUrl = await fetchProductImage(
-        {asin: item.asin, vendorUrl: item.vendor_url},
-        fetchFn,
-      );
-      if (!imageUrl) return item;
-      await persist(item.id, imageUrl);
-      return {...item, image_url: imageUrl};
-    }),
-  );
+): Promise<T[]> => {
+  const next: T[] = [];
+  for (const item of items) {
+    if (itemImageUrl(item)) {
+      next.push(item);
+      continue;
+    }
+    const imageUrl = await fetchProductImage(
+      {asin: item.asin, vendorUrl: item.vendor_url},
+      fetchFn,
+    );
+    if (!imageUrl) {
+      next.push(item);
+      continue;
+    }
+    await persist(item.id, imageUrl);
+    next.push({...item, image_url: imageUrl});
+  }
+  return next;
+};

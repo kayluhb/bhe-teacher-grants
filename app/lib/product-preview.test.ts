@@ -399,4 +399,36 @@ describe('fillMissingItemImages', () => {
     expect(fetchFn).not.toHaveBeenCalled();
     expect(persist).not.toHaveBeenCalled();
   });
+
+  it('scrapes missing images one item at a time', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const persist = vi.fn(async () => {});
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      const url = String(input);
+      const image = url.includes('one')
+        ? 'https://cdn.example.com/one.jpg'
+        : 'https://cdn.example.com/two.jpg';
+      return new Response(`<meta property="og:image" content="${image}">`, {status: 200});
+    });
+
+    const items = await fillMissingItemImages(
+      [
+        {asin: null, id: 'item-1', image_url: null, vendor_url: 'https://shop.example.com/one'},
+        {asin: null, id: 'item-2', image_url: null, vendor_url: 'https://shop.example.com/two'},
+      ],
+      persist,
+      fetchFn,
+    );
+
+    expect(items.map((item) => item.image_url)).toEqual([
+      'https://cdn.example.com/one.jpg',
+      'https://cdn.example.com/two.jpg',
+    ]);
+    expect(maxInFlight).toBe(1);
+  });
 });

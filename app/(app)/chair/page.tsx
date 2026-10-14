@@ -1,8 +1,5 @@
 import Link from 'next/link';
-import {ChairCommittee} from '~/components/chair-committee';
-import {ChairProcessGuide} from '~/components/process-guide';
-import {SendEvaluationEmail} from '~/components/send-evaluation-email';
-import {TourGrantTable} from '~/components/tour-grant-table';
+import {ChairWizard} from '~/components/chair-wizard';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {requireChairman} from '~/lib/auth';
 import {loadChairProcessSnapshot, resolveChairProcessStepStatus} from '~/lib/chair-process-status';
@@ -54,62 +51,42 @@ export default async function ChairPage() {
       seats: [],
     },
   );
+  const committees = windows.map(({cycle, reviewers}) => ({
+    cycleId: cycle.id,
+    cycleLabel: `${semesterLabel(cycle.semester)} ${formatSchoolYearLong(cycle.school_year)}`,
+    officerIds: reviewers.filter((row) => row.seat !== 'committee').map((row) => row.user_id),
+    selected: reviewers
+      .filter((row) => row.seat === 'committee')
+      .map((row) => ({email: row.email, id: row.user_id, name: row.name})),
+  }));
 
   return (
-    <div className="space-y-10">
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-heading text-3xl font-bold text-charcoal" data-tour="page-heading">
-            Chair
-          </h1>
-          <p className="font-body mt-1 text-gray-600">
-            Confirm the committee, then open submitted grants to track ranks or record outcomes once
-            every required ballot is in.{' '}
-            <Link
-              className="font-medium text-eagle-blue hover:underline"
-              data-tour="nav-windows"
-              href="/chair/windows"
-            >
-              Manage grant windows
-            </Link>
-          </p>
-        </div>
-        {windows.map(({cycle, reviewers}) => {
-          const committee = reviewers
-            .filter((row) => row.seat === 'committee')
-            .map((row) => ({email: row.email, id: row.user_id, name: row.name}));
-          const officerIds = reviewers
-            .filter((row) => row.seat !== 'committee')
-            .map((row) => row.user_id);
-          return (
-            <ChairCommittee
-              cycleId={cycle.id}
-              cycleLabel={`${semesterLabel(cycle.semester)} ${formatSchoolYearLong(cycle.school_year)}`}
-              key={cycle.id}
-              officerIds={officerIds}
-              people={people}
-              selected={committee}
-            />
-          );
-        })}
-        {evaluation ? (
-          <SendEvaluationEmail
-            cycleId={evaluation.cycleId}
-            recipientCount={evaluation.recipientCount}
-          />
-        ) : null}
-        <section className="space-y-3" id="chair-queue">
-          <h2 className="font-heading text-xl font-semibold text-charcoal">Chair queue</h2>
-          <TourGrantTable grants={grants} hrefBase="/chair" queue="chairman" showTeacher />
-        </section>
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-heading text-3xl font-bold text-charcoal" data-tour="page-heading">
+          Chair
+        </h1>
+        <p className="font-body mt-1 text-gray-600">
+          Work through the cycle step by step — launch, seat the committee, monitor submissions,
+          collect ranks, decide, fulfill, then gather stories.{' '}
+          <Link
+            className="font-medium text-eagle-blue hover:underline"
+            data-tour="nav-windows"
+            href="/chair/windows"
+          >
+            Manage grant windows
+          </Link>
+        </p>
       </div>
 
-      <ChairProcessGuide
-        cycleId={primary?.cycle.id}
+      <ChairWizard
+        committees={committees}
+        evaluation={evaluation}
+        grants={grants}
+        people={people}
+        primaryCycleId={primary?.cycle.id}
         statuses={processStatuses}
-        templateValues={
-          primary ? cycleEmailPlaceholders(primary.cycle) : undefined
-        }
+        templateValues={primary ? cycleEmailPlaceholders(primary.cycle) : undefined}
       />
     </div>
   );

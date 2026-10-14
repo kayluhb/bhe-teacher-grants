@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {useRouter} from 'next/navigation';
 import {FormProgress} from '~/components/grant-form/form-progress';
 import {AddAnotherStep} from '~/components/grant-form/steps/add-another-step';
 import {BenefitStep} from '~/components/grant-form/steps/benefit-step';
@@ -123,6 +124,7 @@ export const GrantForm = ({
   grant?: GrantRow;
   items?: GrantItemRow[];
 }) => {
+  const router = useRouter();
   const [screen, setScreen] = useState<WizardScreen>(() => initialScreen(grant, initialItems));
   const [returnToReview, setReturnToReview] = useState(false);
   const [description, setDescription] = useState(grant?.impact_statement || grant?.title || '');
@@ -174,11 +176,14 @@ export const GrantForm = ({
     setError(null);
   };
 
+  const grantsListPath = () =>
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/grants')
+      ? '/grants'
+      : '/portal';
+
   const rememberDraftUrl = (id: string) => {
     if (typeof window === 'undefined') return;
-    const nextPath = window.location.pathname.startsWith('/grants')
-      ? `/grants/${id}`
-      : `/portal/${id}`;
+    const nextPath = `${grantsListPath()}/${id}`;
     if (window.location.pathname !== nextPath) {
       window.history.replaceState(window.history.state, '', nextPath);
     }
@@ -412,6 +417,7 @@ export const GrantForm = ({
           return;
         }
         if (result?.grantId) recordSavedDraft(result.grantId);
+        router.push(grantsListPath());
         return;
       }
 

@@ -41,5 +41,16 @@
 	],
 	"vars": {
 		"APP_PUBLIC_URL": "https://grants.bheeagles.com"
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.1
+		}
 	}
 }

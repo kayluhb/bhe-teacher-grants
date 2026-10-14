@@ -66,10 +66,13 @@ export const ItemDetailsStep = ({
               <input
                 className={inputClass}
                 min={0}
-                onChange={(event) => onChange({unit_price: Number(event.target.value)})}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  onChange({unit_price: raw === '' ? Number.NaN : Number(raw)});
+                }}
                 step="0.01"
                 type="number"
-                value={item.unit_price}
+                value={Number.isFinite(item.unit_price) ? item.unit_price : ''}
               />
             </label>
           </div>

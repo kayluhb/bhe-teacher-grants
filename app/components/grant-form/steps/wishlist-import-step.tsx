@@ -2,6 +2,74 @@ import {StepShell} from '~/components/grant-form/step-shell';
 import {inputClass} from '~/components/grant-form/types';
 import {canImportWishlist, wishlistUrlGuidance} from '~/lib/wishlist';
 
+const DownloadListGuide = () => (
+  <ol className="grid gap-3 sm:grid-cols-3">
+    <li className="rounded-lg border border-gray-200 bg-white p-3">
+      <p className="font-body flex items-center gap-2 text-xs font-medium text-charcoal">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-eagle-blue text-[11px] font-semibold text-white"
+        >
+          1
+        </span>
+        Open your list → click More
+      </p>
+      <div className="mt-3 rounded-md border border-gray-200 bg-warm-white px-2.5 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-body truncate text-[11px] text-gray-500">Classroom list</span>
+          <span className="inline-flex items-center gap-1 rounded border-2 border-amber-500 bg-white px-1.5 py-0.5 text-[11px] font-medium text-charcoal shadow-sm">
+            More
+            <span aria-hidden="true" className="text-[9px] text-gray-500">
+              ▾
+            </span>
+          </span>
+        </div>
+      </div>
+    </li>
+    <li className="rounded-lg border border-gray-200 bg-white p-3">
+      <p className="font-body flex items-center gap-2 text-xs font-medium text-charcoal">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-eagle-blue text-[11px] font-semibold text-white"
+        >
+          2
+        </span>
+        Choose Download list
+      </p>
+      <ul className="font-body mt-3 overflow-hidden rounded-md border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm">
+        <li className="border-b border-gray-100 px-2.5 py-1.5">Manage list</li>
+        <li className="border-b border-gray-100 px-2.5 py-1.5">Print list</li>
+        <li className="border-2 border-amber-500 bg-amber-50 px-2.5 py-1.5 font-medium text-charcoal">
+          Download list
+        </li>
+      </ul>
+    </li>
+    <li className="rounded-lg border border-gray-200 bg-white p-3">
+      <p className="font-body flex items-center gap-2 text-xs font-medium text-charcoal">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-eagle-blue text-[11px] font-semibold text-white"
+        >
+          3
+        </span>
+        Upload that file here
+      </p>
+      <div className="mt-3 flex items-center gap-2 rounded-md border border-dashed border-eagle-blue/30 bg-eagle-blue/5 px-2.5 py-2">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded bg-emerald-600 text-[10px] font-bold text-white"
+        >
+          XLS
+        </span>
+        <div className="min-w-0">
+          <p className="font-body truncate text-[11px] font-medium text-charcoal">Wishlist.xlsx</p>
+          <p className="font-body text-[10px] text-gray-500">No Excel needed</p>
+        </div>
+      </div>
+    </li>
+  </ol>
+);
+
 export const WishlistImportStep = ({
   importError,
   importIndeterminate,
@@ -69,12 +137,13 @@ export const WishlistImportStep = ({
         <summary className="font-body cursor-pointer text-sm font-medium text-charcoal">
           URL not working? Upload Amazon’s download file instead
         </summary>
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-3">
           <p className="font-body text-xs text-gray-600">
             On Amazon, open the list → <span className="font-medium text-charcoal">More</span> →{' '}
             <span className="font-medium text-charcoal">Download list</span>. Then upload the file
             Amazon gives you here. You do not need Excel — just upload that download.
           </p>
+          <DownloadListGuide />
           <div className="flex flex-wrap items-center gap-3">
             <label
               className={`btn btn-secondary cursor-pointer gap-2 ${importing ? 'pointer-events-none opacity-60' : ''}`}

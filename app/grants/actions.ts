@@ -49,7 +49,7 @@ export const saveGrantAction = async (formData: FormData) => {
 
   revalidatePath('/grants');
   revalidatePath('/portal');
-  redirect(grantPath(user.role, result.grantId));
+  redirect(user.role === 'teacher' ? '/portal' : '/grants');
 };
 
 /** Silent draft save for the guided form — no redirect. */

@@ -40,7 +40,7 @@ export const emptyItem = (): DraftItem => ({
   item_description: '',
   quantity: 1,
   source: 'MANUAL',
-  unit_price: 0,
+  unit_price: Number.NaN,
 });
 
 export const inputClass =

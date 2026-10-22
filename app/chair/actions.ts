@@ -14,7 +14,7 @@ import {requireChairman} from '~/lib/auth';
 import {isChairManualStepId, setManualProcessStep} from '~/lib/chair-process-status';
 import {getDb} from '~/lib/db';
 import {notifyQuietly, sendEmail} from '~/lib/email';
-import {buildEvaluationInstructionsEmail, evaluationVoterEmails} from '~/lib/evaluation-email';
+import {evaluationEmailFromDraft, evaluationVoterEmails} from '~/lib/evaluation-email';
 import {cycleInputFromFormData} from '~/lib/grant-cycle';
 import {decideGrant, getGrant, listChairQueue, listReviewerRows} from '~/lib/grants';
 import type {CycleRow} from '~/lib/types';
@@ -134,25 +134,10 @@ export const sendEvaluationInstructionsAction = async (
 
   const reviewers = await listReviewerRows(db, cycleId);
   const to = evaluationVoterEmails(reviewers);
-  const stats = await db
-    .prepare(
-      `SELECT COUNT(*) AS count, COALESCE(SUM(requested_amount), 0) AS total
-       FROM grants
-       WHERE cycle_id = ? AND status = 'PENDING'`,
-    )
-    .bind(cycleId)
-    .first<{count: number; total: number}>();
-  const principal = reviewers.find((row) => row.seat === 'principal');
-
-  const email = buildEvaluationInstructionsEmail({
-    applicationCount: Number(stats?.count ?? 0),
-    budgetLimit: cycle.budget_limit,
+  const email = evaluationEmailFromDraft({
+    body: String(formData.get('body') || ''),
     chairmanEmail: user.email,
-    principalName: principal?.name ?? '',
-    requestedTotal: Number(stats?.total ?? 0),
-    reviewEndsAt: cycle.review_ends_at,
-    schoolYear: cycle.school_year,
-    semester: cycle.semester,
+    subject: String(formData.get('subject') || ''),
     to,
   });
   if ('error' in email) return email;
@@ -161,6 +146,11 @@ export const sendEvaluationInstructionsAction = async (
   if (!sent) {
     return {error: 'Could not send the email. Try again or copy the template below.'};
   }
+  await db
+    .prepare(`UPDATE grant_cycles SET evaluation_instructions_sent_at = ? WHERE id = ?`)
+    .bind(new Date().toISOString(), cycleId)
+    .run();
+  revalidatePath('/chair');
   return {sent: email.to.length};
 };
 

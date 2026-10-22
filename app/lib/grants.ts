@@ -9,7 +9,7 @@ import {
   variance,
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
-import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
+import {isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
 import {grantFileKeys} from '~/lib/grant-files';
 import {finiteMoney, money} from '~/lib/money';
@@ -505,19 +505,10 @@ export const decideGrant = async (
   if (!grant) return {error: 'Grant not found.'};
   if (grant.status !== 'PENDING') return {error: 'This grant is no longer awaiting a decision.'};
 
-  const cycle = await db
-    .prepare('SELECT * FROM grant_cycles WHERE id = ?')
-    .bind(grant.cycle_id)
-    .first<CycleRow>();
-  if (!cycle) return {error: 'Grant window not found.'};
-
   const reviewers = await listReviewerRows(db, grant.cycle_id);
   const chairman = reviewers.find((row) => row.seat === 'chairman');
-  const tally = await grantTally(db, grant);
   const error = validateChairDecision({
-    complete: tally.complete,
     isChairman: isChairActor(input.chairman, chairman?.userId),
-    reviewStarted: hasReviewStarted(cycle),
   });
   if (error) return {error};
 

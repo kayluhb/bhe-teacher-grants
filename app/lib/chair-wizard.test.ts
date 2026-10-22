@@ -7,18 +7,12 @@ import {
 import {
   CHAIR_PROCESS_STEP_IDS,
   type ChairProcessStepStatusMap,
+  EMPTY_CHAIR_PROCESS_SNAPSHOT,
   resolveChairProcessStepStatus,
 } from '~/lib/chair-process-status';
 
 const allPending = (): ChairProcessStepStatusMap =>
-  resolveChairProcessStepStatus({
-    approvedOpenCount: 0,
-    cycle: null,
-    decidedCount: 0,
-    manualDoneStepIds: [],
-    pendingCount: 0,
-    seats: [],
-  });
+  resolveChairProcessStepStatus(EMPTY_CHAIR_PROCESS_SNAPSHOT);
 
 describe('CHAIR_PROGRESS_LABELS', () => {
   it('has one short label per chair process step', () => {
@@ -55,7 +49,6 @@ describe('chairStepCompletedFlags', () => {
     expect(chairStepCompletedFlags(statuses)).toEqual([
       true,
       true,
-      false,
       false,
       false,
       false,

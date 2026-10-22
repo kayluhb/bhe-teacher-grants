@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {buildEvaluationInstructionsEmail, evaluationVoterEmails} from '~/lib/evaluation-email';
+import {
+  buildEvaluationInstructionsEmail,
+  evaluationEmailFromDraft,
+  evaluationVoterEmails,
+} from '~/lib/evaluation-email';
 
 describe('evaluationVoterEmails', () => {
   it('returns unique emails for voting seats and skips the chair', () => {
@@ -54,5 +58,32 @@ describe('buildEvaluationInstructionsEmail', () => {
     expect(buildEvaluationInstructionsEmail({...base, to: []})).toEqual({
       error: 'Add committee members before emailing evaluation instructions.',
     });
+  });
+});
+
+describe('evaluationEmailFromDraft', () => {
+  it('sends the chair’s edited subject and body', () => {
+    const email = evaluationEmailFromDraft({
+      body: 'Please rank by Friday.',
+      chairmanEmail: 'chair@bheeagles.com',
+      subject: 'Ranks due Friday',
+      to: ['principal@austinisd.org'],
+    });
+    if ('error' in email) throw new Error(email.error);
+    expect(email.subject).toBe('Ranks due Friday');
+    expect(email.html).toContain('Please rank by Friday.');
+    expect(email.replyTo).toEqual(['chair@bheeagles.com']);
+    expect(email.to).toEqual(['principal@austinisd.org']);
+  });
+
+  it('rejects an empty draft', () => {
+    expect(
+      evaluationEmailFromDraft({
+        body: '   ',
+        chairmanEmail: 'chair@bheeagles.com',
+        subject: 'Hello',
+        to: ['principal@austinisd.org'],
+      }),
+    ).toEqual({error: 'Add a subject and message before sending.'});
   });
 });

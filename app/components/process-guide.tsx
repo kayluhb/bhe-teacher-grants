@@ -122,19 +122,21 @@ export const ChairProcessGuide = ({
   cycleId,
   statuses,
   templateValues,
+  templateValuesById,
 }: {
   cycleId?: string;
   statuses?: Partial<Record<ChairProcessStepId, StepStatus>>;
   templateValues?: Record<string, string>;
+  templateValuesById?: Record<string, Record<string, string>>;
 } = {}) => (
   <div className="space-y-10" data-tour="chair-playbook">
     <div>
       <h2 className="font-heading text-2xl font-bold text-charcoal">Chair playbook</h2>
       <p className="font-body mt-1 text-gray-600">
-        Full-cycle checklist from teacher launch through outcome stories — what you do here,
-        what to coordinate with Admin (school years) or the Treasurer, and copyable email templates
-        on each outreach step. Status reflects the active grant window; mark the email/outreach
-        steps when you finish them.
+        Full-cycle checklist from teacher launch through outcome stories — what you do here, what to
+        coordinate with Admin (school years) or the Treasurer, and copyable email templates on each
+        outreach step. Status reflects the active grant window; mark the email/outreach steps when
+        you finish them.
       </p>
     </div>
     <section>
@@ -144,6 +146,7 @@ export const ChairProcessGuide = ({
         statuses={statuses}
         steps={CHAIR_PROCESS_STEPS}
         templateValues={templateValues}
+        templateValuesById={templateValuesById}
       />
     </section>
   </div>
@@ -151,8 +154,10 @@ export const ChairProcessGuide = ({
 
 export const ProcessGuide = ({
   templateValues,
+  templateValuesById,
 }: {
   templateValues?: Record<string, string>;
+  templateValuesById?: Record<string, Record<string, string>>;
 } = {}) => (
   <div className="space-y-10" data-tour="process-guide">
     <div>
@@ -165,7 +170,11 @@ export const ProcessGuide = ({
 
     <section>
       <h3 className="font-heading mb-4 text-xl font-bold text-charcoal">Cycle steps</h3>
-      <ProcessStepList steps={PROCESS_STEPS} templateValues={templateValues} />
+      <ProcessStepList
+        steps={PROCESS_STEPS}
+        templateValues={templateValues}
+        templateValuesById={templateValuesById}
+      />
     </section>
 
     <CommitteeComposition />

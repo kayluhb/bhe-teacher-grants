@@ -129,13 +129,17 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
         </ul>
       </div>
 
-      {grant.status !== 'PENDING' ? null : tally.complete ? (
-        <ChairDecisionForm grantId={grant.id} />
-      ) : (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Waiting on {tally.notVoted} reviewer{tally.notVoted === 1 ? '' : 's'} before a decision
-          can be recorded.
-        </p>
+      {grant.status !== 'PENDING' ? null : (
+        <div className="space-y-3">
+          {tally.complete ? null : (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {tally.notVoted > 0
+                ? `Ranks are still coming in (${tally.notVoted} not ranked). You can approve or reject now.`
+                : 'No reviewers are seated yet. You can still approve or reject this grant.'}
+            </p>
+          )}
+          <ChairDecisionForm grantId={grant.id} />
+        </div>
       )}
     </div>
   );

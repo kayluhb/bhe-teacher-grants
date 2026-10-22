@@ -24,9 +24,9 @@ export const ChairDecisionForm = ({grantId}: {grantId: string}) => {
       <input name="grant_id" type="hidden" value={grantId} />
       <p className="font-heading font-semibold text-charcoal">Official decision</p>
       <p className="text-sm text-gray-600">
-        You may follow the tally or override it. The teacher is emailed automatically after you
-        record the outcome. A comment is stored with a rejection and included in the rejection
-        email.
+        You can approve or reject before every reviewer has ranked. The teacher is emailed
+        automatically after you record the outcome. A comment is stored with a rejection and
+        included in the rejection email.
       </p>
       <RadioGroup
         aria-label="Official decision"

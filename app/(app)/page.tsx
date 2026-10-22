@@ -5,7 +5,8 @@ import {StatCard} from '~/components/stat-card';
 import {requireAuth} from '~/lib/auth';
 import {getCycleBudget} from '~/lib/budget';
 import {getDb} from '~/lib/db';
-import {cycleEmailPlaceholders} from '~/lib/email-template-fill';
+import {emailPlaceholdersByTemplateId} from '~/lib/email-template-fill';
+import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle, listGrants} from '~/lib/grants';
 import {formatUsd} from '~/lib/money';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
@@ -29,20 +30,26 @@ export default async function HomePage() {
 
   const awaitingVote = pending.filter((grant) => grant.status === 'PENDING').length;
   const awaitingPurchase = approved.filter((grant) => grant.status === 'APPROVED').length;
-  const showPending =
-    user.role === 'committee' || user.role === 'admin' || user.role === 'principal';
+  const canReview = portals.includes('reviewer');
+  const showPending = canReview || user.role === 'admin';
   const showPurchase = user.role === 'admin';
   const showStats = showPending || showPurchase || Boolean(budget);
+  const submissionOpen = Boolean(cycle && isSubmissionOpen(cycle));
 
-  const templateValues = cycle ? cycleEmailPlaceholders(cycle) : undefined;
-  const guide =
-    user.role === 'teacher' ? (
-      <TeacherProcessGuide />
-    ) : user.role === 'committee' || user.role === 'principal' ? (
-      <CommitteeProcessGuide />
-    ) : (
-      <ProcessGuide templateValues={templateValues} />
-    );
+  const templateValuesById = cycle
+    ? emailPlaceholdersByTemplateId({
+        budgetLimit: cycle.budget_limit,
+        chairName: user.role === 'admin' || user.role === 'chair' ? user.name : undefined,
+        endsAt: cycle.ends_at,
+        reviewEndsAt: cycle.review_ends_at,
+        school_year: cycle.school_year,
+        semester: cycle.semester,
+      })
+    : undefined;
+  const showTeacherGuide = portals.includes('teacher');
+  const showPrincipalHome = user.role === 'principal';
+  const showCommitteeGuide = canReview && !showPrincipalHome && user.role !== 'admin';
+  const showAdminGuide = user.role === 'admin';
 
   return (
     <div className="space-y-10">
@@ -52,15 +59,25 @@ export default async function HomePage() {
             Welcome, {user.name.split(' ')[0]}
           </h1>
           <p className="font-body mt-1 text-gray-600">
-            {cycle ? `${cycle.name} is open.` : 'No grant window is open right now.'}
+            {cycle
+              ? submissionOpen
+                ? `${cycle.name} is open for new requests.`
+                : `${cycle.name} is active — submissions are closed.`
+              : 'No grant window is open right now.'}
           </p>
+          {showPrincipalHome ? (
+            <p className="font-body mt-2 max-w-2xl text-gray-600">
+              Rank each request in Review. In the comment, note any request that should not move
+              forward for a school-related reason.
+            </p>
+          ) : null}
         </div>
 
         {showStats ? (
           <div className="grid gap-4 md:grid-cols-3">
             {showPending ? (
               <StatCard
-                hint="Need a vote"
+                hint={user.role === 'admin' ? 'Need a rank or decision' : 'Need your rank'}
                 label="Pending grants"
                 tone="gold"
                 tour="stat-pending"
@@ -88,7 +105,7 @@ export default async function HomePage() {
         ) : null}
 
         <div className="flex flex-wrap gap-3">
-          {user.role === 'teacher' ? (
+          {showTeacherGuide ? (
             <Link className="btn btn-primary" href="/portal">
               My grants
             </Link>
@@ -98,9 +115,9 @@ export default async function HomePage() {
               Submit grant
             </Link>
           ) : null}
-          {user.role === 'committee' || user.role === 'admin' || user.role === 'principal' ? (
+          {canReview ? (
             <Link className="btn btn-brand" data-tour="home-review" href="/review">
-              Review queue
+              Review
             </Link>
           ) : null}
           {user.role === 'admin' ? (
@@ -111,7 +128,9 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {guide}
+      {showTeacherGuide ? <TeacherProcessGuide /> : null}
+      {showCommitteeGuide ? <CommitteeProcessGuide /> : null}
+      {showAdminGuide ? <ProcessGuide templateValuesById={templateValuesById} /> : null}
     </div>
   );
 }

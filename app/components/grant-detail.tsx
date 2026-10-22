@@ -52,17 +52,37 @@ export const GrantDetail = ({
       </div>
 
       {showEditor && cycle ? (
-        <GrantForm
-          applicant={{email: grant.teacher_email, name: grant.teacher_name}}
-          cycleId={cycle.id}
-          cycleName={cycle.name}
-          grant={grant}
-          items={items}
-        />
+        <div className="space-y-4">
+          {grant.status === 'PENDING' ? (
+            <p
+              className="rounded-xl border border-eagle-blue/20 bg-eagle-blue/5 px-4 py-3 text-sm text-night-blue"
+              role="status"
+            >
+              This request is submitted. You can still edit it until committee review starts — then
+              it locks for ranking.
+            </p>
+          ) : null}
+          <GrantForm
+            applicant={{email: grant.teacher_email, name: grant.teacher_name}}
+            cycleId={cycle.id}
+            cycleName={cycle.name}
+            grant={grant}
+            items={items}
+          />
+        </div>
       ) : null}
 
       {!showEditor ? (
         <div className="space-y-6">
+          {grant.status === 'PENDING' ? (
+            <p
+              className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600"
+              role="status"
+            >
+              Committee review has started, so this request is locked. You will get an email when a
+              decision is recorded.
+            </p>
+          ) : null}
           <GrantNarrative grant={grant} />
           <div className="grid gap-3 md:grid-cols-3">
             <StatCard
@@ -81,7 +101,9 @@ export const GrantDetail = ({
               value={grant.approved_amount == null ? '—' : formatUsd(grant.approved_amount)}
             />
             <StatCard
-              hint={grant.actual_amount == null ? 'Recorded after the PTA buys' : 'What the PTA paid'}
+              hint={
+                grant.actual_amount == null ? 'Recorded after the PTA buys' : 'What the PTA paid'
+              }
               label="Actual"
               tone={grant.actual_amount == null ? 'default' : 'green'}
               value={grant.actual_amount == null ? '—' : formatUsd(grant.actual_amount)}
@@ -90,7 +112,8 @@ export const GrantDetail = ({
           <div>
             <h2 className="font-heading text-lg font-semibold text-charcoal">Requested items</h2>
             <p className="font-body mt-1 mb-3 text-sm text-gray-600">
-              Prices are estimates from when this was submitted. Checkout may come in higher or lower.
+              Prices are estimates from when this was submitted. Checkout may come in higher or
+              lower.
             </p>
             <GrantRequestedItems items={items} />
           </div>

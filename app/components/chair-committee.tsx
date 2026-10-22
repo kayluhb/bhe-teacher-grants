@@ -11,6 +11,7 @@ export const ChairCommittee = ({
   cycleLabel,
   embedded = false,
   officerIds,
+  officers,
   people,
   selected,
 }: {
@@ -19,6 +20,7 @@ export const ChairCommittee = ({
   /** Drop outer card chrome when nested inside the chair wizard step shell. */
   embedded?: boolean;
   officerIds: string[];
+  officers: (DirectoryPerson & {seat: 'principal' | 'treasurer'})[];
   people: DirectoryPerson[];
   selected: DirectoryPerson[];
 }) => {
@@ -49,6 +51,10 @@ export const ChairCommittee = ({
       </div>
       <CommitteePicker
         excludeIds={officerIds}
+        locked={officers.map((person) => ({
+          ...person,
+          label: person.seat === 'principal' ? 'Principal' : 'Treasurer',
+        }))}
         onAdd={async ({email, name}) => {
           const result = await addCommitteeMemberAction(cycleId, email, name);
           if ('error' in result) return result;

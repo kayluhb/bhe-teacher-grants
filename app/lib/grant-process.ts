@@ -31,7 +31,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
     id: 'committee',
     label: 'Recruit & confirm the Grant Committee',
     description:
-      'Confirm your five-member committee through PTA. Officers are set in Admin; add remaining members in Chair. See the committee composition rules and alternate guidelines below.',
+      'Confirm your five-member committee through PTA. Officers are set in Admin; add remaining members in the Chair stepped playbook. See the committee composition rules and alternate guidelines below.',
     href: '#committee-composition',
     linkLabel: 'View composition rules',
   },
@@ -39,36 +39,36 @@ export const PROCESS_STEPS: ProcessStep[] = [
     id: 'monitor',
     label: 'Monitor submissions',
     description:
-      'Keep an eye on incoming applications. Send a reminder to Kati before the deadline if needed.',
+      'Keep an eye on incoming applications in Grants (or on the Monitor step in Chair). Send a reminder to Kati before the deadline if needed.',
     href: '/grants',
     linkLabel: 'View all grants',
     templateIds: ['reminder-kati'],
   },
   {
-    id: 'vote',
+    id: 'review',
     label: 'Request committee ranks',
     description:
-      'When the review window opens, committee members receive an automated email. Send evaluation instructions from Chair (or copy the template here) so reviewers understand the scoring criteria.',
+      'When the review window opens, committee members receive an automated email. In Chair, open the Review step and send evaluation instructions. Sending marks that step done.',
     href: '/chair',
-    linkLabel: 'Open Chair',
+    linkLabel: 'Open Chair playbook',
     templateIds: ['evaluation-instructions'],
   },
   {
     id: 'decide',
     label: 'Record decisions & email applicants',
     description:
-      'After all required ranks are in, record the official outcome for each grant. The app automatically emails approved and rejected teachers; the templates here are for reference.',
+      'Use the Decide step in Chair to approve or reject each submitted grant. You can decide before every rank is in. The app emails approved and rejected teachers; the templates here are for reference.',
     href: '/chair',
-    linkLabel: 'Open Chair',
+    linkLabel: 'Open Chair playbook',
     templateIds: ['approval', 'rejection'],
   },
   {
     id: 'fulfill',
-    label: 'Track reimbursements & spending',
+    label: 'Track purchases & reimbursements',
     description:
-      'Work with the Treasurer to track purchase submissions and send reminders to teachers about the 3–4 week reimbursement deadline.',
+      'On Fulfillment, buy approved items, record actual prices from receipts, and add tracking. Remind teachers about the 3–4 week window.',
     href: '/fulfill',
-    linkLabel: 'Open Fulfill',
+    linkLabel: 'Open Fulfillment',
   },
   {
     id: 'stories',
@@ -172,7 +172,7 @@ export const TEACHER_PROCESS_STEPS: ProcessStep[] = [
     id: 'apply',
     label: 'Submit your request',
     description:
-      'While a grant window is open, open My grants and submit a request. Classroom, grade-level, and school-wide ideas are all welcome. Keep item estimates handy — the form is short.',
+      'While a grant window is open, open My grants and submit a request. Classroom, grade-level, and school-wide ideas are all welcome. Keep item estimates handy — the form is short. You can reopen a submitted request and edit it anytime until committee review starts.',
     href: '/portal/new',
     linkLabel: 'Start a request',
   },
@@ -180,7 +180,7 @@ export const TEACHER_PROCESS_STEPS: ProcessStep[] = [
     id: 'wait',
     label: 'Wait for committee review',
     description:
-      'After the submission window closes, the Grant Committee ranks each request. You will get an email when a decision is recorded — check My grants anytime for status.',
+      'You can keep editing your submitted request until the review window opens. After that it locks for ranking. You will get an email when a decision is recorded — check My grants anytime for status.',
     href: '/portal',
     linkLabel: 'View my grants',
   },
@@ -223,19 +223,13 @@ export const COMMITTEE_PROCESS_STEPS: ProcessStep[] = [
     id: 'rank',
     label: 'Rank each grant',
     description:
-      'Mark High, Medium, or Low priority — or Abstain if you have a conflict of interest. The goal is to fund as much as possible; rankings help sequence spending if the budget is tight.',
+      'Mark High, Medium, or Low priority — or Abstain if you have a conflict of interest. Add an optional comment for context (principals: note any school-related concerns here). The goal is to fund as much as possible; rankings help sequence spending if the budget is tight.',
   },
   {
     id: 'criteria',
     label: 'Use the evaluation questions',
     description:
       'Score with student impact, innovation, how many students benefit, and whether the project already received PTA funding this year in mind. The five questions are listed below.',
-  },
-  {
-    id: 'principal',
-    label: 'Principal flags (principal only)',
-    description:
-      'If you are the principal seat, flag any request that should not move forward for school-related reasons and leave a brief note.',
   },
 ];
 
@@ -261,32 +255,22 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     id: 'monitor',
     label: 'Monitor submissions',
     description:
-      'Watch incoming applications while the submission window is open. If volume is low, ask Kati to send the reminder template to staff.',
-    href: '/grants',
-    linkLabel: 'View all grants',
+      'Watch incoming applications on this step while the submission window is open. If volume is low, ask Kati to send the reminder template to staff.',
     templateIds: ['reminder-kati'],
   },
   {
     id: 'review',
     label: 'Open review & send evaluation instructions',
     description:
-      'When the review window opens, committee members get an automated email. Also send evaluation instructions from this step, then follow up so ranks arrive on time. A grant is ready to decide only after every required reviewer has ranked or abstained.',
+      'When the review window opens, committee members get an automated email. Send evaluation instructions from this step — that marks this step done. You can still follow up on ranks, and you can approve or reject a grant before every reviewer has ranked.',
     templateIds: ['evaluation-instructions'],
   },
   {
     id: 'decide',
     label: 'Record decisions',
     description:
-      'Open each ready grant in the Chair queue and approve or reject. The app emails the teacher either way — approvals include purchase next steps; rejections can include your note. You do not need to send those emails by hand.',
+      'Open any submitted grant and approve or reject it, including before every rank is in. The app emails the teacher either way — approvals include purchase next steps; rejections can include your note. You do not need to send those emails by hand.',
     templateIds: ['approval', 'rejection'],
-  },
-  {
-    id: 'fulfill',
-    label: 'Track reimbursements & spending',
-    description:
-      'Coordinate with the Treasurer on Fulfill: purchase submissions, reimbursements, and reminders so teachers finish within the 3–4 week window.',
-    href: '/fulfill',
-    linkLabel: 'Open Fulfill',
   },
   {
     id: 'stories',
@@ -435,7 +419,7 @@ For each grant, indicate:
 
 There's no required distribution — you can mark as many "High Priority" as you feel are warranted. We're not looking to reject grants; we're simply organizing our funding approach.
 
-Principal's Role: [PRINCIPAL NAME], please review each application and flag any grants that shouldn't move forward for school-related reasons, along with a brief note.
+Principal's Role: [PRINCIPAL NAME], please review each application and leave a comment on any grant that shouldn't move forward for school-related reasons.
 
 How to Access the Review Portal:
 1. Visit https://grants.bheeagles.com/ and sign in with your email

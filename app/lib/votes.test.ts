@@ -119,21 +119,13 @@ describe('isChairActor', () => {
 });
 
 describe('validateChairDecision', () => {
-  it('allows the chairman to decide once review is complete', () => {
-    expect(
-      validateChairDecision({complete: true, isChairman: true, reviewStarted: true}),
-    ).toBeNull();
+  it('allows the chairman to decide before ranks are in', () => {
+    expect(validateChairDecision({isChairman: true})).toBeNull();
   });
 
   it('rejects a non-chairman', () => {
-    expect(validateChairDecision({complete: true, isChairman: false, reviewStarted: true})).toBe(
+    expect(validateChairDecision({isChairman: false})).toBe(
       'Only the chairman can record the official outcome.',
-    );
-  });
-
-  it('rejects an incomplete roster', () => {
-    expect(validateChairDecision({complete: false, isChairman: true, reviewStarted: true})).toBe(
-      'Every required reviewer must rank first.',
     );
   });
 });

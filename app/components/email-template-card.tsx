@@ -111,7 +111,7 @@ export const EmailTemplateCard = ({
           ) : (
             <p className="font-body text-sm text-gray-600">
               {template.id === 'approval' || template.id === 'rejection'
-                ? 'Edit this if you want a different copy to paste. Recording a decision still sends the app’s own email.'
+                ? 'This letter is filled in on each grant. You review and edit that email before it sends.'
                 : 'Edit this before you copy it. Changes stay on this page until you leave.'}
             </p>
           )}

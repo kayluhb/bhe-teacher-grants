@@ -7,6 +7,8 @@ const approved = {
   chairmanEmail: 'laurin@bheeagles.com',
   chairmanName: 'Laurin Samuelson',
   outcome: 'APPROVED' as const,
+  schoolYear: '2026-27',
+  semester: 'FALL' as const,
   teacherEmail: 'caroline.smith@austinisd.org',
   teacherName: 'Caroline Smith',
   title: 'Kinder Classroom Supplies',
@@ -23,7 +25,9 @@ describe('teacherGrantDecisionEmail — approval', () => {
     expect(email.to).toBe(approved.teacherEmail);
     expect(email.replyTo).toEqual([approved.chairmanEmail, TREASURER_EMAIL]);
     expect(email.subject).toContain('Congratulations');
-    expect(email.subject).toContain('approved');
+    expect(email.subject).toContain('Approved');
+    expect(email.subject).toContain('Caroline');
+    expect(email.subject).toContain('Fall 2026-2027');
   });
 
   it('greets the teacher by first name and fills amount, title, and committee signature', () => {
@@ -35,7 +39,8 @@ describe('teacherGrantDecisionEmail — approval', () => {
     expect(html).toContain('Laurin Samuelson');
     expect(html).toContain('BHE PTA Grant Committee');
     expect(html).toContain(TREASURER_EMAIL);
-    expect(html).toContain('https://bheeagles.com/reimbursement');
+    expect(html).toContain('bheeagles.com/reimbursement');
+    expect(html).not.toContain('href=');
   });
 
   it('includes the three payment options', () => {
@@ -71,7 +76,8 @@ describe('teacherGrantDecisionEmail — rejection', () => {
 
   it('has an appropriate subject', () => {
     const email = teacherGrantDecisionEmail(rejected);
-    expect(email.subject).toContain('Kinder Classroom Supplies');
+    expect(email.subject).toContain('Grant Application');
+    expect(email.subject).toContain('Fall 2026-2027');
     expect(email.subject).not.toContain('Congratulations');
   });
 
@@ -103,5 +109,18 @@ describe('teacherGrantDecisionEmail — rejection', () => {
     }).html;
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('sends the subject and message the chair reviewed', () => {
+    const email = teacherGrantDecisionEmail({
+      ...approved,
+      body: 'Hello Caroline!\n\nYou are funded for Art & "Music" <supplies>.',
+      subject: 'Approved: Kinder Classroom Supplies',
+    });
+    expect(email.subject).toBe('Approved: Kinder Classroom Supplies');
+    expect(email.html).toContain(
+      'You are funded for Art &amp; &quot;Music&quot; &lt;supplies&gt;.',
+    );
+    expect(email.html).not.toContain('Next Steps');
   });
 });

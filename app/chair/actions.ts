@@ -75,6 +75,16 @@ export const decideGrantAction = async (formData: FormData) => {
 
   const grantId = String(formData.get('grant_id') || '');
   const comment = String(formData.get('comment') || '') || null;
+  const subject = String(formData.get('subject') || '').trim();
+  const body = String(formData.get('body') || '')
+    .replaceAll('\r\n', '\n')
+    .trim();
+  if (!subject || !body) {
+    return {error: 'Review the email to the teacher before you record the decision.'};
+  }
+  if (subject.length > 300) return {error: 'Subject is too long.'};
+  if (body.length > 20_000) return {error: 'Message is too long.'};
+
   const db = getDb();
   const result = await decideGrant(db, {
     chairman: user,
@@ -88,10 +98,14 @@ export const decideGrantAction = async (formData: FormData) => {
   if (grant) {
     const email = teacherGrantDecisionEmail({
       amount: grant.approved_amount ?? grant.requested_amount,
+      body,
       chairmanEmail: user.email,
       chairmanName: user.name,
       outcome: result.status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
       rejectionComment: result.status === 'REJECTED' ? comment : null,
+      schoolYear: grant.school_year,
+      semester: grant.semester,
+      subject,
       teacherEmail: grant.teacher_email,
       teacherName: grant.teacher_name,
       title: grant.title,

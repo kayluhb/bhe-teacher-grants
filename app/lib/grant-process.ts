@@ -434,7 +434,7 @@ Thank you for helping us support our wonderful BHE teachers!`,
     id: 'approval',
     label: 'Approval — email to teacher',
     tab: 'Approval',
-    when: 'Sent automatically by the app when the chair records an approval. Shown here for reference.',
+    when: 'Filled in on the grant when you record an approval. You can edit it there before it sends.',
     subject: '🎉 Congratulations [NAME]! Your Grant Has Been Approved – [SEMESTER] [YEAR]',
     body: `Hello [NAME]!
 
@@ -468,7 +468,7 @@ Best,
     id: 'rejection',
     label: 'Rejection — email to teacher',
     tab: 'Rejection',
-    when: 'Sent automatically by the app when the chair records a rejection. Shown here for reference.',
+    when: 'Filled in on the grant when you record a rejection. You can edit it there before it sends.',
     subject: 'Update on Your Grant Application – [SEMESTER] [YEAR]',
     body: `Hello [NAME],
 

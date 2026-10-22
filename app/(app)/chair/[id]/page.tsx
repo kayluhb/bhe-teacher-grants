@@ -4,6 +4,7 @@ import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantNotes} from '~/components/grant-notes';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
 import {StatusPill} from '~/components/status-pill';
+import {decisionEmailDraft} from '~/lib/approval-email';
 import {getSession, requireChairman} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {canAuthorGrantNote, canMutateGrantNote, listGrantNotes} from '~/lib/grant-notes';
@@ -138,7 +139,30 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
                 : 'No reviewers are seated yet. You can still approve or reject this grant.'}
             </p>
           )}
-          <ChairDecisionForm grantId={grant.id} />
+          <ChairDecisionForm
+            drafts={{
+              APPROVED: decisionEmailDraft({
+                amount: grant.requested_amount,
+                chairmanName: user.name,
+                outcome: 'APPROVED',
+                schoolYear: grant.school_year,
+                semester: grant.semester,
+                teacherName: grant.teacher_name,
+                title: grant.title,
+              }),
+              REJECTED: decisionEmailDraft({
+                amount: grant.requested_amount,
+                chairmanName: user.name,
+                outcome: 'REJECTED',
+                schoolYear: grant.school_year,
+                semester: grant.semester,
+                teacherName: grant.teacher_name,
+                title: grant.title,
+              }),
+            }}
+            grantId={grant.id}
+            teacherName={grant.teacher_name}
+          />
         </div>
       )}
     </div>

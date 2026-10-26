@@ -110,9 +110,7 @@ export const EmailTemplateCard = ({
             </div>
           ) : (
             <p className="font-body text-sm text-gray-600">
-              {template.id === 'approval' || template.id === 'rejection'
-                ? 'This letter is filled in on each grant. You review and edit that email before it sends.'
-                : 'Edit this before you copy it. Changes stay on this page until you leave.'}
+              Edit this before you copy it. Changes stay on this page until you leave.
             </p>
           )}
         </form>

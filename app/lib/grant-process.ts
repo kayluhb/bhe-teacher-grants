@@ -57,7 +57,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
     id: 'decide',
     label: 'Record decisions & email applicants',
     description:
-      'Use the Decide step in Chair to approve or reject each submitted grant. You can decide before every rank is in. The app emails approved and rejected teachers; the templates here are for reference.',
+      'Use the Decide step in Chair to approve or reject each submitted grant. You can decide before every rank is in. The email the teacher receives is on the grant, where you can edit it before it sends.',
     href: '/chair',
     linkLabel: 'Open Chair playbook',
     templateIds: ['approval', 'rejection'],
@@ -269,8 +269,7 @@ export const CHAIR_PROCESS_STEPS: ProcessStep[] = [
     id: 'decide',
     label: 'Record decisions',
     description:
-      'Open any submitted grant and approve or reject it, including before every rank is in. The app emails the teacher either way — approvals include purchase next steps; rejections can include your note. You do not need to send those emails by hand.',
-    templateIds: ['approval', 'rejection'],
+      'Open any submitted grant and approve or reject it, including before every rank is in. The email that teacher receives is on the grant, and you can edit it before it sends.',
   },
   {
     id: 'stories',

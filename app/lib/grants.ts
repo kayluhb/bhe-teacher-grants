@@ -1,4 +1,5 @@
 import type {User} from '~/lib/auth';
+import {CHAIR_DECIDED_STATUSES} from '~/lib/chair-decide';
 import {newId} from '~/lib/db';
 import {ownedDeliveryR2Key, ownedQuoteR2Key, ownedReceiptR2Key} from '~/lib/files';
 import {type ListSearch, pickListFilters} from '~/lib/filters';
@@ -835,6 +836,30 @@ export const listChairQueue = async (db: D1Database, user: {id: string; role: st
              ORDER BY g.created_at ASC`,
           )
           .bind(user.id)
+          .all<GrantRow>();
+  return attachPreviewImages(db, rows.results ?? []);
+};
+
+export const listChairDecided = async (db: D1Database, user: {id: string; role: string}) => {
+  const placeholders = CHAIR_DECIDED_STATUSES.map(() => '?').join(', ');
+  const rows =
+    user.role === 'chair'
+      ? await db
+          .prepare(
+            `${GRANT_SELECT}
+             WHERE g.status IN (${placeholders}) AND c.is_active = 1
+             ORDER BY g.updated_at DESC`,
+          )
+          .bind(...CHAIR_DECIDED_STATUSES)
+          .all<GrantRow>()
+      : await db
+          .prepare(
+            `${GRANT_SELECT}
+             JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ? AND r.seat = 'chairman'
+             WHERE g.status IN (${placeholders}) AND c.is_active = 1
+             ORDER BY g.updated_at DESC`,
+          )
+          .bind(user.id, ...CHAIR_DECIDED_STATUSES)
           .all<GrantRow>();
   return attachPreviewImages(db, rows.results ?? []);
 };

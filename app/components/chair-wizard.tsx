@@ -6,8 +6,11 @@ import {setManualProcessStepAction} from '~/chair/actions';
 import {ChairCommittee} from '~/components/chair-committee';
 import {FormProgress} from '~/components/grant-form/form-progress';
 import {StepNav, StepShell} from '~/components/grant-form/step-shell';
+import {GrantTable} from '~/components/grant-table';
+import {StatCard} from '~/components/stat-card';
 import {StepEmailTemplates} from '~/components/step-email-templates';
 import {TourGrantTable} from '~/components/tour-grant-table';
+import type {ChairDecideMoney} from '~/lib/chair-decide';
 import type {
   ChairProcessStepId,
   ChairProcessStepStatusMap,
@@ -25,6 +28,7 @@ import {
   type EmailTemplate,
   type ProcessStep,
 } from '~/lib/grant-process';
+import {formatUsd} from '~/lib/money';
 import type {DirectoryPerson} from '~/lib/people';
 import type {GrantRow} from '~/lib/types';
 import type {VoteTally} from '~/lib/votes';
@@ -38,6 +42,8 @@ type CommitteeWindow = {
   officers: CommitteeOfficer[];
   selected: DirectoryPerson[];
 };
+
+const grantCountLabel = (count: number) => `${count} ${count === 1 ? 'grant' : 'grants'}`;
 
 const templatesForStep = (step: ProcessStep, templates: EmailTemplate[]) =>
   (step.templateIds ?? [])
@@ -78,6 +84,8 @@ const ManualMarkDone = ({
 
 export const ChairWizard = ({
   committees,
+  decideMoney,
+  decidedGrants,
   evaluation,
   grants,
   people,
@@ -89,6 +97,8 @@ export const ChairWizard = ({
   templateValuesById,
 }: {
   committees: CommitteeWindow[];
+  decideMoney: ChairDecideMoney | null;
+  decidedGrants: GrantRow[];
   evaluation: {cycleId: string; instructionsSent: boolean; recipientCount: number} | null;
   grants: GrantRow[];
   people: DirectoryPerson[];
@@ -121,7 +131,7 @@ export const ChairWizard = ({
   };
 
   return (
-    <div className="mx-auto max-w-3xl" data-tour="chair-playbook">
+    <div className="w-full" data-tour="chair-playbook">
       <FormProgress completed={completed} currentStep={stepIndex} steps={CHAIR_PROGRESS_LABELS} />
 
       <div aria-live="polite" className="sr-only" role="status">
@@ -189,21 +199,63 @@ export const ChairWizard = ({
           ) : null}
 
           {stepId === 'decide' ? (
-            <section className="space-y-3" id="chair-queue">
-              <h3 className="font-heading text-lg font-semibold text-charcoal">Chair queue</h3>
-              <p className="font-body text-sm text-gray-600">
-                Open a submitted grant to approve or reject it. You can decide before every reviewer
-                has ranked.
-              </p>
-              <TourGrantTable
-                grants={grants}
-                hrefBase="/chair"
-                queue="chairman"
-                showOutcome={false}
-                showTeacher
-                showWindow={false}
-                tallyFor={(grant) => tallies[grant.id] ?? null}
-              />
+            <section className="space-y-6" id="chair-queue">
+              {decideMoney ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <StatCard
+                    hint={grantCountLabel(decideMoney.approvedCount)}
+                    label="Approved"
+                    tone="green"
+                    value={formatUsd(decideMoney.approvedAmount)}
+                  />
+                  <StatCard
+                    hint={grantCountLabel(decideMoney.pendingCount)}
+                    label="Pending"
+                    tone="gold"
+                    value={formatUsd(decideMoney.pendingAmount)}
+                  />
+                  <StatCard
+                    hint={`of ${formatUsd(decideMoney.budgetLimit)} budget`}
+                    label="Left"
+                    tone={decideMoney.leftAmount < 0 ? 'red' : 'green'}
+                    value={formatUsd(decideMoney.leftAmount)}
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg font-semibold text-charcoal">
+                  Still to decide
+                </h3>
+                <p className="font-body text-sm text-gray-600">
+                  Open a submitted grant to approve or reject it. You can decide before every
+                  reviewer has ranked.
+                </p>
+                <TourGrantTable
+                  grants={grants}
+                  hrefBase="/chair"
+                  queue="chairman"
+                  showOutcome={false}
+                  showTeacher
+                  showWindow={false}
+                  tallyFor={(grant) => tallies[grant.id] ?? null}
+                />
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg font-semibold text-charcoal">
+                  Already decided
+                </h3>
+                <p className="font-body text-sm text-gray-600">
+                  Open any row for the full grant: teacher, items, story, ranks, and the decision
+                  you recorded.
+                </p>
+                <GrantTable
+                  empty={<p>No decisions yet.</p>}
+                  grants={decidedGrants}
+                  hrefFor={(grant) => `/chair/${grant.id}`}
+                  showTeacher
+                  showWindow={false}
+                />
+              </div>
             </section>
           ) : null}
 

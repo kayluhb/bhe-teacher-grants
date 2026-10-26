@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {ChairWizard} from '~/components/chair-wizard';
 import {listCycleReviewers, listUsers} from '~/lib/admin';
 import {requireChairman} from '~/lib/auth';
+import {chairDecideMoney} from '~/lib/chair-decide';
 import {
   EMPTY_CHAIR_PROCESS_SNAPSHOT,
   loadChairProcessSnapshot,
@@ -11,7 +12,7 @@ import {
 import {getDb} from '~/lib/db';
 import {emailPlaceholdersByTemplateId} from '~/lib/email-template-fill';
 import {evaluationVoterEmails} from '~/lib/evaluation-email';
-import {grantTally, listChairCycles, listChairQueue} from '~/lib/grants';
+import {grantTally, listChairCycles, listChairDecided, listChairQueue} from '~/lib/grants';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
 import type {ReviewerSeat} from '~/lib/reviewers';
 import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
@@ -21,8 +22,9 @@ export const metadata = {title: DOCUMENT_TITLES.chair};
 export default async function ChairPage() {
   const user = await requireChairman();
   const db = getDb();
-  const [grants, chairCycles, users] = await Promise.all([
+  const [grants, decidedGrants, chairCycles, users] = await Promise.all([
     listChairQueue(db, user),
+    listChairDecided(db, user),
     listChairCycles(db, user),
     listUsers(db),
   ]);
@@ -114,6 +116,15 @@ export default async function ChairPage() {
 
       <ChairWizard
         committees={committees}
+        decidedGrants={decidedGrants}
+        decideMoney={
+          chairCycles.length > 0
+            ? chairDecideMoney(
+                [...grants, ...decidedGrants],
+                chairCycles.reduce((sum, cycle) => sum + Number(cycle.budget_limit), 0),
+              )
+            : null
+        }
         evaluation={evaluation}
         grants={grants}
         people={people}

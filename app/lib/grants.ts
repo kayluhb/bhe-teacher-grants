@@ -496,6 +496,7 @@ export const castVote = async (
 export const decideGrant = async (
   db: D1Database,
   input: {
+    approvedAmount?: number | null;
     chairman: User;
     comment: string | null;
     grantId: string;
@@ -513,7 +514,11 @@ export const decideGrant = async (
   });
   if (error) return {error};
 
-  const approvedAmount = input.outcome === 'APPROVED' ? grant.requested_amount : null;
+  const approvedAmount =
+    input.outcome === 'APPROVED' ? finiteMoney(Number(input.approvedAmount)) : null;
+  if (input.outcome === 'APPROVED' && (approvedAmount == null || approvedAmount <= 0)) {
+    return {error: 'Enter an approved amount greater than zero.'};
+  }
   const updated = await db
     .prepare(
       `UPDATE grants

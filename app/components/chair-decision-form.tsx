@@ -1,9 +1,14 @@
 'use client';
 
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {decideGrantAction} from '~/chair/actions';
 import {RadioGroup} from '~/components/radio-group';
-import {COMMITTEE_NOTE_LABEL, type DecisionEmailDraft} from '~/lib/approval-email';
+import {
+  COMMITTEE_NOTE_LABEL,
+  type DecisionEmailDraft,
+  draftWithApprovedAmount,
+} from '~/lib/approval-email';
+import {finiteMoney, formatUsd} from '~/lib/money';
 
 type Outcome = 'APPROVED' | 'REJECTED';
 
@@ -13,10 +18,12 @@ const fieldClass =
 export const ChairDecisionForm = ({
   drafts,
   grantId,
+  requestedAmount,
   teacherName,
 }: {
   drafts: Record<Outcome, DecisionEmailDraft>;
   grantId: string;
+  requestedAmount: number;
   teacherName: string;
 }) => {
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +31,20 @@ export const ChairDecisionForm = ({
   const [outcome, setOutcome] = useState<Outcome | ''>('');
   const [messages, setMessages] = useState(drafts);
   const [comment, setComment] = useState('');
+  const [approvedAmount, setApprovedAmount] = useState(String(requestedAmount));
+  const appliedAmount = useRef(requestedAmount);
+
+  const onApprovedAmount = (value: string) => {
+    setApprovedAmount(value);
+    const parsed = finiteMoney(Number(value));
+    if (parsed == null || parsed <= 0) return;
+    const from = appliedAmount.current;
+    appliedAmount.current = parsed;
+    setMessages((current) => ({
+      ...current,
+      APPROVED: draftWithApprovedAmount(current.APPROVED, from, parsed),
+    }));
+  };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,6 +90,26 @@ export const ChairDecisionForm = ({
       />
       {selected ? (
         <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          {outcome === 'APPROVED' ? (
+            <label className="font-body block text-sm text-charcoal">
+              Approved amount
+              <span className="mt-0.5 block font-normal text-gray-500">
+                Starts as the request total ({formatUsd(requestedAmount)}). Change it when that
+                total does not match what you are approving.
+              </span>
+              <input
+                className={fieldClass}
+                inputMode="decimal"
+                min="0.01"
+                name="approved_amount"
+                onChange={(event) => onApprovedAmount(event.target.value)}
+                required
+                step="0.01"
+                type="number"
+                value={approvedAmount}
+              />
+            </label>
+          ) : null}
           <p className="text-sm font-medium text-charcoal">Email to {teacherName}</p>
           <label className="font-body block text-sm text-charcoal">
             Subject

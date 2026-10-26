@@ -19,6 +19,20 @@ export type DecisionEmailDraft = {
   subject: string;
 };
 
+export const draftWithApprovedAmount = (
+  draft: DecisionEmailDraft,
+  fromAmount: number,
+  toAmount: number,
+): DecisionEmailDraft => {
+  const from = formatUsd(fromAmount);
+  const to = formatUsd(toAmount);
+  if (from === to) return draft;
+  return {
+    body: draft.body.replaceAll(from, to),
+    subject: draft.subject.replaceAll(from, to),
+  };
+};
+
 export type GrantDecisionEmail = {
   html: string;
   replyTo: string[];

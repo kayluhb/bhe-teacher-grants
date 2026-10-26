@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {teacherGrantDecisionEmail} from '~/lib/approval-email';
+import {
+  decisionEmailDraft,
+  draftWithApprovedAmount,
+  teacherGrantDecisionEmail,
+} from '~/lib/approval-email';
 import {TREASURER_EMAIL} from '~/lib/login-email';
 
 const approved = {
@@ -18,6 +22,26 @@ const rejected = {
   ...approved,
   outcome: 'REJECTED' as const,
 };
+
+describe('draftWithApprovedAmount', () => {
+  it('replaces the approved amount in the letter the chair reviews', () => {
+    const draft = decisionEmailDraft({
+      amount: 465,
+      chairmanName: 'Laurin Samuelson',
+      outcome: 'APPROVED',
+      schoolYear: '2026-27',
+      semester: 'FALL',
+      teacherName: 'Caroline Smith',
+      title: 'Kinder Classroom Supplies',
+    });
+
+    const updated = draftWithApprovedAmount(draft, 465, 720);
+
+    expect(updated.body).toContain('$720.00');
+    expect(updated.body).not.toContain('$465.00');
+    expect(updated.body).toContain('Kinder Classroom Supplies');
+  });
+});
 
 describe('teacherGrantDecisionEmail — approval', () => {
   it('emails the teacher with the chairman and treasurer on reply-to', () => {

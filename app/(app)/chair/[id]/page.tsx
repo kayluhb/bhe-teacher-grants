@@ -161,6 +161,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
               }),
             }}
             grantId={grant.id}
+            requestedAmount={grant.requested_amount}
             teacherName={grant.teacher_name}
           />
         </div>

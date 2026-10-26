@@ -87,6 +87,7 @@ export const decideGrantAction = async (formData: FormData) => {
 
   const db = getDb();
   const result = await decideGrant(db, {
+    approvedAmount: outcome === 'APPROVED' ? Number(formData.get('approved_amount')) : null,
     chairman: user,
     comment,
     grantId,

@@ -6,9 +6,11 @@ import {setManualProcessStepAction} from '~/chair/actions';
 import {ChairCommittee} from '~/components/chair-committee';
 import {FormProgress} from '~/components/grant-form/form-progress';
 import {StepNav, StepShell} from '~/components/grant-form/step-shell';
-import {SendEvaluationEmail} from '~/components/send-evaluation-email';
+import {GrantTable} from '~/components/grant-table';
+import {StatCard} from '~/components/stat-card';
 import {StepEmailTemplates} from '~/components/step-email-templates';
 import {TourGrantTable} from '~/components/tour-grant-table';
+import type {ChairDecideMoney} from '~/lib/chair-decide';
 import type {
   ChairProcessStepId,
   ChairProcessStepStatusMap,
@@ -20,21 +22,33 @@ import {
   chairStepIdAt,
   firstIncompleteChairStepIndex,
 } from '~/lib/chair-wizard';
-import {CHAIR_PROCESS_STEPS, EMAIL_TEMPLATES, type ProcessStep} from '~/lib/grant-process';
+import {
+  CHAIR_PROCESS_STEPS,
+  EMAIL_TEMPLATES,
+  type EmailTemplate,
+  type ProcessStep,
+} from '~/lib/grant-process';
+import {formatUsd} from '~/lib/money';
 import type {DirectoryPerson} from '~/lib/people';
 import type {GrantRow} from '~/lib/types';
+import type {VoteTally} from '~/lib/votes';
+
+type CommitteeOfficer = DirectoryPerson & {seat: 'principal' | 'treasurer'};
 
 type CommitteeWindow = {
   cycleId: string;
   cycleLabel: string;
   officerIds: string[];
+  officers: CommitteeOfficer[];
   selected: DirectoryPerson[];
 };
 
-const templatesForStep = (step: ProcessStep) =>
+const grantCountLabel = (count: number) => `${count} ${count === 1 ? 'grant' : 'grants'}`;
+
+const templatesForStep = (step: ProcessStep, templates: EmailTemplate[]) =>
   (step.templateIds ?? [])
-    .map((id) => EMAIL_TEMPLATES.find((item) => item.id === id))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    .map((id) => templates.find((item) => item.id === id))
+    .filter((item): item is EmailTemplate => Boolean(item));
 
 const StatusBadge = ({status}: {status?: StepStatus}) => {
   if (!status) return null;
@@ -70,20 +84,30 @@ const ManualMarkDone = ({
 
 export const ChairWizard = ({
   committees,
+  decideMoney,
+  decidedGrants,
   evaluation,
   grants,
   people,
   primaryCycleId,
+  reviewNote,
   statuses,
+  tallies,
   templateValues,
+  templateValuesById,
 }: {
   committees: CommitteeWindow[];
-  evaluation: {cycleId: string; recipientCount: number} | null;
+  decideMoney: ChairDecideMoney | null;
+  decidedGrants: GrantRow[];
+  evaluation: {cycleId: string; instructionsSent: boolean; recipientCount: number} | null;
   grants: GrantRow[];
   people: DirectoryPerson[];
   primaryCycleId?: string;
+  reviewNote?: string;
   statuses: ChairProcessStepStatusMap;
+  tallies: Record<string, VoteTally>;
   templateValues?: Record<string, string>;
+  templateValuesById?: Record<string, Record<string, string>>;
 }) => {
   const [stepIndex, setStepIndex] = useState(() => firstIncompleteChairStepIndex(statuses));
   const stepId = chairStepIdAt(stepIndex);
@@ -91,7 +115,7 @@ export const ChairWizard = ({
     CHAIR_PROCESS_STEPS.find((item) => item.id === stepId) ??
     CHAIR_PROCESS_STEPS.find((item) => item.id === 'notify-kati');
   const status = statuses[stepId];
-  const templates = step ? templatesForStep(step) : [];
+  const templates = step ? templatesForStep(step, EMAIL_TEMPLATES) : [];
   const completed = chairStepCompletedFlags(statuses);
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === CHAIR_PROGRESS_LABELS.length - 1;
@@ -107,7 +131,7 @@ export const ChairWizard = ({
   };
 
   return (
-    <div className="mx-auto max-w-3xl" data-tour="chair-playbook">
+    <div className="w-full" data-tour="chair-playbook">
       <FormProgress completed={completed} currentStep={stepIndex} steps={CHAIR_PROGRESS_LABELS} />
 
       <div aria-live="polite" className="sr-only" role="status">
@@ -122,17 +146,10 @@ export const ChairWizard = ({
             {primaryCycleId && status?.source === 'manual' ? (
               <ManualMarkDone cycleId={primaryCycleId} done={status.done} stepId={stepId} />
             ) : null}
-            {stepId === 'monitor' ? (
-              <Link className="text-sm font-medium text-eagle-blue hover:underline" href="/grants">
-                View all grants →
-              </Link>
-            ) : null}
-            {stepId === 'fulfill' ? (
-              <Link className="text-sm font-medium text-eagle-blue hover:underline" href="/fulfill">
-                Open Fulfill →
-              </Link>
-            ) : null}
           </div>
+          {stepId === 'review' && reviewNote ? (
+            <p className="font-body text-sm text-gray-600">{reviewNote}</p>
+          ) : null}
 
           {stepId === 'committee' ? (
             committees.length > 0 ? (
@@ -144,6 +161,7 @@ export const ChairWizard = ({
                     embedded
                     key={window.cycleId}
                     officerIds={window.officerIds}
+                    officers={window.officers}
                     people={people}
                     selected={window.selected}
                   />
@@ -160,28 +178,95 @@ export const ChairWizard = ({
             )
           ) : null}
 
-          {stepId === 'review' ? (
-            evaluation ? (
-              <SendEvaluationEmail
-                cycleId={evaluation.cycleId}
-                recipientCount={evaluation.recipientCount}
+          {stepId === 'monitor' ? (
+            <section className="space-y-3">
+              <h3 className="font-heading text-lg font-semibold text-charcoal">Submitted so far</h3>
+              <TourGrantTable
+                grants={grants}
+                hrefBase="/chair"
+                queue="chairman"
+                showOutcome={false}
+                showTeacher
+                showWindow={false}
               />
-            ) : (
-              <p className="font-body text-sm text-amber-800">
-                Open a grant window before sending evaluation instructions.
-              </p>
-            )
+            </section>
+          ) : null}
+
+          {stepId === 'review' && !evaluation ? (
+            <p className="font-body text-sm text-amber-800">
+              Open a grant window before sending evaluation instructions.
+            </p>
           ) : null}
 
           {stepId === 'decide' ? (
-            <section className="space-y-3" id="chair-queue">
-              <h3 className="font-heading text-lg font-semibold text-charcoal">Chair queue</h3>
-              <TourGrantTable grants={grants} hrefBase="/chair" queue="chairman" showTeacher />
+            <section className="space-y-6" id="chair-queue">
+              {decideMoney ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <StatCard
+                    hint={grantCountLabel(decideMoney.approvedCount)}
+                    label="Approved"
+                    tone="green"
+                    value={formatUsd(decideMoney.approvedAmount)}
+                  />
+                  <StatCard
+                    hint={grantCountLabel(decideMoney.pendingCount)}
+                    label="Pending"
+                    tone="gold"
+                    value={formatUsd(decideMoney.pendingAmount)}
+                  />
+                  <StatCard
+                    hint={`of ${formatUsd(decideMoney.budgetLimit)} budget`}
+                    label="Left"
+                    tone={decideMoney.leftAmount < 0 ? 'red' : 'green'}
+                    value={formatUsd(decideMoney.leftAmount)}
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg font-semibold text-charcoal">
+                  Still to decide
+                </h3>
+                <p className="font-body text-sm text-gray-600">
+                  Open a submitted grant to approve or reject it. You can decide before every
+                  reviewer has ranked.
+                </p>
+                <TourGrantTable
+                  grants={grants}
+                  hrefBase="/chair"
+                  queue="chairman"
+                  showOutcome={false}
+                  showTeacher
+                  showWindow={false}
+                  tallyFor={(grant) => tallies[grant.id] ?? null}
+                />
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg font-semibold text-charcoal">
+                  Already decided
+                </h3>
+                <p className="font-body text-sm text-gray-600">
+                  Open any row for the full grant: teacher, items, story, ranks, and the decision
+                  you recorded.
+                </p>
+                <GrantTable
+                  empty={<p>No decisions yet.</p>}
+                  grants={decidedGrants}
+                  hrefFor={(grant) => `/chair/${grant.id}`}
+                  showTeacher
+                  showWindow={false}
+                />
+              </div>
             </section>
           ) : null}
 
           {templates.length > 0 ? (
-            <StepEmailTemplates templates={templates} values={templateValues} />
+            <StepEmailTemplates
+              editable
+              evaluationSend={stepId === 'review' ? evaluation : null}
+              templates={templates}
+              values={templateValues}
+              valuesById={templateValuesById}
+            />
           ) : null}
 
           <StepNav

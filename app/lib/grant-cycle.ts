@@ -55,6 +55,17 @@ export const formatSchoolDateTime = (value: string): string =>
     year: 'numeric',
   });
 
+export const formatSchoolDate = (value: string): string =>
+  formatInSchoolZone(value, {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+    year: 'numeric',
+  });
+
+export const formatSchoolWeekday = (value: string): string =>
+  formatInSchoolZone(value, {weekday: 'long'});
+
 export const formatSchoolCompactDateTime = (value: string): string =>
   formatInSchoolZone(value, {
     day: 'numeric',
@@ -192,8 +203,8 @@ export const fulfillQueueMessaging = (state: ReviewWindowState): QueueCopy => {
     return {
       paragraphs: [
         end
-          ? `Review for ${state.cycle.name} is open through ${end}. After the chairman records a decision, approved grants will appear here for you to purchase.`
-          : `Review for ${state.cycle.name} is underway. After the chairman records a decision, approved grants will appear here for you to purchase.`,
+          ? `Review for ${state.cycle.name} is open through ${end}. After the chair records a decision, approved grants will appear here for you to purchase.`
+          : `Review for ${state.cycle.name} is underway. After the chair records a decision, approved grants will appear here for you to purchase.`,
       ],
       subtitle: 'Waiting on approved grants.',
     };

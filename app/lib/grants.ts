@@ -1,4 +1,5 @@
 import type {User} from '~/lib/auth';
+import {CHAIR_DECIDED_STATUSES} from '~/lib/chair-decide';
 import {newId} from '~/lib/db';
 import {ownedDeliveryR2Key, ownedQuoteR2Key, ownedReceiptR2Key} from '~/lib/files';
 import {type ListSearch, pickListFilters} from '~/lib/filters';
@@ -9,7 +10,7 @@ import {
   variance,
 } from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
-import {hasReviewStarted, isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
+import {isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
 import {grantFileKeys} from '~/lib/grant-files';
 import {finiteMoney, money} from '~/lib/money';
@@ -505,19 +506,10 @@ export const decideGrant = async (
   if (!grant) return {error: 'Grant not found.'};
   if (grant.status !== 'PENDING') return {error: 'This grant is no longer awaiting a decision.'};
 
-  const cycle = await db
-    .prepare('SELECT * FROM grant_cycles WHERE id = ?')
-    .bind(grant.cycle_id)
-    .first<CycleRow>();
-  if (!cycle) return {error: 'Grant window not found.'};
-
   const reviewers = await listReviewerRows(db, grant.cycle_id);
   const chairman = reviewers.find((row) => row.seat === 'chairman');
-  const tally = await grantTally(db, grant);
   const error = validateChairDecision({
-    complete: tally.complete,
     isChairman: isChairActor(input.chairman, chairman?.userId),
-    reviewStarted: hasReviewStarted(cycle),
   });
   if (error) return {error};
 
@@ -844,6 +836,30 @@ export const listChairQueue = async (db: D1Database, user: {id: string; role: st
              ORDER BY g.created_at ASC`,
           )
           .bind(user.id)
+          .all<GrantRow>();
+  return attachPreviewImages(db, rows.results ?? []);
+};
+
+export const listChairDecided = async (db: D1Database, user: {id: string; role: string}) => {
+  const placeholders = CHAIR_DECIDED_STATUSES.map(() => '?').join(', ');
+  const rows =
+    user.role === 'chair'
+      ? await db
+          .prepare(
+            `${GRANT_SELECT}
+             WHERE g.status IN (${placeholders}) AND c.is_active = 1
+             ORDER BY g.updated_at DESC`,
+          )
+          .bind(...CHAIR_DECIDED_STATUSES)
+          .all<GrantRow>()
+      : await db
+          .prepare(
+            `${GRANT_SELECT}
+             JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ? AND r.seat = 'chairman'
+             WHERE g.status IN (${placeholders}) AND c.is_active = 1
+             ORDER BY g.updated_at DESC`,
+          )
+          .bind(user.id, ...CHAIR_DECIDED_STATUSES)
           .all<GrantRow>();
   return attachPreviewImages(db, rows.results ?? []);
 };

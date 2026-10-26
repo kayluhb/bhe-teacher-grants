@@ -1,10 +1,7 @@
-import {fillTemplate} from '~/lib/email-template-fill';
-import {formatSchoolDateTime} from '~/lib/grant-cycle';
+import {emailPlaceholdersForTemplate, fillEmailBody, fillTemplate} from '~/lib/email-template-fill';
 import {EMAIL_TEMPLATES} from '~/lib/grant-process';
-import {escapeHtml} from '~/lib/html';
-import {formatUsd} from '~/lib/money';
+import {plainTextToEmailHtml} from '~/lib/html';
 import {type ReviewerSeat, VOTER_SEATS} from '~/lib/reviewers';
-import {formatSchoolYearLong, semesterLabel} from '~/lib/school-year';
 import type {Result} from '~/lib/types';
 
 export type EvaluationEmail = {
@@ -32,18 +29,6 @@ export const evaluationVoterEmails = (
 const evaluationTemplate = () =>
   EMAIL_TEMPLATES.find((item) => item.id === 'evaluation-instructions');
 
-const toHtml = (body: string): string =>
-  body
-    .split(/\n\n+/)
-    .map((paragraph) => {
-      const lines = paragraph
-        .split('\n')
-        .map((line) => escapeHtml(line))
-        .join('<br>\n');
-      return `<p>${lines}</p>`;
-    })
-    .join('\n');
-
 export const buildEvaluationInstructionsEmail = (input: {
   applicationCount: number;
   budgetLimit: number;
@@ -61,29 +46,46 @@ export const buildEvaluationInstructionsEmail = (input: {
   const template = evaluationTemplate();
   if (!template) return {error: 'Evaluation instructions template is missing.'};
 
-  const semester = semesterLabel(input.semester);
-  const year = formatSchoolYearLong(input.schoolYear);
-  const deadline = input.reviewEndsAt
-    ? formatSchoolDateTime(input.reviewEndsAt)
-    : 'the review deadline';
-  const principal = input.principalName.trim() || 'Principal';
-
-  const values = {
-    '[#]': String(input.applicationCount),
-    '[$]': formatUsd(input.requestedTotal),
-    '[DATE]': deadline,
-    '[PHONE]': '',
-    '[PRINCIPAL NAME]': principal,
-    '[SEMESTER]': semester,
-    '[YEAR]': year,
-    '$10,000': formatUsd(input.budgetLimit),
-  };
+  const values = emailPlaceholdersForTemplate('evaluation-instructions', {
+    applicationCount: input.applicationCount,
+    budgetLimit: input.budgetLimit,
+    principalName: input.principalName.trim() || 'Principal',
+    requestedTotal: input.requestedTotal,
+    reviewEndsAt: input.reviewEndsAt,
+    school_year: input.schoolYear,
+    semester: input.semester,
+  });
 
   const subject = fillTemplate(template.subject, values);
-  const body = fillTemplate(template.body, values).replace(/\s+or contact me at\s*\./g, '.');
+  const body = fillEmailBody(template.body, values);
 
   return {
-    html: toHtml(body),
+    html: plainTextToEmailHtml(body),
+    replyTo: [input.chairmanEmail.trim().toLowerCase()].filter(Boolean),
+    subject,
+    to: input.to,
+  };
+};
+
+const DRAFT_SUBJECT_MAX = 300;
+const DRAFT_BODY_MAX = 20_000;
+
+export const evaluationEmailFromDraft = (input: {
+  body: string;
+  chairmanEmail: string;
+  subject: string;
+  to: string[];
+}): Result<EvaluationEmail> => {
+  if (input.to.length === 0) {
+    return {error: 'Add committee members before emailing evaluation instructions.'};
+  }
+  const subject = input.subject.trim();
+  const body = input.body.replaceAll('\r\n', '\n').trim();
+  if (!subject || !body) return {error: 'Add a subject and message before sending.'};
+  if (subject.length > DRAFT_SUBJECT_MAX) return {error: 'Subject is too long.'};
+  if (body.length > DRAFT_BODY_MAX) return {error: 'Message is too long.'};
+  return {
+    html: plainTextToEmailHtml(body),
     replyTo: [input.chairmanEmail.trim().toLowerCase()].filter(Boolean),
     subject,
     to: input.to,

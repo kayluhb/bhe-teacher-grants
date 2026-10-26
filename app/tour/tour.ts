@@ -132,7 +132,7 @@ const TEACHER_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Watch a request move from Draft to Voting, then Approved or Rejected, Purchased, and Delivered. Click a title for the full story.',
+        'Watch a request move from Draft to Voting, then Approved or Rejected, Purchased, and Delivered. Click a title to open it — you can edit a submitted request until committee review starts.',
       title: 'Track the status',
     },
   },
@@ -180,7 +180,7 @@ const CHAIRMAN_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Run the cycle here step by step: launch, seat the committee, monitor submissions, send evaluation instructions, record decisions, fulfill, then gather stories.',
+        'Run the cycle here step by step. Sending evaluation instructions marks Review done, and you can approve or reject a submitted grant before every rank is in.',
       title: 'Chair home',
     },
   },
@@ -260,8 +260,8 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'You rank grants in Review, the same as the principal and committee. Other reviewers cannot see your rank; the chair sees tallies when deciding.',
-      title: 'Review queue',
+        'If you hold a reviewer seat, open Review to rank grants. Other reviewers cannot see your rank; the chair sees tallies when deciding.',
+      title: 'Review',
     },
   },
   {

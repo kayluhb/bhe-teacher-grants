@@ -11,7 +11,6 @@ export const CHAIR_PROGRESS_LABELS = [
   'Monitor',
   'Review',
   'Decide',
-  'Fulfill',
   'Stories',
 ] as const;
 

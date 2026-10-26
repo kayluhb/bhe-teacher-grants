@@ -125,6 +125,7 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
         <VoteForm
           existing={mine && isBallot(mine.vote) ? mine.vote : undefined}
           grantId={grant.id}
+          principal={user.role === 'principal'}
         />
       ) : null}
     </div>

@@ -5,20 +5,38 @@ import {EmailTemplateCard} from '~/components/email-template-card';
 import type {EmailTemplate} from '~/lib/grant-process';
 
 export const StepEmailTemplates = ({
+  editable = false,
+  evaluationSend = null,
   templates,
   values = {},
+  valuesById = {},
 }: {
+  editable?: boolean;
+  evaluationSend?: {
+    cycleId: string;
+    instructionsSent: boolean;
+    recipientCount: number;
+  } | null;
   templates: EmailTemplate[];
   values?: Record<string, string>;
+  valuesById?: Record<string, Record<string, string>>;
 }) => {
   const [activeId, setActiveId] = useState(templates[0]?.id ?? '');
   const template = templates.find((item) => item.id === activeId) ?? templates[0];
   if (!template) return null;
 
+  const filled = {...values, ...valuesById[template.id]};
+
   if (templates.length === 1) {
     return (
       <div className="mt-4">
-        <EmailTemplateCard template={template} values={values} />
+        <EmailTemplateCard
+          editable={editable}
+          evaluationSend={template.id === 'evaluation-instructions' ? evaluationSend : null}
+          key={template.id}
+          template={template}
+          values={filled}
+        />
       </div>
     );
   }
@@ -46,7 +64,13 @@ export const StepEmailTemplates = ({
           );
         })}
       </nav>
-      <EmailTemplateCard template={template} values={values} />
+      <EmailTemplateCard
+        editable={editable}
+        evaluationSend={template.id === 'evaluation-instructions' ? evaluationSend : null}
+        key={template.id}
+        template={template}
+        values={filled}
+      />
     </div>
   );
 };

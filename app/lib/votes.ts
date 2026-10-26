@@ -79,13 +79,7 @@ export const isChairActor = (
   seatedChairmanId: string | null | undefined,
 ) => actor.role === 'chair' || seatedChairmanId === actor.id;
 
-export const validateChairDecision = (input: {
-  complete: boolean;
-  isChairman: boolean;
-  reviewStarted: boolean;
-}): string | null => {
+export const validateChairDecision = (input: {isChairman: boolean}): string | null => {
   if (!input.isChairman) return 'Only the chairman can record the official outcome.';
-  if (!input.reviewStarted) return 'Review has not started yet.';
-  if (!input.complete) return 'Every required reviewer must rank first.';
   return null;
 };

@@ -15,14 +15,18 @@ type MenuBox = {bottom?: number; left: number; top?: number; width: number};
 const fieldClass =
   'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-spirit-gold focus:ring-2 focus:ring-spirit-gold/40';
 
+type LockedPerson = DirectoryPerson & {label: string};
+
 export const CommitteePicker = ({
   excludeIds = [],
+  locked = [],
   onAdd,
   onRemove,
   people,
   selected,
 }: {
   excludeIds?: string[];
+  locked?: LockedPerson[];
   onAdd: (input: {email: string; name?: string}) => Promise<Result<DirectoryPerson>>;
   onRemove: (userId: string) => Promise<Result<{ok: true}>>;
   people: DirectoryPerson[];
@@ -174,6 +178,22 @@ export const CommitteePicker = ({
   return (
     <div className="space-y-3" data-committee-picker="" ref={rootRef}>
       <ul className="flex flex-wrap gap-2">
+        {locked.map((person) => (
+          <li
+            className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5"
+            key={`locked-${person.id}`}
+          >
+            <span className="min-w-0">
+              <span className="block text-[10px] font-semibold tracking-[0.12em] text-gray-500 uppercase">
+                {person.label}
+              </span>
+              <span className="font-heading block text-sm font-semibold text-charcoal">
+                {person.name}
+              </span>
+              <span className="block text-xs text-gray-500">{person.email}</span>
+            </span>
+          </li>
+        ))}
         {selected.map((person) => (
           <li
             className="flex items-center gap-2 rounded-full border border-eagle-blue/20 bg-warm-white px-3 py-1.5"

@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import {StepEmailTemplates} from '~/components/step-email-templates';
 import {setManualProcessStepAction} from '~/chair/actions';
+import {StepEmailTemplates} from '~/components/step-email-templates';
 import type {ChairProcessStepId, StepStatus} from '~/lib/chair-process-status';
 import {EMAIL_TEMPLATES, type ProcessStep} from '~/lib/grant-process';
 
@@ -14,11 +14,13 @@ export const ProcessStepList = ({
   statuses,
   steps,
   templateValues,
+  templateValuesById,
 }: {
   cycleId?: string;
   statuses?: Partial<Record<ChairProcessStepId, StepStatus>>;
   steps: ProcessStep[];
   templateValues?: Record<string, string>;
+  templateValuesById?: Record<string, Record<string, string>>;
 }) => (
   <ol className="space-y-4">
     {steps.map((step, index) => {
@@ -75,7 +77,11 @@ export const ProcessStepList = ({
               ) : null}
             </div>
             {templates.length > 0 ? (
-              <StepEmailTemplates templates={templates} values={templateValues} />
+              <StepEmailTemplates
+                templates={templates}
+                values={templateValues}
+                valuesById={templateValuesById}
+              />
             ) : null}
           </div>
         </li>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import {redirect} from 'next/navigation';
 import {
   addRosterUserAction,
   createCycleAction,
@@ -16,16 +17,21 @@ import {DeletePersonForm} from '~/components/delete-person-form';
 import {FormDialog} from '~/components/form-dialog';
 import {GrantWindowsPanel} from '~/components/grant-windows-panel';
 import {LoginActivityDialog} from '~/components/login-activity-dialog';
+import {RosterFilters} from '~/components/roster-filters';
+import {RosterPager} from '~/components/roster-pager';
+import {RosterReturnFields} from '~/components/roster-return-fields';
 import {SchoolYearForm} from '~/components/school-year-form';
 import {Select} from '~/components/select';
-import {listCycleReviewers, listUsers} from '~/lib/admin';
+import {listCycleReviewers, listRoster, listUsers} from '~/lib/admin';
 import {ASSIGNABLE_ROLES, ROLE_LABELS, requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
+import {firstParam} from '~/lib/filters';
 import {formatSchoolCompactDateTime} from '~/lib/grant-cycle';
 import {listCycles, listSchoolYears} from '~/lib/grants';
 import {isLockedRosterEmail} from '~/lib/login-email';
 import {listLoginEventsForEmail} from '~/lib/login-events';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
+import {parseRosterQuery, rosterPath} from '~/lib/roster-query';
 import {formatSchoolYearLong} from '~/lib/school-year';
 
 const ADMIN_TABS = [
@@ -39,38 +45,60 @@ type AdminTab = (typeof ADMIN_TABS)[number]['id'];
 const parseAdminTab = (value: string | undefined): AdminTab =>
   ADMIN_TABS.some((tab) => tab.id === value) ? (value as AdminTab) : 'roster';
 
-const TabField = ({tab}: {tab: AdminTab}) => <input name="tab" type="hidden" value={tab} />;
-
 export const metadata = {title: DOCUMENT_TITLES.admin};
 
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{error?: string; tab?: string}>;
+  searchParams: Promise<{
+    error?: string | string[];
+    page?: string | string[];
+    q?: string | string[];
+    role?: string | string[];
+    tab?: string | string[];
+  }>;
 }) {
   await requireRole('admin');
-  const {error, tab: tabParam} = await searchParams;
-  const tab = parseAdminTab(tabParam);
+  const params = await searchParams;
+  const error = firstParam(params.error);
+  const tab = parseAdminTab(firstParam(params.tab));
+  const rosterQuery = parseRosterQuery(params);
   const visibleTabs = ADMIN_TABS;
   const db = getDb();
-  const [years, cycles, users] = await Promise.all([
+  const [years, cycles, roster, users] = await Promise.all([
     listSchoolYears(db),
     listCycles(db),
-    listUsers(db),
+    tab === 'roster' ? listRoster(db, rosterQuery) : Promise.resolve(null),
+    tab === 'windows' ? listUsers(db) : Promise.resolve([]),
   ]);
+  if (roster && roster.page !== rosterQuery.page) {
+    redirect(
+      rosterPath({
+        error,
+        page: roster.page,
+        q: rosterQuery.q,
+        role: rosterQuery.role,
+        tab: 'roster',
+      }),
+    );
+  }
+  const rosterUsers = roster?.users ?? [];
   const loginEventsByEmail = Object.fromEntries(
     await Promise.all(
-      users.map(
+      rosterUsers.map(
         async (user) => [user.email, await listLoginEventsForEmail(db, user.email)] as const,
       ),
     ),
   );
-  const reviewers = await Promise.all(
-    cycles.map(async (cycle) => ({
-      cycleId: cycle.id,
-      rows: await listCycleReviewers(db, cycle.id),
-    })),
-  );
+  const reviewers =
+    tab === 'windows'
+      ? await Promise.all(
+          cycles.map(async (cycle) => ({
+            cycleId: cycle.id,
+            rows: await listCycleReviewers(db, cycle.id),
+          })),
+        )
+      : [];
   const reviewersByCycle = Object.fromEntries(reviewers.map((row) => [row.cycleId, row.rows]));
 
   return (
@@ -119,83 +147,99 @@ export default async function AdminPage({
               title="Add person"
               triggerLabel="Add person"
             >
-              <AddPersonForm action={addRosterUserAction} tab={tab} />
+              <AddPersonForm action={addRosterUserAction} query={rosterQuery} tab={tab} />
             </FormDialog>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="bg-warm-white text-left text-xs text-gray-500 uppercase">
-                <tr>
-                  <th className="px-4 py-2">Name</th>
-                  <th className="px-4 py-2">Email</th>
-                  <th className="px-4 py-2">Last login</th>
-                  <th className="px-4 py-2">Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr className="border-t border-gray-100" key={user.id}>
-                    <td className="px-4 py-2">
-                      <AutosaveForm action={updateUserNameAction}>
-                        <TabField tab={tab} />
-                        <input name="user_id" type="hidden" value={user.id} />
-                        <input
-                          aria-label="Name"
-                          className="rounded-lg border border-gray-300 px-2 py-1"
-                          defaultValue={user.name}
-                          name="name"
-                        />
-                      </AutosaveForm>
-                    </td>
-                    <td className="px-4 py-2">{user.email}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="whitespace-nowrap text-gray-700">
-                          {user.last_login_at
-                            ? formatSchoolCompactDateTime(user.last_login_at)
-                            : 'Never'}
-                        </span>
-                        <LoginActivityDialog
-                          email={user.email}
-                          events={loginEventsByEmail[user.email] ?? []}
-                          name={user.name}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {isLockedRosterEmail(user.email) ? (
-                          <span>{ROLE_LABELS[user.role]}</span>
-                        ) : (
-                          <AutosaveForm action={updateUserRoleAction}>
-                            <TabField tab={tab} />
-                            <input name="user_id" type="hidden" value={user.id} />
-                            <Select
-                              aria-label={`Role for ${user.name}`}
-                              defaultValue={user.role}
-                              name="role"
-                              options={ASSIGNABLE_ROLES.map((role) => ({
-                                label: ROLE_LABELS[role],
-                                value: role,
-                              }))}
-                              size="sm"
-                            />
-                          </AutosaveForm>
-                        )}
-                        {isLockedRosterEmail(user.email) ? null : (
-                          <DeletePersonForm
-                            action={deleteUserAction}
-                            name={user.name}
-                            tab={tab}
-                            userId={user.id}
-                          />
-                        )}
-                      </div>
-                    </td>
+          <RosterFilters q={rosterQuery.q} role={rosterQuery.role} />
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-warm-white text-left text-xs text-gray-500 uppercase">
+                  <tr>
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Email</th>
+                    <th className="px-4 py-2">Last login</th>
+                    <th className="px-4 py-2">Role</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rosterUsers.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={4}>
+                        {rosterQuery.q || rosterQuery.role !== 'all'
+                          ? 'No people match that search.'
+                          : 'No people on the roster yet.'}
+                      </td>
+                    </tr>
+                  ) : null}
+                  {rosterUsers.map((user) => (
+                    <tr className="border-t border-gray-100" key={user.id}>
+                      <td className="px-4 py-2">
+                        <AutosaveForm action={updateUserNameAction}>
+                          <RosterReturnFields query={rosterQuery} tab={tab} />
+                          <input name="user_id" type="hidden" value={user.id} />
+                          <input
+                            aria-label="Name"
+                            className="rounded-lg border border-gray-300 px-2 py-1"
+                            defaultValue={user.name}
+                            name="name"
+                          />
+                        </AutosaveForm>
+                      </td>
+                      <td className="px-4 py-2">{user.email}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="whitespace-nowrap text-gray-700">
+                            {user.last_login_at
+                              ? formatSchoolCompactDateTime(user.last_login_at)
+                              : 'Never'}
+                          </span>
+                          <LoginActivityDialog
+                            email={user.email}
+                            events={loginEventsByEmail[user.email] ?? []}
+                            name={user.name}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isLockedRosterEmail(user.email) ? (
+                            <span>{ROLE_LABELS[user.role]}</span>
+                          ) : (
+                            <AutosaveForm action={updateUserRoleAction}>
+                              <RosterReturnFields query={rosterQuery} tab={tab} />
+                              <input name="user_id" type="hidden" value={user.id} />
+                              <Select
+                                aria-label={`Role for ${user.name}`}
+                                defaultValue={user.role}
+                                name="role"
+                                options={ASSIGNABLE_ROLES.map((role) => ({
+                                  label: ROLE_LABELS[role],
+                                  value: role,
+                                }))}
+                                size="sm"
+                              />
+                            </AutosaveForm>
+                          )}
+                          {isLockedRosterEmail(user.email) ? null : (
+                            <DeletePersonForm
+                              action={deleteUserAction}
+                              name={user.name}
+                              query={rosterQuery}
+                              tab={tab}
+                              userId={user.id}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {roster ? (
+              <RosterPager query={{...rosterQuery, page: roster.page}} total={roster.total} />
+            ) : null}
           </div>
         </section>
       ) : null}

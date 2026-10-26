@@ -24,6 +24,7 @@ import {
 } from '~/lib/people';
 import {rosterAssignments, validateReviewerRoster} from '~/lib/reviewers';
 import {normalizeRole, type Role} from '~/lib/roles';
+import {type RosterQuery, rosterWhere} from '~/lib/roster-query';
 import {validateSchoolYearDates, validateSchoolYearInput} from '~/lib/school-year';
 import type {Result} from '~/lib/types';
 
@@ -83,14 +84,51 @@ export type UserRow = {
   role: Role;
 };
 
+const toUserRow = (row: UserRow): UserRow => ({
+  ...row,
+  role: displayRole(row.email, normalizeRole(row.role) ?? row.role),
+});
+
+const USER_COLUMNS = 'id, email, name, role, created_at, last_login_at';
+
 export const listUsers = async (db: D1Database) => {
-  const rows = await db
-    .prepare('SELECT id, email, name, role, created_at, last_login_at FROM users ORDER BY name')
+  const rows = await db.prepare(`SELECT ${USER_COLUMNS} FROM users ORDER BY name`).all<UserRow>();
+  return (rows.results ?? []).map((row) => toUserRow(row));
+};
+
+export type RosterPage = {
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+  users: UserRow[];
+};
+
+export const listRoster = async (db: D1Database, query: RosterQuery): Promise<RosterPage> => {
+  const where = rosterWhere(query);
+  const countStatement = db.prepare(`SELECT COUNT(*) AS total FROM users ${where.sql}`);
+  const totalRow = await (where.binds.length
+    ? countStatement.bind(...where.binds)
+    : countStatement
+  ).first<{
+    total: number;
+  }>();
+  const total = Number(totalRow?.total ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / query.pageSize));
+  const page = Math.min(query.page, pageCount);
+  const listStatement = db.prepare(
+    `SELECT ${USER_COLUMNS} FROM users ${where.sql} ORDER BY name LIMIT ? OFFSET ?`,
+  );
+  const rows = await listStatement
+    .bind(...where.binds, query.pageSize, (page - 1) * query.pageSize)
     .all<UserRow>();
-  return (rows.results ?? []).map((row) => ({
-    ...row,
-    role: displayRole(row.email, normalizeRole(row.role) ?? row.role),
-  }));
+  return {
+    page,
+    pageCount,
+    pageSize: query.pageSize,
+    total,
+    users: (rows.results ?? []).map((row) => toUserRow(row)),
+  };
 };
 
 export const listCycleReviewers = async (db: D1Database, cycleId: string) => {
@@ -106,11 +144,6 @@ export const listCycleReviewers = async (db: D1Database, cycleId: string) => {
     .all<{email: string; name: string; seat: string; user_id: string}>();
   return rows.results ?? [];
 };
-
-const toUserRow = (row: UserRow): UserRow => ({
-  ...row,
-  role: displayRole(row.email, normalizeRole(row.role) ?? row.role),
-});
 
 export const addRosterUser = async (
   db: D1Database,

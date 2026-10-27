@@ -1,6 +1,7 @@
 import {redirect} from 'next/navigation';
 import {FulfillForm} from '~/components/fulfill-form';
 import {GrantNarrative} from '~/components/grant-narrative';
+import {ProductPurchaseLink} from '~/components/product-purchase-link';
 import {StatusPill} from '~/components/status-pill';
 import {requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
@@ -75,7 +76,9 @@ export default async function FulfillDetailPage({params}: {params: Promise<{id: 
             {items.map((item) => (
               <li className="flex justify-between py-2" key={item.id}>
                 <span>
-                  {item.item_description} · {item.item_status}
+                  <ProductPurchaseLink item={item}>{item.item_description}</ProductPurchaseLink>
+                  {' · '}
+                  {item.item_status}
                 </span>
                 <span className="tabular-nums">
                   {item.actual_total_price == null

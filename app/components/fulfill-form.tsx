@@ -2,6 +2,7 @@
 
 import {useMemo, useState} from 'react';
 import {FileUpload} from '~/components/file-upload';
+import {ProductPurchaseLink} from '~/components/product-purchase-link';
 import {ProductThumb} from '~/components/product-thumb';
 import {Select} from '~/components/select';
 import {fulfillGrantAction} from '~/fulfill/actions';
@@ -157,7 +158,9 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
                     <div className="flex items-center gap-3">
                       <ProductThumb alt="" url={itemImageUrl(item)} />
                       <div>
-                        <p className="font-medium">{item.item_description}</p>
+                        <ProductPurchaseLink className="font-medium" item={item}>
+                          {item.item_description}
+                        </ProductPurchaseLink>
                         <p className="tabular-nums text-gray-500">
                           {item.quantity} × {formatUsd(item.unit_price)}
                         </p>

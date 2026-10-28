@@ -42,10 +42,10 @@ export default async function GrantSummaryPage({
           {cycles.map((item) => (
             <li key={item.id}>
               <Link
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
+                className={`px-1 py-1 text-sm font-medium ${
                   item.id === cycle?.id
-                    ? 'bg-night-blue text-white'
-                    : 'bg-white text-charcoal ring-1 ring-gray-300'
+                    ? 'text-eagle-blue underline'
+                    : 'text-gray-600 hover:text-charcoal'
                 }`}
                 href={`/community?cycle=${item.id}`}
               >

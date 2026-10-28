@@ -82,10 +82,10 @@ export const GrantSummary = ({
           {MODES.map((option) => (
             <button
               aria-pressed={mode === option.value}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+              className={`px-1 py-1.5 text-sm font-medium ${
                 mode === option.value
-                  ? 'bg-eagle-blue text-white'
-                  : 'bg-white text-eagle-blue ring-1 ring-eagle-blue/30'
+                  ? 'text-eagle-blue underline'
+                  : 'text-gray-600 hover:text-charcoal'
               }`}
               key={option.value}
               onClick={() => setMode(option.value)}
@@ -95,13 +95,19 @@ export const GrantSummary = ({
             </button>
           ))}
         </div>
-        {items.length > 0 ? <CopyButton label="Copy summary" text={text} /> : null}
+        {items.length > 0 ? (
+          <CopyButton
+            className="px-1 py-1.5 text-sm font-medium text-eagle-blue hover:underline"
+            label="Copy summary"
+            text={text}
+          />
+        ) : null}
       </div>
 
       {mode === 'kind' ? (
         <div className="flex flex-wrap items-center gap-3">
           <button
-            className="btn btn-brand"
+            className="bg-eagle-blue px-3 py-1.5 text-sm font-semibold text-white hover:bg-eagle-blue/90 disabled:opacity-60"
             disabled={busy || items.length === 0}
             onClick={sort}
             type="button"
@@ -121,10 +127,7 @@ export const GrantSummary = ({
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {piles.map((pile, index) => (
-            <li
-              className="rounded-xl border border-gray-200 border-l-4 border-l-spirit-gold bg-white p-4 shadow-sm"
-              key={pile.itemIds.join(',') || pile.name}
-            >
+            <li className="py-2" key={pile.itemIds.join(',') || pile.name}>
               {mode === 'kind' && kindPiles ? (
                 <input
                   aria-label="Pile name"
@@ -148,7 +151,7 @@ export const GrantSummary = ({
                       {mode === 'kind' && kindPiles && piles.length > 1 ? (
                         <select
                           aria-label={`Move ${item.description}`}
-                          className="max-w-36 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600"
+                          className="max-w-36 bg-transparent px-1 py-1 text-xs text-gray-600"
                           onChange={(event) => move(id, Number(event.target.value))}
                           value={index}
                         >

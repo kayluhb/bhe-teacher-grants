@@ -66,7 +66,7 @@ export const PROCESS_STEPS: ProcessStep[] = [
     id: 'fulfill',
     label: 'Track purchases & reimbursements',
     description:
-      'On Fulfillment, buy approved items, record actual prices from receipts, and add tracking. Remind teachers about the 3–4 week window.',
+      'On Fulfillment, buy approved items and record actual prices from receipts. Remind teachers about the 3–4 week window.',
     href: '/fulfill',
     linkLabel: 'Open Fulfillment',
   },

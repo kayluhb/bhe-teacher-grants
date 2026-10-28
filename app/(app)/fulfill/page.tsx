@@ -29,7 +29,7 @@ export default async function FulfillPage({
   const copy = fulfillQueueMessaging(reviewWindowState(relevant));
   const subtitle =
     grants.length > 0
-      ? 'Approved grants to buy, plus orders already placed. Record actual prices from receipts and add tracking.'
+      ? 'Approved grants to buy, plus orders already placed. Record actual prices from receipts.'
       : copy.subtitle;
 
   return (

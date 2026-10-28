@@ -62,9 +62,7 @@ describe('fulfillGrant', () => {
       grantId: approvedGrant.id,
       items: [{id: 'item-1', item_status: 'PURCHASED', variance_note: null}],
       receiptR2Key: null,
-      trackingNumber: null,
       varianceNote: null,
-      vendorName: 'Amazon',
     });
 
     expect(result).toEqual({actualAmount: 214.37, variance: -25.63});
@@ -81,9 +79,7 @@ describe('fulfillGrant', () => {
       grantId: approvedGrant.id,
       items: [{id: 'item-1', item_status: 'SUBSTITUTED', variance_note: 'Soft bins'}],
       receiptR2Key: null,
-      trackingNumber: null,
       varianceNote: null,
-      vendorName: 'Amazon',
     });
 
     expect(result).toEqual({actualAmount: 214.37, variance: -25.63});
@@ -110,9 +106,7 @@ describe('fulfillGrant', () => {
         },
       ],
       receiptR2Key: null,
-      trackingNumber: null,
       varianceNote: null,
-      vendorName: 'Amazon',
     });
 
     expect(result).toEqual({actualAmount: 50, variance: -190});

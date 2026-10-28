@@ -250,6 +250,6 @@ describe('fulfillQueueMessaging', () => {
     expect(copy.paragraphs[0]).toContain('Fall 2026-27 Teacher Grants');
     expect(copy.paragraphs[0]).toMatch(/opens .+ October 15, 2026/);
     expect(copy.paragraphs[1]).toContain('record actual prices from the receipt');
-    expect(copy.paragraphs[1]).toContain('add tracking');
+    expect(copy.paragraphs[1]).not.toContain('tracking');
   });
 });

@@ -33,9 +33,7 @@ export const fulfillGrantAction = async (formData: FormData) => {
     grantId,
     items,
     receiptR2Key: String(formData.get('receipt_r2_key') || '') || null,
-    trackingNumber: String(formData.get('tracking_number') || '') || null,
     varianceNote: String(formData.get('variance_note') || '') || null,
-    vendorName: String(formData.get('vendor_name') || ''),
   });
   if ('error' in result) return result;
 

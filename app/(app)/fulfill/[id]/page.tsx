@@ -62,8 +62,6 @@ export default async function FulfillDetailPage({params}: {params: Promise<{id: 
               </>
             ) : null}
           </p>
-          {grant.vendor_name ? <p>Vendor: {grant.vendor_name}</p> : null}
-          {grant.tracking_number ? <p>Tracking: {grant.tracking_number}</p> : null}
           {grant.receipt_r2_key ? (
             <a
               className="text-eagle-blue underline"

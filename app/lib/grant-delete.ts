@@ -1,5 +1,6 @@
 import type {User} from '~/lib/auth';
 import {hasReviewStarted} from '~/lib/grant-cycle';
+import {isApplicantRole} from '~/lib/roles';
 
 export type MutateGrantCycle = {review_starts_at: string | null};
 
@@ -10,7 +11,7 @@ export const canTeacherMutateGrant = (
   cycle: MutateGrantCycle | null | undefined,
   now = new Date(),
 ): boolean => {
-  if (actor.role !== 'teacher' || grant.teacher_id !== actor.id) return false;
+  if (!isApplicantRole(actor.role) || grant.teacher_id !== actor.id) return false;
   if (grant.status === 'DRAFT') return true;
   if (grant.status !== 'PENDING') return false;
   return !hasReviewStarted(cycle ?? {review_starts_at: null}, now);

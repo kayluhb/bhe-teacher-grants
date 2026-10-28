@@ -1,5 +1,6 @@
 import {redirect} from 'next/navigation';
 import {ChairDecisionForm} from '~/components/chair-decision-form';
+import {ChairReviseForm} from '~/components/chair-revise-form';
 import {GrantNarrative} from '~/components/grant-narrative';
 import {GrantNotes} from '~/components/grant-notes';
 import {GrantRequestedItems} from '~/components/grant-requested-items';
@@ -130,7 +131,7 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
         </ul>
       </div>
 
-      {grant.status !== 'PENDING' ? null : (
+      {grant.status === 'PENDING' ? (
         <div className="space-y-3">
           {tally.complete ? null : (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -165,7 +166,28 @@ export default async function ChairDetailPage({params}: {params: Promise<{id: st
             teacherName={grant.teacher_name}
           />
         </div>
-      )}
+      ) : null}
+      {grant.status === 'APPROVED' || grant.status === 'REJECTED' ? (
+        <ChairReviseForm
+          draft={
+            grant.status === 'REJECTED'
+              ? decisionEmailDraft({
+                  amount: grant.requested_amount,
+                  chairmanName: user.name,
+                  outcome: 'APPROVED',
+                  schoolYear: grant.school_year,
+                  semester: grant.semester,
+                  teacherName: grant.teacher_name,
+                  title: grant.title,
+                })
+              : null
+          }
+          grantId={grant.id}
+          outcome={grant.status === 'APPROVED' ? 'REJECTED' : 'APPROVED'}
+          requestedAmount={grant.requested_amount}
+          teacherName={grant.teacher_name}
+        />
+      ) : null}
     </div>
   );
 }

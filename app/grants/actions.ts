@@ -9,7 +9,7 @@ import {notifyQuietly} from '~/lib/email';
 import {deleteGrantFiles} from '~/lib/grant-files';
 import {confirmDelivery, deleteGrant, saveGrant} from '~/lib/grants';
 import {escapeHtml} from '~/lib/html';
-import {grantPath} from '~/lib/roles';
+import {grantPath, isApplicantRole} from '~/lib/roles';
 import type {GrantItemInput} from '~/lib/types';
 
 const parseJson = <T>(raw: string, fallback: T): T => {
@@ -35,7 +35,7 @@ const readGrantForm = (formData: FormData) => {
 };
 
 export const saveGrantAction = async (formData: FormData) => {
-  const user = await requireRole('teacher');
+  const user = await requireRole('teacher', 'principal');
   const fields = readGrantForm(formData);
   const submit = String(formData.get('submit') || '') === '1';
 
@@ -49,12 +49,12 @@ export const saveGrantAction = async (formData: FormData) => {
 
   revalidatePath('/grants');
   revalidatePath('/portal');
-  redirect(user.role === 'teacher' ? '/portal' : '/grants');
+  redirect(isApplicantRole(user.role) ? '/portal' : '/grants');
 };
 
 /** Silent draft save for the guided form — no redirect. */
 export const saveGrantDraftAction = async (formData: FormData) => {
-  const user = await requireRole('teacher');
+  const user = await requireRole('teacher', 'principal');
   const fields = readGrantForm(formData);
 
   const result = await saveGrant(getDb(), {
@@ -73,7 +73,7 @@ export const saveGrantDraftAction = async (formData: FormData) => {
 export const deleteGrantAction = async (formData: FormData): Promise<void> => {
   const user = await requireAuth();
   const grantId = String(formData.get('grant_id') || '');
-  const home = user.role === 'teacher' ? '/portal' : '/grants';
+  const home = isApplicantRole(user.role) ? '/portal' : '/grants';
 
   const result = await deleteGrant(getDb(), {actor: user, grantId});
   if ('error' in result) {

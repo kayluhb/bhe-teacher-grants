@@ -26,6 +26,7 @@ export const canManageViewAs = (user: User): boolean =>
 
 export const portalsForViewAs = (role: Role): Portal[] => {
   if (role === 'teacher') return ['teacher'];
+  if (role === 'principal') return ['teacher', 'reviewer'];
   if (role === 'chair') return ['chairman'];
   if (role === 'admin') return ['treasurer'];
   return ['reviewer'];

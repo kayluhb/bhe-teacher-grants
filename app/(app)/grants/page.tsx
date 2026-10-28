@@ -8,6 +8,7 @@ import {toListGrantFilters} from '~/lib/filters';
 import {isSubmissionOpen} from '~/lib/grant-cycle';
 import {getActiveCycle, listGrants, resolveListFilters} from '~/lib/grants';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
+import {isApplicantRole} from '~/lib/roles';
 
 export const metadata = {title: DOCUMENT_TITLES.grants};
 
@@ -17,7 +18,7 @@ export default async function GrantsPage({
   searchParams: Promise<{semester?: string | string[]; year?: string | string[]}>;
 }) {
   const user = await requireAuth();
-  if (user.role === 'teacher') redirect('/portal');
+  if (isApplicantRole(user.role)) redirect('/portal');
   await requireRole('admin');
   const params = await searchParams;
   const db = getDb();

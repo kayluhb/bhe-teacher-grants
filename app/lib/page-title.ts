@@ -5,6 +5,7 @@ export const DOCUMENT_TITLES = {
   budget: 'Budget ledger',
   chair: 'Chair',
   chairWindows: 'Grant windows',
+  community: 'Community update',
   fulfill: 'Fulfillment',
   grants: 'Grants',
   grantsNew: 'Create grant',

@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {CHAIR_DECIDED_STATUSES, chairDecideMoney} from '~/lib/chair-decide';
+import {
+  CHAIR_DECIDED_STATUSES,
+  chairDecideMoney,
+  revisionNotifiesTeacher,
+} from '~/lib/chair-decide';
 
 describe('chairDecideMoney', () => {
   it('counts approved caps, keeps pending separate, and leaves rejected out of the leftover', () => {
@@ -41,5 +45,12 @@ describe('chairDecideMoney', () => {
 
   it('lists approved and rejected grants as decided, and leaves drafts and pending out', () => {
     expect([...CHAIR_DECIDED_STATUSES]).toEqual(['APPROVED', 'REJECTED', 'PURCHASED', 'DELIVERED']);
+  });
+});
+
+describe('revisionNotifiesTeacher', () => {
+  it('emails the teacher only when a denial becomes an approval', () => {
+    expect(revisionNotifiesTeacher('APPROVED')).toBe(true);
+    expect(revisionNotifiesTeacher('REJECTED')).toBe(false);
   });
 });

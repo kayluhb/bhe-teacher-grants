@@ -11,12 +11,19 @@ import {
 } from '~/lib/admin';
 import {teacherGrantDecisionEmail} from '~/lib/approval-email';
 import {requireChairman} from '~/lib/auth';
+import {revisionNotifiesTeacher} from '~/lib/chair-decide';
 import {isChairManualStepId, setManualProcessStep} from '~/lib/chair-process-status';
 import {getDb} from '~/lib/db';
 import {notifyQuietly, sendEmail} from '~/lib/email';
 import {evaluationEmailFromDraft, evaluationVoterEmails} from '~/lib/evaluation-email';
 import {cycleInputFromFormData} from '~/lib/grant-cycle';
-import {decideGrant, getGrant, listChairQueue, listReviewerRows} from '~/lib/grants';
+import {
+  decideGrant,
+  getGrant,
+  listChairQueue,
+  listReviewerRows,
+  reviseGrantDecision,
+} from '~/lib/grants';
 import type {CycleRow} from '~/lib/types';
 
 export type ChairFormState = {error?: string};
@@ -120,6 +127,72 @@ export const decideGrantAction = async (formData: FormData) => {
   revalidatePath('/grants');
   revalidatePath('/portal');
   redirect(remaining[0] ? `/chair/${remaining[0].id}` : '/chair');
+};
+
+export const reviseGrantAction = async (formData: FormData) => {
+  const user = await requireChairman();
+  const outcome = String(formData.get('outcome') || '');
+  if (outcome !== 'APPROVED' && outcome !== 'REJECTED') {
+    return {error: 'Choose approve or reject.'};
+  }
+  const grantId = String(formData.get('grant_id') || '');
+  const note = String(formData.get('note') || '').trim();
+  if (!note) return {error: 'Add a short note about why this result changed.'};
+  if (note.length > 2000) return {error: 'Note is too long.'};
+
+  const subject = String(formData.get('subject') || '').trim();
+  const body = String(formData.get('body') || '')
+    .replaceAll('\r\n', '\n')
+    .trim();
+  if (revisionNotifiesTeacher(outcome) && (!subject || !body)) {
+    return {error: 'Review the email to the teacher before you record the decision.'};
+  }
+  if (subject.length > 300) return {error: 'Subject is too long.'};
+  if (body.length > 20_000) return {error: 'Message is too long.'};
+
+  const db = getDb();
+  const result = await reviseGrantDecision(db, {
+    approvedAmount: outcome === 'APPROVED' ? Number(formData.get('approved_amount')) : null,
+    chairman: user,
+    grantId,
+    note,
+    outcome,
+  });
+  if ('error' in result) return result;
+
+  if (revisionNotifiesTeacher(outcome)) {
+    const grant = await getGrant(db, grantId);
+    if (grant) {
+      const email = teacherGrantDecisionEmail({
+        amount: grant.approved_amount ?? grant.requested_amount,
+        body,
+        chairmanEmail: user.email,
+        chairmanName: user.name,
+        outcome: 'APPROVED',
+        schoolYear: grant.school_year,
+        semester: grant.semester,
+        subject,
+        teacherEmail: grant.teacher_email,
+        teacherName: grant.teacher_name,
+        title: grant.title,
+      });
+      notifyQuietly(email);
+      revalidatePath(`/community/${grant.cycle_id}`);
+    }
+  } else {
+    const grant = await getGrant(db, grantId);
+    if (grant) revalidatePath(`/community/${grant.cycle_id}`);
+  }
+
+  revalidatePath('/chair');
+  revalidatePath(`/chair/${grantId}`);
+  revalidatePath('/review');
+  revalidatePath('/grants');
+  revalidatePath('/portal');
+  revalidatePath('/fulfill');
+  revalidatePath('/budget');
+  revalidatePath('/community');
+  redirect(`/chair/${grantId}`);
 };
 
 export type EvaluationEmailState = {error?: string; sent?: number};

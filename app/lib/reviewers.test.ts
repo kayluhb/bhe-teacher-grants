@@ -25,7 +25,9 @@ describe('validateReviewerRoster', () => {
   });
 
   it('accepts a partial roster', () => {
-    expect(validateReviewerRoster({...roster, chairmanUserId: '', committeeUserIds: []})).toBeNull();
+    expect(
+      validateReviewerRoster({...roster, chairmanUserId: '', committeeUserIds: []}),
+    ).toBeNull();
   });
 
   it('rejects overlapping officer seats', () => {
@@ -94,6 +96,14 @@ describe('requiredVoterIds', () => {
       'treasurer',
       'principal',
       'committee-a',
+    ]);
+  });
+
+  it('excludes the principal from the vote on a grant they submitted', () => {
+    expect(requiredVoterIds(reviewers, 'principal')).toEqual([
+      'treasurer',
+      'committee-a',
+      'teacher',
     ]);
   });
 

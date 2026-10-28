@@ -23,8 +23,38 @@ const nowAfter = new Date('2026-10-16T12:00:00.000Z');
 describe('canTeacherMutateGrant', () => {
   it('allows a teacher to edit their own draft', () => {
     expect(
-      canTeacherMutateGrant(teacher(), {status: 'DRAFT', teacher_id: 't1'}, beforeReview, nowBefore),
+      canTeacherMutateGrant(
+        teacher(),
+        {status: 'DRAFT', teacher_id: 't1'},
+        beforeReview,
+        nowBefore,
+      ),
     ).toBe(true);
+  });
+
+  it('allows the principal to edit a grant they submitted', () => {
+    const principal: User = {
+      email: 'kathryn.achtermann@austinisd.org',
+      id: 'p1',
+      name: 'Kati Achtermann',
+      role: 'principal',
+    };
+    expect(
+      canTeacherMutateGrant(
+        principal,
+        {status: 'DRAFT', teacher_id: 'p1'},
+        beforeReview,
+        nowBefore,
+      ),
+    ).toBe(true);
+    expect(
+      canTeacherMutateGrant(
+        principal,
+        {status: 'DRAFT', teacher_id: 't1'},
+        beforeReview,
+        nowBefore,
+      ),
+    ).toBe(false);
   });
 
   it('allows a teacher to edit their pending grant before review starts', () => {
@@ -78,16 +108,19 @@ describe('canTeacherMutateGrant', () => {
       ),
     ).toBe(false);
     expect(
-      canTeacherMutateGrant(admin(), {status: 'PENDING', teacher_id: 't1'}, beforeReview, nowBefore),
+      canTeacherMutateGrant(
+        admin(),
+        {status: 'PENDING', teacher_id: 't1'},
+        beforeReview,
+        nowBefore,
+      ),
     ).toBe(false);
   });
 });
 
 describe('canDeleteGrant', () => {
   it('allows a teacher to delete their own draft', () => {
-    expect(canDeleteGrant(teacher(), {status: 'DRAFT', teacher_id: 't1'}, beforeReview)).toBe(
-      true,
-    );
+    expect(canDeleteGrant(teacher(), {status: 'DRAFT', teacher_id: 't1'}, beforeReview)).toBe(true);
   });
 
   it('allows a teacher to delete their pending grant before review starts', () => {
@@ -107,9 +140,7 @@ describe('canDeleteGrant', () => {
   });
 
   it('allows an admin to delete any status', () => {
-    expect(canDeleteGrant(admin(), {status: 'PENDING', teacher_id: 't1'}, beforeReview)).toBe(
-      true,
-    );
+    expect(canDeleteGrant(admin(), {status: 'PENDING', teacher_id: 't1'}, beforeReview)).toBe(true);
     expect(canDeleteGrant(admin(), {status: 'DRAFT', teacher_id: 't1'})).toBe(true);
   });
 

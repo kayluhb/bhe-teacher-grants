@@ -68,7 +68,8 @@ export default async function HomePage() {
           {showPrincipalHome ? (
             <p className="font-body mt-2 max-w-2xl text-gray-600">
               Rank each request in Review. In the comment, note any request that should not move
-              forward for a school-related reason.
+              forward for a school-related reason. Submit your own request from My grants while a
+              window is open.
             </p>
           ) : null}
         </div>
@@ -128,7 +129,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {showTeacherGuide ? <TeacherProcessGuide /> : null}
+      {showTeacherGuide && !showPrincipalHome ? <TeacherProcessGuide /> : null}
       {showCommitteeGuide ? <CommitteeProcessGuide /> : null}
       {showAdminGuide ? <ProcessGuide templateValuesById={templateValuesById} /> : null}
     </div>

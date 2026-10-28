@@ -8,9 +8,11 @@ import {validateGrantNarrative} from '~/lib/grant-application';
 import {isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
 import {grantFileKeys} from '~/lib/grant-files';
+import {createGrantNote} from '~/lib/grant-notes';
 import {finiteMoney, money} from '~/lib/money';
 import {asinFromUrl, itemImageUrl, stackPreviewImages} from '~/lib/product-preview';
 import {type ReviewerAssignment, type ReviewerSeat, requiredVoterIds} from '~/lib/reviewers';
+import {isApplicantRole} from '~/lib/roles';
 import type {Actor, CycleRow, GrantItemInput, GrantItemRow, GrantRow, Result} from '~/lib/types';
 import {
   BALLOT_LABELS,
@@ -557,6 +559,95 @@ export const decideGrant = async (
   return {status: input.outcome};
 };
 
+const resultLabel = (status: 'APPROVED' | 'REJECTED') =>
+  status === 'APPROVED' ? 'Approved' : 'Rejected';
+
+export const reviseGrantDecision = async (
+  db: D1Database,
+  input: {
+    approvedAmount?: number | null;
+    chairman: User;
+    grantId: string;
+    note: string;
+    outcome: 'APPROVED' | 'REJECTED';
+  },
+): Promise<Result<{status: string}>> => {
+  const note = input.note.trim();
+  if (!note) return {error: 'Add a short note about why this result changed.'};
+
+  const grant = await getGrant(db, input.grantId);
+  if (!grant) return {error: 'Grant not found.'};
+  if (grant.status !== 'APPROVED' && grant.status !== 'REJECTED') {
+    return {error: 'Only an approved or rejected grant can be changed.'};
+  }
+  if (grant.status === input.outcome) return {error: 'That is already the result.'};
+
+  const reviewers = await listReviewerRows(db, grant.cycle_id);
+  const chairman = reviewers.find((row) => row.seat === 'chairman');
+  const error = validateChairDecision({
+    isChairman: isChairActor(input.chairman, chairman?.userId),
+  });
+  if (error) return {error};
+
+  const approvedAmount =
+    input.outcome === 'APPROVED' ? finiteMoney(Number(input.approvedAmount)) : null;
+  if (input.outcome === 'APPROVED' && (approvedAmount == null || approvedAmount <= 0)) {
+    return {error: 'Enter an approved amount greater than zero.'};
+  }
+
+  const previousStatus = grant.status;
+  const updated = await db
+    .prepare(
+      `UPDATE grants
+       SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
+       WHERE id = ? AND status = ?`,
+    )
+    .bind(
+      input.outcome,
+      approvedAmount,
+      input.outcome === 'REJECTED' ? note : null,
+      input.grantId,
+      previousStatus,
+    )
+    .run();
+  if (!updated.meta.changes) {
+    return {error: 'This grant result changed before it could be saved.'};
+  }
+
+  const history = `Result changed from ${resultLabel(previousStatus)} to ${resultLabel(input.outcome)}. ${note}`;
+  try {
+    await writeAudit(
+      db,
+      input.grantId,
+      input.chairman,
+      previousStatus,
+      input.outcome,
+      history,
+    ).run();
+    await createGrantNote(db, {
+      authorId: input.chairman.id,
+      body: history,
+      grantId: input.grantId,
+    });
+  } catch (error) {
+    await db
+      .prepare(
+        `UPDATE grants
+         SET status = ?, approved_amount = ?, rejection_reason = ?, updated_at = datetime('now')
+         WHERE id = ?`,
+      )
+      .bind(
+        previousStatus,
+        grant.approved_amount ?? null,
+        grant.rejection_reason ?? null,
+        input.grantId,
+      )
+      .run();
+    throw error;
+  }
+  return {status: input.outcome};
+};
+
 export const setApprovedAmount = async (
   db: D1Database,
   input: {actor: User; amount: number; grantId: string},
@@ -889,7 +980,7 @@ export const deleteGrant = async (
   if (!canDeleteGrant(input.actor, grant, {review_starts_at: grant.review_starts_at})) {
     return {
       error:
-        input.actor.role === 'teacher' && grant.teacher_id === input.actor.id
+        isApplicantRole(input.actor.role) && grant.teacher_id === input.actor.id
           ? grant.status === 'PENDING'
             ? 'This grant can no longer be deleted because review has started.'
             : 'Only draft or open submissions can be deleted.'

@@ -2,6 +2,10 @@ import {money} from '~/lib/money';
 
 export const CHAIR_DECIDED_STATUSES = ['APPROVED', 'REJECTED', 'PURCHASED', 'DELIVERED'] as const;
 
+/** A revised approval tells the teacher. A revised denial does not. */
+export const revisionNotifiesTeacher = (outcome: 'APPROVED' | 'REJECTED'): boolean =>
+  outcome === 'APPROVED';
+
 const APPROVED_MONEY_STATUSES = new Set<string>(['APPROVED', 'PURCHASED', 'DELIVERED']);
 
 export type ChairDecideMoneyGrant = {

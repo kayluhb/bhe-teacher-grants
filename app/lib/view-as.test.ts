@@ -77,7 +77,7 @@ describe('portalsForViewAs', () => {
   it('maps each role to the portals that role typically sees', () => {
     expect(portalsForViewAs('teacher')).toEqual(['teacher']);
     expect(portalsForViewAs('committee')).toEqual(['reviewer']);
-    expect(portalsForViewAs('principal')).toEqual(['reviewer']);
+    expect(portalsForViewAs('principal')).toEqual(['teacher', 'reviewer']);
     expect(portalsForViewAs('chair')).toEqual(['chairman']);
     expect(portalsForViewAs('admin')).toEqual(['treasurer']);
   });

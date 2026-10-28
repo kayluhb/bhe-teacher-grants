@@ -2,13 +2,14 @@ import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 import {getDb} from '~/lib/db';
 import {displayRole} from '~/lib/login-email';
-import {homePath, normalizeRole, type Role, type User} from '~/lib/roles';
+import {homePath, isApplicantRole, normalizeRole, type Role, type User} from '~/lib/roles';
 import {applyViewAs, isViewingAs, parseViewAsRole, VIEW_AS_COOKIE} from '~/lib/view-as';
 
 export {
   ASSIGNABLE_ROLES,
   grantPath,
   homePath,
+  isApplicantRole,
   normalizeRole,
   ROLE_LABELS,
   ROLES,
@@ -106,7 +107,7 @@ export const requireRole = async (...roles: Role[]): Promise<User> => {
 
 export const requireTeacher = async (): Promise<User> => {
   const user = await requireAuth();
-  if (user.role !== 'teacher') redirect(homePath(user.role));
+  if (!isApplicantRole(user.role)) redirect(homePath(user.role));
   return user;
 };
 

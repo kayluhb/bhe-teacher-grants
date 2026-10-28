@@ -5,6 +5,7 @@ import {
   grantPath,
   homePath,
   homePathForPortals,
+  isApplicantRole,
   normalizeRole,
 } from '~/lib/roles';
 
@@ -85,9 +86,26 @@ describe('displayRoleLabel', () => {
   });
 });
 
+describe('isApplicantRole', () => {
+  it('lets a teacher and the principal file a grant', () => {
+    expect(isApplicantRole('teacher')).toBe(true);
+    expect(isApplicantRole('principal')).toBe(true);
+  });
+
+  it('keeps reviewers who are not the principal from filing', () => {
+    expect(isApplicantRole('committee')).toBe(false);
+    expect(isApplicantRole('chair')).toBe(false);
+    expect(isApplicantRole('admin')).toBe(false);
+  });
+});
+
 describe('grantPath', () => {
   it('keeps teacher grants on the portal', () => {
     expect(grantPath('teacher', 'grant_1')).toBe('/portal/grant_1');
+  });
+
+  it('keeps the principal on the portal for their own grant', () => {
+    expect(grantPath('principal', 'grant_1')).toBe('/portal/grant_1');
   });
 
   it('keeps staff grants on the staff list', () => {

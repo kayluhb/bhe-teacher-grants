@@ -4,6 +4,7 @@ import {getSession, requireAuth} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {getCycle, getGrant, listGrantItems} from '~/lib/grants';
 import {GRANT_TITLE_SECTIONS, grantDocumentTitle} from '~/lib/page-title';
+import {isApplicantRole} from '~/lib/roles';
 
 const ROLE_ADMIN = 'admin';
 
@@ -22,7 +23,7 @@ export const generateMetadata = async ({params}: {params: Promise<{id: string}>}
 export default async function GrantDetailPage({params}: {params: Promise<{id: string}>}) {
   const user = await requireAuth();
   const {id} = await params;
-  if (user.role === 'teacher') redirect(`/portal/${id}`);
+  if (isApplicantRole(user.role)) redirect(`/portal/${id}`);
 
   const db = getDb();
   const grant = await getGrant(db, id);

@@ -25,6 +25,8 @@ export type User = {
   role: Role;
 };
 
+export const isApplicantRole = (role: Role): boolean => role === 'teacher' || role === 'principal';
+
 export const displayRoleLabel = (user: User, portals: Portal[] = []): string =>
   portals.includes('chairman') ? 'Chair' : ROLE_LABELS[user.role];
 
@@ -46,4 +48,4 @@ export const homePathForPortals = (user: User, portals: Portal[]): string => {
 };
 
 export const grantPath = (role: Role, grantId: string): string =>
-  role === 'teacher' ? `/portal/${grantId}` : `/grants/${grantId}`;
+  isApplicantRole(role) ? `/portal/${grantId}` : `/grants/${grantId}`;

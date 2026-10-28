@@ -3,12 +3,7 @@ import {CHAIR_DECIDED_STATUSES} from '~/lib/chair-decide';
 import {newId} from '~/lib/db';
 import {ownedDeliveryR2Key, ownedQuoteR2Key, ownedReceiptR2Key} from '~/lib/files';
 import {type ListSearch, pickListFilters} from '~/lib/filters';
-import {
-  type AdHocItemInput,
-  type FulfillmentItemInput,
-  sumActuals,
-  variance,
-} from '~/lib/fulfillment';
+import {type FulfillmentItemInput, variance} from '~/lib/fulfillment';
 import {validateGrantNarrative} from '~/lib/grant-application';
 import {isReviewOpen, isSubmissionOpen} from '~/lib/grant-cycle';
 import {canDeleteGrant, canTeacherMutateGrant} from '~/lib/grant-delete';
@@ -596,7 +591,7 @@ export const fulfillGrant = async (
   db: D1Database,
   input: {
     actor: User;
-    adHocItems?: AdHocItemInput[];
+    actualAmount: number;
     grantId: string;
     items: FulfillmentItemInput[];
     receiptR2Key: string | null;
@@ -625,24 +620,21 @@ export const fulfillGrant = async (
     return {error: 'Record an outcome for every requested line.'};
   }
 
+  if (!Number.isFinite(input.actualAmount) || input.actualAmount < 0) {
+    return {error: 'Enter the amount spent.'};
+  }
   for (const item of input.items) {
-    if (item.item_status === 'SUBSTITUTED' && !item.actual_description) {
+    if (item.item_status === 'SUBSTITUTED' && !item.variance_note?.trim()) {
       return {error: 'Substituted items need a description of what was bought.'};
-    }
-    if (
-      (item.item_status === 'PURCHASED' || item.item_status === 'SUBSTITUTED') &&
-      (item.actual_quantity == null || item.actual_unit_price == null)
-    ) {
-      return {error: 'Purchased items need an actual quantity and price.'};
     }
   }
 
-  const actualAmount = sumActuals(input.items, input.adHocItems ?? []);
+  const actualAmount = money(input.actualAmount);
   const approvedAmount = Number(grant.approved_amount ?? grant.requested_amount);
   const delta = variance(approvedAmount, actualAmount);
 
   const statements: D1PreparedStatement[] = input.items.map((item) => {
-    const purchased = item.item_status === 'PURCHASED' || item.item_status === 'SUBSTITUTED';
+    const note = item.variance_note?.trim() || null;
     return db
       .prepare(
         `UPDATE grant_items
@@ -651,35 +643,14 @@ export const fulfillGrant = async (
       )
       .bind(
         item.item_status,
-        item.actual_description ?? null,
-        purchased ? item.actual_quantity : 0,
-        purchased ? item.actual_unit_price : 0,
-        item.variance_note ?? null,
+        item.item_status === 'SUBSTITUTED' ? note : null,
+        null,
+        null,
+        note,
         item.id,
         input.grantId,
       );
   });
-
-  for (const extra of input.adHocItems ?? []) {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO grant_items (
-             id, grant_id, item_description, quantity, unit_price, is_ad_hoc, item_status,
-             actual_description, actual_quantity, actual_unit_price, variance_note
-           ) VALUES (?, ?, ?, 0, 0, 1, 'PURCHASED', ?, ?, ?, ?)`,
-        )
-        .bind(
-          newId(),
-          input.grantId,
-          extra.item_description,
-          extra.item_description,
-          extra.actual_quantity,
-          extra.actual_unit_price,
-          extra.variance_note ?? 'Ad-hoc fulfillment charge',
-        ),
-    );
-  }
 
   const updated = await db
     .prepare(

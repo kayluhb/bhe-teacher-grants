@@ -5,7 +5,7 @@ import {redirect} from 'next/navigation';
 import {requireRole} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {notifyQuietly} from '~/lib/email';
-import type {AdHocItemInput, FulfillmentItemInput} from '~/lib/fulfillment';
+import type {FulfillmentItemInput} from '~/lib/fulfillment';
 import {fulfillGrant, getGrant} from '~/lib/grants';
 import {escapeHtml} from '~/lib/html';
 
@@ -20,12 +20,16 @@ const parseJson = <T>(raw: string, fallback: T): T => {
 export const fulfillGrantAction = async (formData: FormData) => {
   const user = await requireRole('admin');
   const items = parseJson<FulfillmentItemInput[]>(String(formData.get('items') || '[]'), []);
-  const adHocItems = parseJson<AdHocItemInput[]>(String(formData.get('ad_hoc_items') || '[]'), []);
   const grantId = String(formData.get('grant_id') || '');
+  const rawAmount = String(formData.get('actual_amount') ?? '').trim();
+  const actualAmount = Number(rawAmount);
+  if (!rawAmount || !Number.isFinite(actualAmount) || actualAmount < 0) {
+    return {error: 'Enter the amount spent.'};
+  }
 
   const result = await fulfillGrant(getDb(), {
     actor: user,
-    adHocItems,
+    actualAmount,
     grantId,
     items,
     receiptR2Key: String(formData.get('receipt_r2_key') || '') || null,

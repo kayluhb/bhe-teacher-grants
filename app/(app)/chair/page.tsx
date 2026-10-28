@@ -112,8 +112,8 @@ export default async function ChairPage() {
             Manage grant windows
           </Link>
           {' · '}
-          <Link className="font-medium text-eagle-blue hover:underline" href="/community/edit">
-            Community page
+          <Link className="font-medium text-eagle-blue hover:underline" href="/community">
+            Grant summary
           </Link>
         </p>
       </div>

@@ -7,6 +7,12 @@ declare namespace Cloudflare {
     SESSION_SECRET: string;
     RESEND_API_KEY: string;
     APP_PUBLIC_URL?: string;
+    AI?: {
+      run: (
+        model: string,
+        input: {messages: {content: string; role: string}[]},
+      ) => Promise<unknown>;
+    };
   }
 }
 

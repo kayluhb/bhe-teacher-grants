@@ -1,40 +1,27 @@
 'use server';
 
-import {revalidatePath} from 'next/cache';
-import {redirect} from 'next/navigation';
+import {env} from 'cloudflare:workers';
 import {requireAuth} from '~/lib/auth';
-import {communityPath} from '~/lib/community';
-import {saveCommunityPage} from '~/lib/community-page';
+import {
+  canViewGrantSummary,
+  type ItemPile,
+  type ModelSorter,
+  sortItemsWithModel,
+} from '~/lib/community';
+import {listSummaryItems} from '~/lib/community-page';
 import {getDb} from '~/lib/db';
+import {listUserSeats} from '~/lib/grants';
 
-const editorPath = (cycleId: string, error?: string) => {
-  const params = new URLSearchParams({cycle: cycleId});
-  if (error) params.set('error', error);
-  return `/community/edit?${params.toString()}`;
-};
-
-export const saveCommunityAction = async (formData: FormData) => {
+export const sortGrantItemsAction = async (
+  cycleId: string,
+): Promise<{ok: true; piles: ItemPile[]} | {error: string; ok: false}> => {
   const user = await requireAuth();
-  const cycleId = String(formData.get('cycle_id') || '');
-  if (!cycleId) redirect('/community/edit?error=Choose%20a%20grant%20window.');
-
-  const blurbs = [...formData.entries()]
-    .filter(([key]) => key.startsWith('blurb_'))
-    .map(([key, value]) => ({
-      blurb: String(value),
-      grantId: key.slice('blurb_'.length),
-    }));
-
-  const result = await saveCommunityPage(getDb(), {
-    actor: user,
-    blurbs,
-    cycleId,
-    intro: String(formData.get('intro') || ''),
-    publish: formData.get('publish') === '1',
-  });
-  if ('error' in result) redirect(editorPath(cycleId, result.error));
-
-  revalidatePath('/community/edit');
-  revalidatePath(communityPath(cycleId));
-  redirect(editorPath(cycleId));
+  const db = getDb();
+  const seats = await listUserSeats(db, user.id);
+  if (!canViewGrantSummary(user, seats.includes('chairman'))) {
+    return {error: 'You cannot sort this summary.', ok: false};
+  }
+  const items = await listSummaryItems(db, cycleId);
+  const ai = env.AI as ModelSorter | undefined;
+  return sortItemsWithModel(ai, items);
 };

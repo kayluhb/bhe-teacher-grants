@@ -73,20 +73,19 @@ export default async function FulfillDetailPage({params}: {params: Promise<{id: 
             </a>
           ) : null}
           <ul className="divide-y divide-gray-100">
-            {items.map((item) => (
-              <li className="flex justify-between py-2" key={item.id}>
-                <span>
+            {items
+              .filter((item) => item.is_ad_hoc === 0)
+              .map((item) => (
+                <li className="py-2" key={item.id}>
                   <ProductPurchaseLink item={item}>{item.item_description}</ProductPurchaseLink>
                   {' · '}
                   {item.item_status}
-                </span>
-                <span className="tabular-nums">
-                  {item.actual_total_price == null
-                    ? formatUsd(0)
-                    : formatUsd(item.actual_total_price)}
-                </span>
-              </li>
-            ))}
+                  {item.variance_note ? ` · ${item.variance_note}` : null}
+                  {item.actual_description && item.actual_description !== item.variance_note
+                    ? ` · ${item.actual_description}`
+                    : null}
+                </li>
+              ))}
           </ul>
         </div>
       )}

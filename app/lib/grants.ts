@@ -595,9 +595,7 @@ export const fulfillGrant = async (
     grantId: string;
     items: FulfillmentItemInput[];
     receiptR2Key: string | null;
-    trackingNumber: string | null;
     varianceNote: string | null;
-    vendorName: string;
   },
 ): Promise<Result<{actualAmount: number; variance: number}>> => {
   if (input.actor.role !== 'admin') {
@@ -606,7 +604,6 @@ export const fulfillGrant = async (
   const grant = await getGrant(db, input.grantId);
   if (!grant) return {error: 'Grant not found.'};
   if (grant.status !== 'APPROVED') return {error: 'Grant is not awaiting purchase.'};
-  if (!input.vendorName.trim()) return {error: 'Vendor is required.'};
 
   const existing = await db
     .prepare('SELECT id FROM grant_items WHERE grant_id = ? AND is_ad_hoc = 0')
@@ -655,16 +652,14 @@ export const fulfillGrant = async (
   const updated = await db
     .prepare(
       `UPDATE grants
-       SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = ?,
-           tracking_number = ?, receipt_r2_key = ?, purchased_at = datetime('now'),
+       SET status = 'PURCHASED', actual_amount = ?, variance_note = ?, vendor_name = NULL,
+           tracking_number = NULL, receipt_r2_key = ?, purchased_at = datetime('now'),
            updated_at = datetime('now')
        WHERE id = ? AND status = 'APPROVED'`,
     )
     .bind(
       actualAmount,
       input.varianceNote,
-      input.vendorName.trim(),
-      input.trackingNumber,
       ownedReceiptR2Key(input.receiptR2Key, input.grantId),
       input.grantId,
     )
@@ -680,7 +675,7 @@ export const fulfillGrant = async (
       input.actor,
       'APPROVED',
       'PURCHASED',
-      `Vendor ${input.vendorName}. Approved ${approvedAmount.toFixed(2)}, actual ${actualAmount.toFixed(2)}, variance ${delta.toFixed(2)}`,
+      `Approved ${approvedAmount.toFixed(2)}, actual ${actualAmount.toFixed(2)}, variance ${delta.toFixed(2)}`,
     ),
   );
 

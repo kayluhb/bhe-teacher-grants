@@ -191,7 +191,7 @@ export const fulfillQueueMessaging = (state: ReviewWindowState): QueueCopy => {
     return {
       paragraphs: [
         `Approved grants will appear here after review. Review for ${state.cycle.name} opens ${start}.`,
-        "When a grant is approved, you'll buy the items, record actual prices from the receipt, and add tracking. Teachers confirm delivery from their own portal.",
+        "When a grant is approved, you'll buy the items and record actual prices from the receipt. Teachers confirm delivery from their own portal.",
       ],
       subtitle: "Fulfillment isn't ready yet.",
     };

@@ -66,23 +66,6 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
   return (
     <form className="space-y-6" onSubmit={onSubmit}>
       <input name="grant_id" type="hidden" value={grant.id} />
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="font-body text-sm font-medium text-charcoal">
-          Vendor
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-eagle-blue focus:ring-1 focus:ring-eagle-blue"
-            name="vendor_name"
-            required
-          />
-        </label>
-        <label className="font-body text-sm font-medium text-charcoal">
-          Tracking number
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-eagle-blue focus:ring-1 focus:ring-eagle-blue"
-            name="tracking_number"
-          />
-        </label>
-      </div>
       <FileUpload
         grantId={grant.id}
         kind="receipts"

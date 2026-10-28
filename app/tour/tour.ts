@@ -234,7 +234,7 @@ const TREASURER_STEPS: TourStep[] = [
     optional: true,
     popover: {
       description:
-        'Approved grants that have not been purchased yet. Buying and tracking happen on Fulfillment.',
+        'Approved grants that have not been purchased yet. Purchases are recorded on Fulfillment.',
       title: 'To purchase',
     },
   },
@@ -268,7 +268,7 @@ const TREASURER_STEPS: TourStep[] = [
     element: '[data-tour="home-fulfill"]',
     optional: true,
     popover: {
-      description: 'Buy the approved items, record actual prices from receipts, and add tracking.',
+      description: 'Buy the approved items and record actual prices from receipts.',
       title: 'Fulfillment',
     },
   },
@@ -288,7 +288,7 @@ const FULFILL_STEPS: TourStep[] = [
     element: '[data-tour="page-heading"]',
     popover: {
       description:
-        'Approved, purchased, and delivered grants live here — the queue for buying and tracking orders.',
+        'Approved, purchased, and delivered grants live here — the queue for buying approved items.',
       title: 'Fulfillment',
     },
   },
@@ -304,7 +304,7 @@ const FULFILL_STEPS: TourStep[] = [
     element: '[data-tour="grant-table"]',
     popover: {
       description:
-        'Open a grant to record what you actually paid, attach a receipt, and add a tracking number. Teachers confirm delivery from My grants.',
+        'Open a grant to record what you actually paid and attach a receipt. Teachers confirm delivery from My grants.',
       title: 'Record the purchase',
     },
   },

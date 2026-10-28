@@ -38,5 +38,8 @@ describe('FulfillForm', () => {
     expect(html).not.toContain('Add tax / shipping / fee');
     expect(html).not.toContain('Actual price');
     expect(html).not.toContain('Actual qty');
+    expect(html).not.toContain('name="vendor_name"');
+    expect(html).not.toContain('name="tracking_number"');
+    expect(html).toContain('name="receipt_r2_key"');
   });
 });

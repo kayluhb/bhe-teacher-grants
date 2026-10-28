@@ -36,7 +36,7 @@ export const TeacherNav = ({portals, user}: {portals?: Portal[]; user: User}) =>
       ? [
           {href: '/chair', label: user.role === 'chair' ? 'Home' : 'Chair'},
           {href: '/chair/windows', label: 'Grant windows'},
-          {href: '/community/edit', label: 'Community'},
+          {href: '/community', label: 'Summary'},
         ]
       : []),
   ].filter((link, index, list) => list.findIndex((item) => item.href === link.href) === index);

@@ -160,28 +160,22 @@ export const reviseGrantAction = async (formData: FormData) => {
   });
   if ('error' in result) return result;
 
-  if (revisionNotifiesTeacher(outcome)) {
-    const grant = await getGrant(db, grantId);
-    if (grant) {
-      const email = teacherGrantDecisionEmail({
-        amount: grant.approved_amount ?? grant.requested_amount,
-        body,
-        chairmanEmail: user.email,
-        chairmanName: user.name,
-        outcome: 'APPROVED',
-        schoolYear: grant.school_year,
-        semester: grant.semester,
-        subject,
-        teacherEmail: grant.teacher_email,
-        teacherName: grant.teacher_name,
-        title: grant.title,
-      });
-      notifyQuietly(email);
-      revalidatePath(`/community/${grant.cycle_id}`);
-    }
-  } else {
-    const grant = await getGrant(db, grantId);
-    if (grant) revalidatePath(`/community/${grant.cycle_id}`);
+  const grant = await getGrant(db, grantId);
+  if (grant && revisionNotifiesTeacher(outcome)) {
+    const email = teacherGrantDecisionEmail({
+      amount: grant.approved_amount ?? grant.requested_amount,
+      body,
+      chairmanEmail: user.email,
+      chairmanName: user.name,
+      outcome: 'APPROVED',
+      schoolYear: grant.school_year,
+      semester: grant.semester,
+      subject,
+      teacherEmail: grant.teacher_email,
+      teacherName: grant.teacher_name,
+      title: grant.title,
+    });
+    notifyQuietly(email);
   }
 
   revalidatePath('/chair');

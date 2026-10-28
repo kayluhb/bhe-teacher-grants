@@ -17,7 +17,7 @@ const LINKS: {href: string; label: string; roles: Role[]}[] = [
   {href: '/review', label: 'Review', roles: ['committee', 'admin', 'principal']},
   {href: '/fulfill', label: 'Fulfill', roles: ['admin']},
   {href: '/budget', label: 'Budget', roles: ['admin']},
-  {href: '/community/edit', label: 'Community', roles: ['admin']},
+  {href: '/community', label: 'Summary', roles: ['admin']},
   {href: '/admin', label: 'Admin', roles: ['admin']},
 ];
 
@@ -56,7 +56,7 @@ export const Sidebar = ({
       ? [
           {href: '/chair', label: user.role === 'chair' ? 'Home' : 'Chair'},
           {href: '/chair/windows', label: 'Grant windows'},
-          {href: '/community/edit', label: 'Community'},
+          {href: '/community', label: 'Summary'},
         ]
       : []),
     ...LINKS.filter((link) => {

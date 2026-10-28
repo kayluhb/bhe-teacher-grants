@@ -2,7 +2,7 @@
 
 import {useState} from 'react';
 
-export const CopyButton = ({text}: {text: string}) => {
+export const CopyButton = ({label = 'Copy', text}: {label?: string; text: string}) => {
   const [copied, setCopied] = useState(false);
 
   const onClick = async () => {
@@ -21,7 +21,7 @@ export const CopyButton = ({text}: {text: string}) => {
       onClick={onClick}
       type="button"
     >
-      {copied ? 'Copied!' : 'Copy'}
+      {copied ? 'Copied!' : label}
     </button>
   );
 };

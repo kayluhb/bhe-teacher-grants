@@ -107,7 +107,7 @@ export const GrantSummary = ({
       {mode === 'kind' ? (
         <div className="flex flex-wrap items-center gap-3">
           <button
-            className="bg-eagle-blue px-3 py-1.5 text-sm font-semibold text-white hover:bg-eagle-blue/90 disabled:opacity-60"
+            className="bg-eagle-blue px-3 py-1.5 font-heading text-sm font-semibold text-white hover:bg-eagle-blue/90 disabled:opacity-60"
             disabled={busy || items.length === 0}
             onClick={sort}
             type="button"

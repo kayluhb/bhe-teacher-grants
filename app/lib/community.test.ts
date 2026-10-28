@@ -46,6 +46,17 @@ describe('pileByReach', () => {
 });
 
 describe('pilesFromModel', () => {
+  it('matches an item when the model repeats its name instead of its id', () => {
+    expect(
+      pilesFromModel(items, {
+        groups: [{item_ids: ['Large bean bag chair'], name: 'Reading corners'}],
+      }),
+    ).toEqual([
+      {itemIds: ['bean'], name: 'Reading corners'},
+      {itemIds: ['scope'], name: 'Still to place'},
+    ]);
+  });
+
   it('keeps only real items and parks anything the model skipped', () => {
     expect(
       pilesFromModel(items, {
@@ -116,6 +127,22 @@ describe('sortItemsWithModel', () => {
         response: JSON.stringify({
           groups: [{itemIds: ['bean', 'invented'], name: 'Reading corners'}],
         }),
+      }),
+    };
+    const result = await sortItemsWithModel(ai, items);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.piles).toEqual([
+      {itemIds: ['bean'], name: 'Reading corners'},
+      {itemIds: ['scope'], name: 'Still to place'},
+    ]);
+  });
+
+  it('keeps complete groups when the reply is cut off', async () => {
+    const ai = {
+      run: async () => ({
+        response:
+          '{"groups":[{"name":"Reading corners","itemIds":["bean"]},{"name":"Science","itemIds":["sc',
       }),
     };
     const result = await sortItemsWithModel(ai, items);

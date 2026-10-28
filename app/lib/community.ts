@@ -34,7 +34,10 @@ export type ItemPile = {
 };
 
 export type ModelSorter = {
-  run: (model: string, input: {messages: {content: string; role: string}[]}) => Promise<unknown>;
+  run: (
+    model: string,
+    input: {max_tokens?: number; messages: {content: string; role: string}[]},
+  ) => Promise<unknown>;
 };
 
 const MODEL = '@cf/meta/llama-3.2-3b-instruct';
@@ -74,8 +77,25 @@ const cleanName = (name: unknown) => {
   return text.slice(0, 40) || 'More';
 };
 
+const listedIds = (record: Record<string, unknown>) => {
+  for (const key of ['itemIds', 'item_ids', 'ids', 'items']) {
+    const value = record[key];
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+};
+
+const resolveItemId = (value: unknown, items: SummaryItem[], used: Set<string>) => {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (items.some((item) => item.id === text) && !used.has(text)) return text;
+  const named = items.find(
+    (item) => item.description.trim().toLowerCase() === text.toLowerCase() && !used.has(item.id),
+  );
+  return named?.id ?? null;
+};
+
 export const pilesFromModel = (items: SummaryItem[], raw: unknown): ItemPile[] => {
-  const known = new Set(items.map((item) => item.id));
   const groups =
     raw && typeof raw === 'object' && 'groups' in raw ? (raw as {groups: unknown}).groups : null;
   const piles: ItemPile[] = [];
@@ -83,15 +103,16 @@ export const pilesFromModel = (items: SummaryItem[], raw: unknown): ItemPile[] =
   if (Array.isArray(groups)) {
     for (const group of groups) {
       if (!group || typeof group !== 'object') continue;
-      const record = group as {itemIds?: unknown; name?: unknown};
-      const itemIds = Array.isArray(record.itemIds)
-        ? record.itemIds.filter(
-            (id): id is string => typeof id === 'string' && known.has(id) && !used.has(id),
-          )
-        : [];
-      for (const id of itemIds) used.add(id);
+      const record = group as Record<string, unknown>;
+      const itemIds = listedIds(record).flatMap((value) => {
+        const id = resolveItemId(value, items, used);
+        if (!id) return [];
+        used.add(id);
+        return [id];
+      });
       if (itemIds.length === 0) continue;
-      piles.push({itemIds, name: cleanName(record.name)});
+      const label = record.name ?? record.title ?? record.label;
+      piles.push({itemIds, name: cleanName(label)});
     }
   }
   const left = items.map((item) => item.id).filter((id) => !used.has(id));
@@ -118,32 +139,53 @@ export const summaryText = (cycleName: string, piles: ItemPile[], items: Summary
   return [heading, ...blocks].join('\n\n');
 };
 
-const responseText = (payload: unknown) => {
-  if (typeof payload === 'string') return payload;
-  if (!payload || typeof payload !== 'object') return '';
-  const record = payload as {choices?: {message?: {content?: unknown}}[]; response?: unknown};
-  if (typeof record.response === 'string') return record.response;
-  const content = record.choices?.[0]?.message?.content;
-  return typeof content === 'string' ? content : '';
-};
-
-const modelGroups = (payload: unknown): unknown => {
-  if (payload && typeof payload === 'object' && 'response' in payload) {
-    const response = (payload as {response: unknown}).response;
-    if (response && typeof response === 'object') return response;
-  }
-  return parseGroups(responseText(payload));
-};
-
 const parseGroups = (text: string): unknown => {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return null;
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch {
+      // A long reply can be cut off. Keep any group objects that finished.
+    }
   }
+  const groups: unknown[] = [];
+  for (const match of text.matchAll(/\{[^{}]*\}/g)) {
+    try {
+      groups.push(JSON.parse(match[0]));
+    } catch {
+      // Skip a group the model did not finish.
+    }
+  }
+  return groups.length > 0 ? {groups} : null;
+};
+
+const replyCandidates = (payload: unknown): unknown[] => {
+  const found: unknown[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (value == null || depth > 6) return;
+    found.push(value);
+    if (typeof value === 'string' || depth === 6) return;
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry, depth + 1);
+      return;
+    }
+    if (typeof value === 'object') {
+      for (const entry of Object.values(value)) visit(entry, depth + 1);
+    }
+  };
+  visit(payload, 0);
+  return found;
+};
+
+const modelGroups = (items: SummaryItem[], payload: unknown): ItemPile[] | null => {
+  for (const candidate of replyCandidates(payload)) {
+    const raw = typeof candidate === 'string' ? parseGroups(candidate) : candidate;
+    if (!raw || typeof raw !== 'object') continue;
+    const piles = pilesFromModel(items, raw);
+    if (piles.some((pile) => pile.name !== 'Still to place')) return piles;
+  }
+  return null;
 };
 
 export const sortItemsWithModel = async (
@@ -159,6 +201,7 @@ export const sortItemsWithModel = async (
   let payload: unknown;
   try {
     payload = await ai.run(MODEL, {
+      max_tokens: 2048,
       messages: [
         {
           content:
@@ -171,10 +214,9 @@ export const sortItemsWithModel = async (
   } catch {
     return {error: 'Workers AI could not sort these items.', ok: false};
   }
-  const parsed = modelGroups(payload);
-  if (!parsed) return {error: 'The sorter sent something we could not read.', ok: false};
   const sent = items.slice(0, 80);
-  const piles = pilesFromModel(sent, parsed);
+  const piles = modelGroups(sent, payload);
+  if (!piles) return {error: 'The sorter sent something we could not read.', ok: false};
   if (!piles.some((pile) => pile.name !== 'Still to place')) {
     return {error: 'The sorter did not place any items.', ok: false};
   }

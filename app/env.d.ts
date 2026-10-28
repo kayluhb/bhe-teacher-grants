@@ -10,7 +10,7 @@ declare namespace Cloudflare {
     AI?: {
       run: (
         model: string,
-        input: {messages: {content: string; role: string}[]},
+        input: {max_tokens?: number; messages: {content: string; role: string}[]},
       ) => Promise<unknown>;
     };
   }

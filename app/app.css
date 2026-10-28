@@ -7,8 +7,10 @@
   --color-warm-white: #faf8f5;
   --color-night-blue: #0a2a15;
   --color-charcoal: #1a2e1a;
-  --font-family-heading: "Montserrat", sans-serif;
-  --font-family-body: "Inter", sans-serif;
+  --font-heading: "Montserrat", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-family-heading: var(--font-heading);
+  --font-family-body: var(--font-body);
 }
 
 @media (prefers-reduced-motion: reduce) {

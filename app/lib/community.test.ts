@@ -166,6 +166,24 @@ describe('sortItemsWithModel', () => {
     expect(result.piles[0]).toEqual({itemIds: ['bean'], name: 'Reading corners'});
   });
 
+  it('reads the OpenAI chat shape that gemma-4 replies with', async () => {
+    const ai = {
+      run: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({groups: [{itemIds: ['bean'], name: 'Reading corners'}]}),
+            },
+          },
+        ],
+      }),
+    };
+    const result = await sortItemsWithModel(ai, items);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.piles[0]).toEqual({itemIds: ['bean'], name: 'Reading corners'});
+  });
+
   it('reports when Workers AI is not configured', async () => {
     const result = await sortItemsWithModel(undefined, items);
     expect(result).toEqual({error: 'Workers AI is not configured.', ok: false});

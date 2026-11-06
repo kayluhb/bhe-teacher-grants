@@ -36,11 +36,18 @@ export type ItemPile = {
 export type ModelSorter = {
   run: (
     model: string,
-    input: {max_tokens?: number; messages: {content: string; role: string}[]},
+    input: {
+      chat_template_kwargs?: {enable_thinking: boolean};
+      max_tokens?: number;
+      messages: {content: string; role: string}[];
+    },
   ) => Promise<unknown>;
 };
 
-const MODEL = '@cf/meta/llama-3.2-3b-instruct';
+// llama-3.2-3b-instruct is deprecated on Workers AI from 2026-11-20; gemma-4-26b-a4b-it is
+// Cloudflare's suggested small-model replacement. It replies in the OpenAI chat shape
+// (`choices[0].message.content`), which `replyCandidates` already walks into.
+const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
 const REACH: Record<string, string> = {
   CLASS: 'One class',
@@ -201,6 +208,8 @@ export const sortItemsWithModel = async (
   let payload: unknown;
   try {
     payload = await ai.run(MODEL, {
+      // Gemma thinks by default and those tokens count against max_tokens; sorting doesn't need it.
+      chat_template_kwargs: {enable_thinking: false},
       max_tokens: 2048,
       messages: [
         {

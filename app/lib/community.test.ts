@@ -3,11 +3,15 @@ import {
   canViewGrantSummary,
   communityGrantVisible,
   communityItemLines,
+  grantsFromRows,
+  newsletterFromModel,
+  newsletterText,
   pileByClassroom,
   pileByReach,
   pilesFromModel,
   sortItemsWithModel,
   summaryText,
+  writeNewsletter,
 } from '~/lib/community';
 
 const items = [
@@ -187,6 +191,216 @@ describe('sortItemsWithModel', () => {
   it('reports when Workers AI is not configured', async () => {
     const result = await sortItemsWithModel(undefined, items);
     expect(result).toEqual({error: 'Workers AI is not configured.', ok: false});
+  });
+});
+
+const grants = [
+  {
+    benefitScope: 'CLASS',
+    description: 'I am requesting a set of android tablets so kids can do more tech.',
+    grade: '2nd grade',
+    id: 'tablets',
+    items: ['Android tablet', 'Case'],
+    teacherName: 'Jordan Lee',
+    title: 'I am requesting a set of android tablets',
+  },
+  {
+    benefitScope: 'WHOLE_SCHOOL',
+    description: 'Microscopes for the science lab everyone uses.',
+    grade: '4th grade',
+    id: 'scopes',
+    items: ['Microscope'],
+    teacherName: 'Sam Patel',
+    title: 'Microscopes',
+  },
+];
+
+describe('newsletterFromModel', () => {
+  it('drops JSON left on the end of a paragraph', () => {
+    expect(
+      newsletterFromModel({
+        paragraphs: ['Classroom grants give students a quieter place to read."]}'],
+      }),
+    ).toEqual(['Classroom grants give students a quieter place to read.']);
+  });
+
+  it('keeps two newsletter paragraphs and drops a blank one', () => {
+    expect(
+      newsletterFromModel({
+        paragraphs: [
+          ' Tablets in one classroom give students a way to practice research on their own. ',
+          '',
+          'Shared microscopes in the science lab let every class look closely at what they study.',
+        ],
+      }),
+    ).toEqual([
+      'Tablets in one classroom give students a way to practice research on their own.',
+      'Shared microscopes in the science lab let every class look closely at what they study.',
+    ]);
+  });
+});
+
+describe('newsletterText', () => {
+  it('writes the cycle name and the paragraphs for the newsletter', () => {
+    expect(
+      newsletterText('Fall 2026-27 Teacher Grants', [
+        'Tablets in one classroom give students a way to practice research on their own.',
+        'Shared microscopes let every class look closely at what they study.',
+      ]),
+    ).toBe(
+      [
+        'Fall 2026-27 Teacher Grants',
+        '',
+        'Tablets in one classroom give students a way to practice research on their own.',
+        '',
+        'Shared microscopes let every class look closely at what they study.',
+      ].join('\n'),
+    );
+  });
+
+  it('says when nothing has been written for the newsletter yet', () => {
+    expect(newsletterText('Fall 2026-27 Teacher Grants', [])).toBe(
+      'Fall 2026-27 Teacher Grants\n\nNothing has been written for the newsletter yet.',
+    );
+  });
+});
+
+describe('writeNewsletter', () => {
+  it('turns the approved grants into the paragraphs the model wrote', async () => {
+    const ai = {
+      run: async () => ({
+        response: JSON.stringify({
+          paragraphs: [
+            'Tablets in one classroom give students a way to practice research on their own.',
+            'Shared microscopes let every class look closely at what they study.',
+          ],
+        }),
+      }),
+    };
+    const result = await writeNewsletter(ai, grants);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.paragraphs).toEqual([
+      'Tablets in one classroom give students a way to practice research on their own.',
+      'Shared microscopes let every class look closely at what they study.',
+    ]);
+  });
+
+  it('reads a paragraph when the JSON reply is cut off', async () => {
+    const ai = {
+      run: async () => ({
+        response:
+          '{"paragraphs":["The PTA funded reading corners so students in one classroom can settle in with a book.","Shared microscopes let every class look closely at what they study."',
+      }),
+    };
+    const result = await writeNewsletter(ai, grants);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.paragraphs).toEqual([
+      'The PTA funded reading corners so students in one classroom can settle in with a book.',
+      'Shared microscopes let every class look closely at what they study.',
+    ]);
+  });
+
+  it('reads paragraphs when the model sends more than one JSON object', async () => {
+    const ai = {
+      run: async () => ({
+        response:
+          '{"paragraphs":["Tablets in one classroom give students a way to practice research on their own."]}\n\n{"paragraphs":["Shared microscopes let every class look closely at what they study."]}',
+      }),
+    };
+    const result = await writeNewsletter(ai, grants);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.paragraphs).toEqual([
+      'Tablets in one classroom give students a way to practice research on their own.',
+      'Shared microscopes let every class look closely at what they study.',
+    ]);
+  });
+
+  it('ignores a model id and keeps the paragraphs', async () => {
+    const ai = {
+      run: async () => ({
+        id: 'chatcmpl-ec15d843-a81c-41a8-9d9c-05fa4a833bd4',
+        response: JSON.stringify({
+          paragraphs: [
+            'Tablets in one classroom give students a way to practice research on their own.',
+            'Shared microscopes let every class look closely at what they study.',
+          ],
+        }),
+      }),
+    };
+    const result = await writeNewsletter(ai, grants);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.paragraphs[0]).toMatch(/Tablets in one classroom/);
+  });
+
+  it('reads two paragraphs when the model writes them as prose', async () => {
+    const ai = {
+      run: async () => ({
+        response:
+          'Tablets in one classroom give students a way to practice research on their own.\n\nShared microscopes let every class look closely at what they study.',
+      }),
+    };
+    const result = await writeNewsletter(ai, grants);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.paragraphs).toEqual([
+      'Tablets in one classroom give students a way to practice research on their own.',
+      'Shared microscopes let every class look closely at what they study.',
+    ]);
+  });
+
+  it('reports when Workers AI is not configured', async () => {
+    const result = await writeNewsletter(undefined, grants);
+    expect(result).toEqual({error: 'Workers AI is not configured.', ok: false});
+  });
+});
+
+describe('grantsFromRows', () => {
+  it('folds item lines onto one grant and drops a blank item', () => {
+    expect(
+      grantsFromRows([
+        {
+          benefit_scope: 'CLASS',
+          description: ' Tablets for class ',
+          grade: '2nd grade',
+          id: 'tablets',
+          item_description: ' Android tablet ',
+          teacher_name: 'Jordan Lee',
+          title: ' I am requesting tablets ',
+        },
+        {
+          benefit_scope: 'CLASS',
+          description: 'Tablets for class',
+          grade: '2nd grade',
+          id: 'tablets',
+          item_description: ' ',
+          teacher_name: 'Jordan Lee',
+          title: 'I am requesting tablets',
+        },
+        {
+          benefit_scope: 'CLASS',
+          description: 'Tablets for class',
+          grade: '2nd grade',
+          id: 'tablets',
+          item_description: 'Case',
+          teacher_name: 'Jordan Lee',
+          title: 'I am requesting tablets',
+        },
+      ]),
+    ).toEqual([
+      {
+        benefitScope: 'CLASS',
+        description: 'Tablets for class',
+        grade: '2nd grade',
+        id: 'tablets',
+        items: ['Android tablet', 'Case'],
+        teacherName: 'Jordan Lee',
+        title: 'I am requesting tablets',
+      },
+    ]);
   });
 });
 

@@ -1,7 +1,6 @@
 'use client';
 
 import {useMemo, useState} from 'react';
-import {FileUpload} from '~/components/file-upload';
 import {ProductPurchaseLink} from '~/components/product-purchase-link';
 import {ProductThumb} from '~/components/product-thumb';
 import {Select} from '~/components/select';
@@ -66,13 +65,6 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
   return (
     <form className="space-y-6" onSubmit={onSubmit}>
       <input name="grant_id" type="hidden" value={grant.id} />
-      <FileUpload
-        grantId={grant.id}
-        kind="receipts"
-        label="Receipt"
-        name="receipt_r2_key"
-        required
-      />
       <label className="font-body block text-sm font-medium text-charcoal">
         Variance note (optional)
         <textarea
@@ -157,10 +149,10 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
         </table>
       </div>
 
-      <label className="font-body block text-sm font-medium text-charcoal">
+      <label className="font-body flex flex-col gap-2 text-sm font-medium text-charcoal">
         Amount spent
         <input
-          className="mt-1 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 tabular-nums shadow-sm focus:border-eagle-blue focus:ring-1 focus:ring-eagle-blue"
+          className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 tabular-nums shadow-sm focus:border-eagle-blue focus:ring-1 focus:ring-eagle-blue"
           min="0"
           name="actual_amount"
           onChange={(event) => setAmount(event.target.value)}
@@ -169,7 +161,7 @@ export const FulfillForm = ({grant, items}: {grant: GrantRow; items: GrantItemRo
           type="number"
           value={amount}
         />
-        <span className="mt-1 block text-xs font-normal text-gray-500">
+        <span className="text-xs font-normal text-gray-500">
           Full receipt total. Tax and shipping stay inside this number.
         </span>
       </label>

@@ -28,6 +28,16 @@ export type SummaryItem = {
   teacherName: string;
 };
 
+export type SummaryGrant = {
+  benefitScope: string;
+  description: string;
+  grade: string;
+  id: string;
+  items: string[];
+  teacherName: string;
+  title: string;
+};
+
 export type ItemPile = {
   itemIds: string[];
   name: string;
@@ -54,6 +64,84 @@ const REACH: Record<string, string> = {
   MULTIPLE_GRADES: 'More than one grade',
   WHOLE_GRADE: 'A whole grade',
   WHOLE_SCHOOL: 'The whole school',
+};
+
+const PUBLISH_REACH: Record<string, string> = {
+  CLASS: 'One classroom',
+  MULTIPLE_GRADES: 'More than one grade',
+  WHOLE_GRADE: 'A whole grade',
+  WHOLE_SCHOOL: 'The whole school',
+};
+
+const familyReach = (scope: string) => PUBLISH_REACH[scope] ?? 'One classroom';
+
+const paragraphText = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/["']\s*\]\s*\}+\s*$/, '')
+    .trim();
+};
+
+export const newsletterFromModel = (raw: unknown): string[] => {
+  if (!raw || typeof raw !== 'object') return [];
+  const record = raw as Record<string, unknown>;
+  const source = record.paragraphs ?? record.paragraph ?? record.text;
+  const parts = Array.isArray(source)
+    ? source
+    : typeof source === 'string'
+      ? source.split(/\n\s*\n/)
+      : [];
+  return parts
+    .flatMap((part) => {
+      const text = paragraphText(part);
+      return text ? [text] : [];
+    })
+    .slice(0, 2);
+};
+
+export const newsletterText = (cycleName: string, paragraphs: string[]): string => {
+  const heading = cycleName.trim();
+  const blocks = paragraphs.map((paragraph) => paragraph.trim()).filter(Boolean);
+  if (blocks.length === 0) return `${heading}\n\nNothing has been written for the newsletter yet.`;
+  return [heading, ...blocks].join('\n\n');
+};
+
+export type SummaryGrantRow = {
+  benefit_scope: string;
+  description: string;
+  grade: string;
+  id: string;
+  item_description: string | null;
+  teacher_name: string;
+  title: string;
+};
+
+export const grantsFromRows = (rows: SummaryGrantRow[]): SummaryGrant[] => {
+  const order: string[] = [];
+  const grants = new Map<string, SummaryGrant>();
+  for (const row of rows) {
+    let grant = grants.get(row.id);
+    if (!grant) {
+      grant = {
+        benefitScope: row.benefit_scope,
+        description: row.description.trim(),
+        grade: row.grade,
+        id: row.id,
+        items: [],
+        teacherName: row.teacher_name,
+        title: row.title.trim(),
+      };
+      grants.set(row.id, grant);
+      order.push(row.id);
+    }
+    const item = row.item_description?.trim() ?? '';
+    if (item) grant.items.push(item);
+  }
+  return order.flatMap((id) => {
+    const grant = grants.get(id);
+    return grant ? [grant] : [];
+  });
 };
 
 const groupBy = (items: SummaryItem[], nameFor: (item: SummaryItem) => string): ItemPile[] => {
@@ -193,6 +281,107 @@ const modelGroups = (items: SummaryItem[], payload: unknown): ItemPile[] | null 
     if (piles.some((pile) => pile.name !== 'Still to place')) return piles;
   }
   return null;
+};
+
+const parseJsonObject = (text: string): unknown => {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+};
+
+const proseParagraphs = (text: string): string[] =>
+  text
+    .split(/\n\s*\n/)
+    .flatMap((part) => {
+      const line = paragraphText(part);
+      return line.includes(' ') && line.length > 40 && !line.startsWith('{') ? [line] : [];
+    })
+    .slice(0, 2);
+
+const quotedParagraphs = (text: string): string[] => {
+  const found: string[] = [];
+  for (const match of text.matchAll(/"((?:[^"\\]|\\.){40,})"/g)) {
+    const line = paragraphText(match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"'));
+    if (line.includes(' ') && line.length > 40) found.push(line);
+  }
+  return found.slice(0, 2);
+};
+
+const paragraphsInText = (text: string): string[] => {
+  const cleaned = text.replace(/```json|```/gi, '').trim();
+  const parsed = parseJsonObject(cleaned);
+  const fromJson = parsed ? newsletterFromModel(parsed) : [];
+  if (fromJson.length > 0) return fromJson;
+  const gathered: string[] = [];
+  for (const match of cleaned.matchAll(/\{[^{}]*\}/g)) {
+    try {
+      gathered.push(...newsletterFromModel(JSON.parse(match[0])));
+    } catch {
+      // Skip a fragment the model did not finish.
+    }
+  }
+  if (gathered.length > 0) return gathered.slice(0, 2);
+  const quoted = quotedParagraphs(cleaned);
+  if (quoted.length > 0) return quoted;
+  return proseParagraphs(cleaned);
+};
+
+const modelParagraphs = (payload: unknown): string[] | null => {
+  for (const candidate of replyCandidates(payload)) {
+    if (typeof candidate === 'string') {
+      const paragraphs = paragraphsInText(candidate);
+      if (paragraphs.length > 0) return paragraphs;
+      continue;
+    }
+    if (!candidate || typeof candidate !== 'object') continue;
+    const paragraphs = newsletterFromModel(candidate);
+    if (paragraphs.length > 0) return paragraphs;
+  }
+  return null;
+};
+
+const catalogField = (value: string) => value.replaceAll('|', '/').replace(/\s+/g, ' ').trim();
+
+const grantCatalog = (grant: SummaryGrant) =>
+  [
+    catalogField(grant.title),
+    catalogField(grant.grade),
+    familyReach(grant.benefitScope),
+    catalogField(grant.teacherName),
+    catalogField(grant.description),
+    catalogField(grant.items.join('; ')),
+  ].join(' | ');
+
+export const writeNewsletter = async (
+  ai: ModelSorter | undefined,
+  grants: SummaryGrant[],
+): Promise<{ok: true; paragraphs: string[]} | {error: string; ok: false}> => {
+  if (!ai) return {error: 'Workers AI is not configured.', ok: false};
+  if (grants.length === 0) return {ok: true, paragraphs: []};
+  let payload: unknown;
+  try {
+    payload = await ai.run(MODEL, {
+      max_tokens: 2048,
+      messages: [
+        {
+          content:
+            'You are the PTA writing to families. Write two paragraphs about grants the PTA has already approved. Explain how they help students, and say when something is for one classroom, a whole grade, more than one grade, or the whole school. Do not thank the PTA, donors, or "our PTA." Do not say anyone requested or asked for a grant. Do not list every teacher. No prices. Do not invent grants. Reply with JSON only, shaped as {"paragraphs":["first paragraph","second paragraph"]}.',
+          role: 'system',
+        },
+        {content: grants.slice(0, 40).map(grantCatalog).join('\n'), role: 'user'},
+      ],
+    });
+  } catch {
+    return {error: 'Workers AI could not write the newsletter.', ok: false};
+  }
+  const paragraphs = modelParagraphs(payload);
+  if (!paragraphs) return {error: 'The writer sent something we could not read.', ok: false};
+  return {ok: true, paragraphs};
 };
 
 export const sortItemsWithModel = async (

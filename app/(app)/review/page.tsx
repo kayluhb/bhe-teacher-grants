@@ -3,7 +3,12 @@ import {TourGrantTable} from '~/components/tour-grant-table';
 import {requireReviewer} from '~/lib/auth';
 import {getDb} from '~/lib/db';
 import {reviewQueueMessaging, reviewWindowState} from '~/lib/grant-cycle';
-import {listReviewerCycles, listReviewQueue, type ReviewQueueGrant} from '~/lib/grants';
+import {
+  listReviewerApproved,
+  listReviewerCycles,
+  listReviewQueue,
+  type ReviewQueueGrant,
+} from '~/lib/grants';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
 import {splitReviewQueue} from '~/lib/votes';
 
@@ -12,8 +17,9 @@ export const metadata = {title: DOCUMENT_TITLES.review};
 export default async function ReviewPage() {
   const user = await requireReviewer();
   const db = getDb();
-  const [grants, cycles] = await Promise.all([
+  const [grants, approved, cycles] = await Promise.all([
     listReviewQueue(db, user.id),
+    listReviewerApproved(db, user.id),
     listReviewerCycles(db, user.id),
   ]);
   const {pending, ranked} = splitReviewQueue(grants);
@@ -48,6 +54,19 @@ export default async function ReviewPage() {
           />
         </section>
       ) : null}
+      <section className="space-y-3" id="approved">
+        <h2 className="font-heading text-xl font-semibold text-charcoal">Approved</h2>
+        <p className="font-body text-sm text-gray-600">
+          Funded grants from the windows you sit on, including ones already purchased or delivered.
+        </p>
+        <GrantTable
+          empty={<p>No grants have been approved yet.</p>}
+          grants={approved}
+          hrefFor={(grant) => `/review/${grant.id}`}
+          myVote={(grant) => (grant as ReviewQueueGrant).my_vote}
+          showTeacher
+        />
+      </section>
     </div>
   );
 }

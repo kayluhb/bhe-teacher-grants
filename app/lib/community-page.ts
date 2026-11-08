@@ -1,4 +1,10 @@
-import {COMMUNITY_GRANT_STATUSES, type SummaryItem} from '~/lib/community';
+import {
+  COMMUNITY_GRANT_STATUSES,
+  grantsFromRows,
+  type SummaryGrant,
+  type SummaryGrantRow,
+  type SummaryItem,
+} from '~/lib/community';
 import type {Role} from '~/lib/roles';
 
 export type CommunityCycle = {
@@ -46,6 +52,26 @@ export const listSummaryCycles = async (
 
 export const getSummaryCycle = async (db: D1Database, cycleId: string) =>
   db.prepare(`${cycleSelect} WHERE c.id = ?`).bind(cycleId).first<CommunityCycle>();
+
+export const listSummaryGrants = async (
+  db: D1Database,
+  cycleId: string,
+): Promise<SummaryGrant[]> => {
+  const rows = await db
+    .prepare(
+      `SELECT g.id, g.title, g.impact_statement AS description, g.grade_level_subject AS grade,
+              g.benefit_scope, u.name AS teacher_name, i.item_description
+       FROM grants g
+       JOIN users u ON u.id = g.teacher_id
+       LEFT JOIN grant_items i
+         ON i.grant_id = g.id AND i.is_ad_hoc = 0 AND i.item_status != 'CANCELLED'
+       WHERE g.cycle_id = ? AND g.status IN (${statusPlaceholders})
+       ORDER BY u.name, g.title, i.created_at`,
+    )
+    .bind(cycleId, ...COMMUNITY_GRANT_STATUSES)
+    .all<SummaryGrantRow>();
+  return grantsFromRows(rows.results ?? []);
+};
 
 export const listSummaryItems = async (db: D1Database, cycleId: string): Promise<SummaryItem[]> => {
   const rows = await db

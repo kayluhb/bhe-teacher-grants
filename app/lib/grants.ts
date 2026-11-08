@@ -880,6 +880,44 @@ export const listReviewQueue = async (
   }));
 };
 
+export const REVIEWER_APPROVED_STATUSES = ['APPROVED', 'PURCHASED', 'DELIVERED'] as const;
+
+export const isReviewerApprovedStatus = (status: string): boolean =>
+  (REVIEWER_APPROVED_STATUSES as readonly string[]).includes(status);
+
+export const listReviewerApproved = async (
+  db: D1Database,
+  userId: string,
+): Promise<ReviewQueueGrant[]> => {
+  const statuses = REVIEWER_APPROVED_STATUSES.map((status) => `'${status}'`).join(', ');
+  const rows = await db
+    .prepare(
+      `SELECT g.*, u.name AS teacher_name, u.email AS teacher_email,
+              c.semester, c.school_year_id, y.label AS school_year,
+              v.vote AS my_vote
+       FROM grants g
+       JOIN users u ON u.id = g.teacher_id
+       JOIN grant_cycles c ON c.id = g.cycle_id
+       JOIN school_years y ON y.id = c.school_year_id
+       JOIN cycle_reviewers r ON r.cycle_id = g.cycle_id AND r.user_id = ?
+       LEFT JOIN grant_votes v ON v.grant_id = g.id AND v.voter_id = ?
+       WHERE g.status IN (${statuses})
+         AND r.seat != 'chairman'
+       ORDER BY g.updated_at DESC`,
+    )
+    .bind(userId, userId)
+    .all<GrantRow & {my_vote: string | null}>();
+  const approved = (rows.results ?? []).map((grant) => ({
+    ...grant,
+    my_vote: grant.my_vote && isBallot(grant.my_vote) ? grant.my_vote : null,
+  }));
+  const withImages = await attachPreviewImages(db, approved);
+  return withImages.map((grant, index) => ({
+    ...grant,
+    my_vote: approved[index].my_vote,
+  }));
+};
+
 export const listChairQueue = async (db: D1Database, user: {id: string; role: string}) => {
   const rows =
     user.role === 'chair'

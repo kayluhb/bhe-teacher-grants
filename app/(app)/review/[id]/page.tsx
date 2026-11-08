@@ -10,6 +10,7 @@ import {getDb} from '~/lib/db';
 import {canAuthorGrantNote, canMutateGrantNote, listGrantNotes} from '~/lib/grant-notes';
 import {
   getGrant,
+  isReviewerApprovedStatus,
   listGrantItems,
   listReviewerRows,
   listUserSeats,
@@ -92,13 +93,19 @@ export default async function ReviewDetailPage({params}: {params: Promise<{id: s
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Remaining if this passed</p>
+          <p className="text-xs text-gray-500 uppercase">
+            {isReviewerApprovedStatus(grant.status) ? 'Approved' : 'Remaining if this passed'}
+          </p>
           <p className="font-heading text-xl font-bold tabular-nums">
-            {budget
-              ? formatUsd(
-                  budget.remaining - (grant.status === 'PENDING' ? grant.requested_amount : 0),
-                )
-              : '—'}
+            {isReviewerApprovedStatus(grant.status)
+              ? grant.approved_amount == null
+                ? '—'
+                : formatUsd(grant.approved_amount)
+              : budget
+                ? formatUsd(
+                    budget.remaining - (grant.status === 'PENDING' ? grant.requested_amount : 0),
+                  )
+                : '—'}
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">

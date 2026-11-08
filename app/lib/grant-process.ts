@@ -231,6 +231,14 @@ export const COMMITTEE_PROCESS_STEPS: ProcessStep[] = [
     description:
       'Score with student impact, innovation, how many students benefit, and whether the project already received PTA funding this year in mind. The five questions are listed below.',
   },
+  {
+    id: 'outcomes',
+    label: 'See what was approved',
+    description:
+      'After the chair records a decision, funded grants stay on Review under Approved. That list includes grants already purchased or delivered, and it stays up after the review window closes.',
+    href: '/review#approved',
+    linkLabel: 'See approved grants',
+  },
 ];
 
 // ---------------------------------------------------------------------------

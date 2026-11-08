@@ -3,7 +3,7 @@ import {redirect} from 'next/navigation';
 import {GrantSummary} from '~/components/grant-summary';
 import {requireAuth} from '~/lib/auth';
 import {canViewGrantSummary} from '~/lib/community';
-import {getSummaryCycle, listSummaryCycles, listSummaryItems} from '~/lib/community-page';
+import {getSummaryCycle, listSummaryCycles, listSummaryGrants} from '~/lib/community-page';
 import {getDb} from '~/lib/db';
 import {listUserSeats} from '~/lib/grants';
 import {DOCUMENT_TITLES} from '~/lib/page-title';
@@ -26,14 +26,14 @@ export default async function GrantSummaryPage({
   const requested = Array.isArray(params.cycle) ? params.cycle[0] : params.cycle;
   const cycleId = cycles.some((cycle) => cycle.id === requested) ? requested : cycles[0]?.id;
   const cycle = cycleId ? await getSummaryCycle(db, cycleId) : null;
-  const items = cycle ? await listSummaryItems(db, cycle.id) : [];
+  const grants = cycle ? await listSummaryGrants(db, cycle.id) : [];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="font-heading text-3xl font-bold text-charcoal">Grant summary</h1>
         <p className="font-body mt-1 text-gray-600">
-          Approved items for the newsletter. Same list, three ways to pile it. No prices.
+          Two paragraphs for the PTA newsletter on how these grants help students. No prices.
         </p>
       </div>
 
@@ -42,10 +42,10 @@ export default async function GrantSummaryPage({
           {cycles.map((item) => (
             <li key={item.id}>
               <Link
-                className={`px-1 py-1 text-sm font-medium ${
+                className={`rounded-full px-3 py-1 text-sm font-medium ${
                   item.id === cycle?.id
-                    ? 'text-eagle-blue underline'
-                    : 'text-gray-600 hover:text-charcoal'
+                    ? 'bg-night-blue text-white'
+                    : 'bg-white text-charcoal ring-1 ring-gray-300'
                 }`}
                 href={`/community?cycle=${item.id}`}
               >
@@ -57,7 +57,7 @@ export default async function GrantSummaryPage({
       ) : null}
 
       {cycle ? (
-        <GrantSummary cycleId={cycle.id} cycleName={cycle.name} items={items} />
+        <GrantSummary cycleId={cycle.id} cycleName={cycle.name} grants={grants} />
       ) : (
         <p className="text-sm text-gray-600">No grant window is available yet.</p>
       )}

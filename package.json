@@ -36,7 +36,7 @@
     "fflate": "^0.8.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-server-dom-webpack": "^19.2.8",
+    "react-server-dom-webpack": "^19.2.9",
     "vinext": "1.0.0-beta.8"
   },
   "devDependencies": {
